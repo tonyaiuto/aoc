@@ -1,8 +1,8 @@
 
 
 go:
-	#python day6.py input.txt
-	python day6.py i.txt
+	python day6.py input.txt
+	# python day6.py i.txt
 
 
 

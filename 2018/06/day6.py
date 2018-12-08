@@ -112,17 +112,19 @@ class Grid(object):
   def __init__(this, max_x, max_y):
     this.grid = {}
     this.max_x = max_x
+    this.width = max_x + 1
     this.max_y = max_y
+    this.height = max_y + 1
 
   def at(this, x, y):
-    return this.grid.get(y * this.max_x + x)
+    return this.grid.get(y * this.width + x)
 
   def take(this, x, y, point, dist, cell=None):
     #if this.at(x, y):
     #   raise ValueError('point %d,%d already taken: %s' % (x, y, this.at(x,y)))
     # print('%s taking %d,%d' % (point, x, y))
     if not cell:
-      this.grid[y * this.max_x + x] = Cell(point.id, dist)
+      this.grid[y * this.width + x] = Cell(point.id, dist)
     point.size += 1
     point.add_to_frontier(x,y)
 
@@ -130,7 +132,7 @@ class Grid(object):
     if not this.at(x, y):
       raise ValueError('point %d,%d already taken' % (x, y))
     print('%s giving up %d,%d because #%d' % (point, x, y, other))
-    this.grid[y * this.max_x + x] = Cell(-1, -1)
+    this.grid[y * this.width + x] = Cell(-1, -1)
     point.size -= 1
     point.frontier.remove((x,y))
 
@@ -139,7 +141,7 @@ class Grid(object):
     for delta in ((-1,0), (1,0), (0,-1), (0,1)):
       x1 = x + delta[0]
       y1 = y + delta[1]
-      if x1 < 0 or y1 < 0 or x1 >= this.max_x or y1 >= this.max_y:
+      if x1 < 0 or y1 < 0 or x1 > this.max_x or y1 > this.max_y:
         point.infinite = True
         continue
       cell = this.at(x1, y1)
@@ -154,28 +156,29 @@ class Grid(object):
         expanded = True
     return expanded
 
-  def flood(this, x, y, point, dist):
+  def flood(this, from_x, from_y, point, dist):
     expanded = False
     for delta in ((-1,0), (1,0), (0,-1), (0,1)):
-      x1 = x + delta[0]
-      y1 = y + delta[1]
-      if x1 < 0 or y1 < 0 or x1 >= this.max_x or y1 >= this.max_y:
+      x = from_x + delta[0]
+      y = from_y + delta[1]
+      if x < 0 or y < 0 or x > this.max_x or y > this.max_y:
+        # print('%s hit edge at %d,%d' % (point, x, y))
         point.infinite = True
         continue
-      cell = this.at(x1, y1)
+      cell = this.at(x, y)
       if cell:
         if cell.id != point.id:
           cell.id = point.id
           cell.dist += dist
-          this.take(x1, y1, point, dist, cell=cell)
-          # print('flooded %d,%d to %s' % (x1,y1, cell))
-          if this.at(x1, y1) != cell:
+          this.take(x, y, point, dist, cell=cell)
+          # print('flooded %d,%d to %s' % (x, y, cell))
+          if this.at(x, y) != cell:
             raise ValueError('foowey')
           expanded = True
       else:
         if point.id > 0:
           raise ValueError("WTF no cell at %d,%d" % (x,y))
-        this.take(x1, y1, point, dist)
+        this.take(x, y, point, dist)
         expanded = True
     return expanded
 
@@ -252,7 +255,7 @@ What is the size of the region containing all locations which have a
 total distance to all given coordinates of less than 10000?
 """
 
-def part2(points, g):
+def part2a(points, g):
   for p in points:
     print('# Begin flood fill from %s' % p)
     g.take(p.x, p.y, p, 0, cell=g.at(p.x, p.y))
@@ -264,15 +267,31 @@ def part2(points, g):
       p.frontier = set()
       for x, y in f:
         expanded |= g.flood(x, y, p, dist)
+        # print('   flood from %d,%d => expanded:%s, frontier size: %d' % (
+        #   x, y, expanded, len(p.frontier)))
       if not expanded:
         break
     print('# flood fill from %s: max distance %d' % (p, dist))
 
-  for y in range(g.max_y):
-    for x in range(g.max_x):
+  for y in range(g.max_y+1):
+    for x in range(g.max_x+1):
       cell = g.at(x, y)
       if cell.dist < 10000:
         print('cell: %d,%d: %d' % (x, y, dist))
+
+
+def part2(points, g):
+  c = [0] * g.width * g.height
+  n_size = 0
+  for y in range(g.height):
+    for x in range(g.width):
+       dist = 0
+       for p in points:
+         dist += abs(p.x - x) + abs(p.y - y)
+       c[y * g.width + x] = dist
+       if dist < 10000:
+         n_size += 1
+  print('n_cells = %d' % n_size)
 
 
 if __name__ == '__main__':
@@ -282,6 +301,5 @@ if __name__ == '__main__':
   for p in points:
     max_x = max(max_x, p.x)
     max_y = max(max_y, p.y)
-
-  # part1(points, Grid(max_x, max_y))
+  #part1(points, Grid(max_x, max_y))
   part2(points, Grid(max_x, max_y))
