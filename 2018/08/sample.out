@@ -1,0 +1,7 @@
+Node(1, nc:2 [2,3], nm:3 [1, 1, 2]
+Node(1, nc:2 [2,3], nm:3 [1, 1, 2]
+  Node(2, nc:0 [], nm:3 [10, 11, 12]
+  Node(3, nc:1 [4], nm:1 [2]
+    Node(4, nc:0 [], nm:1 [99]
+Sum meta=138
+part2: sum meta=66
