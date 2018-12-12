@@ -5,12 +5,13 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
-import heapq
 import sys
 
 """
 What is the sum of all metadata entries?
 """
+
+_WSIZE = 5
 
 class Rule(object):
 
@@ -36,14 +37,96 @@ class Rules(object):
 
   def ParseAndAdd(this, text):
     # '#.#.# => .'
-    #pattern = [False] * 5
-    #for i in range(5):
+    #pattern = [False] * _WSIZE
+    #for i in range(_WSIZE):
     #  if text[i] == '#':
     #    pattern[i] = True
 
-    this.patterns.append(text[0:5])
+    this.patterns.append(text[0:_WSIZE])
     this.results.append(text[9])
  
+
+class Game(object):
+
+  def __init__(this, rules, state):
+    this.rules = rules
+    this.state = state
+    this.gen = 0
+    this.zero = 0
+
+  def PrintState(this, out):
+    out.write('%3d: %3d ' % (this.gen, this.zero))
+    out.write(this.state)
+    out.write('\n')
+
+  def Gen(this):
+    this.gen += 1
+    w = ['.'] * _WSIZE  # window
+    w[3:_WSIZE] = this.state[0:2]
+    used = 2  # two chars from state are in window
+    n_state = ''
+    pos = 0
+
+    # does window match pattern
+    def _match(p, pos):
+      for i in range(_WSIZE):
+        if p[i] != w[(pos + i) % _WSIZE]:
+          return False
+      return True
+
+    emitted = 0
+    while used < len(this.state) + 4:
+      # find matching rule and emit result
+      matched = False
+      for ri in range(len(this.rules.patterns)):
+        if _match(this.rules.patterns[ri], pos):
+          # print('match at %d %s => %s' % (pos, this.rules.patterns[ri], n_state))
+          n_state += this.rules.results[ri]
+          matched = True
+          break
+      if not matched:
+        n_state += '.'
+      emitted += 1
+
+      # slide window and input
+      try:
+        w[pos % _WSIZE] = this.state[used]
+      except:
+        # print('used = %d, emitted=%d' % (used, emitted))
+        w[pos % _WSIZE] = '.'
+      used += 1
+      pos += 1
+      assert emitted == pos
+
+    #print('window = %s' % ''.join(
+    #    [w[(pos + p) % _WSIZE] for p in range(_WSIZE)]))
+    #print("out:%d, in:%d" % (len(n_state), len(this.state)))
+    assert len(n_state) == emitted
+    assert emitted == len(this.state) + 2
+    # assert 
+    left = 1
+    if n_state[0] == '#':
+      left = 0
+      this.zero += 1
+    right = len(n_state)
+    if n_state[right-1] == '.':
+      right -= 1
+    # print('new=%s' % n_state)
+    this.state = n_state[left:right]
+
+  def SumPotted(this):
+    vs = []
+    sum = 0
+    for i in range(len(this.state)):
+      v = i - game.zero
+      if game.state[i] == '#':
+        vs.append(str(v))
+        sum += v
+      else:
+        vs.append('-')
+    print(vs)
+    print('Sum Potted: %d' % sum)
+
 
 def LoadAll(inp):
   rules = Rules()
@@ -58,6 +141,16 @@ def LoadAll(inp):
       rules.ParseAndAdd(line)
   return rules, state
 
+
+def part1(game):
+  game.PrintState(sys.stdout)
+  for i in range(20):
+    game.Gen()
+    game.PrintState(sys.stdout)
+  game.SumPotted()
+
+
+
 if __name__ == '__main__':
   verbose = False
   iarg = 1
@@ -66,5 +159,8 @@ if __name__ == '__main__':
     iarg += 1
   with open(sys.argv[iarg]) as inp:
     rules, state = LoadAll(inp)
-  print(rules)
-  print(state)
+  if verbose:
+    print(rules)
+    print(state)
+  game = Game(rules, state)
+  part1(game)
