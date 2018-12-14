@@ -6,10 +6,7 @@ from __future__ import print_function
 
 import collections
 import sys
-
-"""
-What is the sum of all metadata entries?
-"""
+import time
 
 _WSIZE = 5
 
@@ -53,11 +50,14 @@ class Game(object):
     this.state = state
     this.gen = 0
     this.zero = 0
+    this.start_time = time.time()
 
   def PrintState(this, out):
+    out.write('=gen:%d, time: %d\n' % (this.gen, int(time.time() - this.start_time)))
     out.write('%3d: %3d ' % (this.gen, this.zero))
     out.write(this.state)
     out.write('\n')
+
 
   def Gen(this):
     this.gen += 1
@@ -100,7 +100,7 @@ class Game(object):
 
     #print('window = %s' % ''.join(
     #    [w[(pos + p) % _WSIZE] for p in range(_WSIZE)]))
-    #print("out:%d, in:%d" % (len(n_state), len(this.state)))
+    #print('out:%d, in:%d' % (len(n_state), len(this.state)))
     assert len(n_state) == emitted
     assert emitted == len(this.state) + 2
     # assert 
@@ -118,8 +118,8 @@ class Game(object):
     vs = []
     sum = 0
     for i in range(len(this.state)):
-      v = i - game.zero
-      if game.state[i] == '#':
+      v = i - this.zero
+      if this.state[i] == '#':
         vs.append(str(v))
         sum += v
       else:
@@ -150,13 +150,44 @@ def part1(game):
   game.SumPotted()
 
 
+def part2(game, target_gen):
+  game.PrintState(sys.stdout)
+  for i in range(3000):
+    glide_right = '.' + game.state
+    game.Gen()
+    if glide_right == game.state:
+      print('Glider!')
+      game.PrintState(sys.stdout)
+      break
+  game.SumPotted()
+
+  vs = []
+  sum = 0
+  more_gens = target_gen - game.gen
+  for i in range(len(game.state)):
+    v = more_gens + i - game.zero
+    if game.state[i] == '#':
+      vs.append(str(v))
+      sum += v
+    else:
+      vs.append('-')
+  print(vs)
+  print('Sum Potted: %d' % sum)
+
 
 if __name__ == '__main__':
   verbose = False
   iarg = 1
-  if sys.argv[iarg] == '-v':
-    verbose = True
-    iarg += 1
+  do_part2 = False
+  while sys.argv[iarg][0] == '-':
+    if sys.argv[iarg] == '-2':
+      do_part2 = True
+      iarg += 1
+    elif sys.argv[iarg] == '-v':
+      verbose = True
+      iarg += 1
+    else:
+      break
   with open(sys.argv[iarg]) as inp:
     rules, state = LoadAll(inp)
   if verbose:
@@ -164,3 +195,5 @@ if __name__ == '__main__':
     print(state)
   game = Game(rules, state)
   part1(game)
+  if do_part2:
+    part2(game, 50000000000)
