@@ -54,14 +54,18 @@ class Car(object):
   UP = '^'
   DOWN = 'v'
 
+  id = 1
+
   def __init__(this, x, y, initial_dir):
+    Car.id += 1
+    this.id = Car.id
     this.x = x
     this.y = y
     this.dir = initial_dir
     this.turn_count = 0
 
   def __str__(this):
-    return '%d,%d.%c' % (this.x, this.y, this.dir)
+    return '%d,%d.%c#%d' % (this.x, this.y, this.dir, this.id)
 
   def __lt__(this, other):
     return ((this.y < other.y) or (this.y == other.y and this.x < other.x))
@@ -171,10 +175,12 @@ class Cars(object):
       yield c
 
   def Turn(this, map):
-    this.pos = {}
+    # print('=== %d cars left' % len(this.cars))
     ret = None
     to_drop = []
     for car in this.MoveOrdered():
+      old_x = car.x
+      old_y = car.y
       car.Move(map)
       other_car = this.pos.get((car.x, car.y))
       if other_car:
@@ -183,6 +189,7 @@ class Cars(object):
         to_drop.append(other_car)
         to_drop.append(car)
       else:
+        del this.pos[(old_x, old_y)]
         this.pos[(car.x, car.y)] = car
     for car in to_drop:
       print('Drop car: %s' % car)
@@ -232,17 +239,16 @@ def part1(map, cars, verbose):
 
 # stop on last cart
 def part2(map, cars, verbose):
-  while True:
+  while len(cars.cars) > 1:
     crash = cars.Turn(map)
     if verbose:
       map.Print(cars)
     if crash:
       print(crash)
-    if len(cars.cars) < 2:
-      print('Last car is %s' % cars.cars[0])
-      crash = cars.Turn(map)
-      print('Final pos is %s' % cars.cars[0])
-      break
+  
+  print('Last car is %s' % cars.cars[0])
+  crash = cars.Turn(map)
+  print('Final pos is %s' % cars.cars[0])
 
 
 if __name__ == '__main__':

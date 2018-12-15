@@ -1,26 +1,40 @@
-Drop car: 130,104.>
-Drop car: 130,104.^
+Drop car: 130,104.>#18
+Drop car: 130,104.^#6
 Crash: 130,104
-Drop car: 118,103.^
-Drop car: 118,103.>
-Crash: 118,103
-Drop car: 112,95.v
-Drop car: 112,95.^
+Drop car: 57,72.^#16
+Drop car: 57,73.v#8
+Drop car: 57,73.v#8
+Drop car: 57,72.^#16
+Crash: 57,72
+Drop car: 130,104.>#18
+Drop car: 130,104.^#12
+Crash: 130,104
+Drop car: 75,11.>#11
+Drop car: 74,11.<#17
+Crash: 74,11
+Drop car: 130,104.>#18
+Drop car: 130,104.v#10
+Crash: 130,104
+Drop car: 74,11.<#17
+Drop car: 74,10.^#9
+Crash: 74,10
+Drop car: 130,104.>#18
+Drop car: 130,104.^#14
+Crash: 130,104
+Drop car: 112,95.v#13
+Drop car: 112,95.^#4
 Crash: 112,95
-Drop car: 138,6.>
-Drop car: 138,6.<
-Crash: 138,6
-Drop car: 28,10.<
-Drop car: 28,10.<
-Crash: 28,10
-Drop car: 54,31.>
-Drop car: 54,31.^
-Crash: 54,31
-Drop car: 80,110.>
-Drop car: 80,110.v
-Crash: 80,110
-Drop car: 95,1.>
-Drop car: 95,1.<
-Crash: 95,1
-Last car is 45,48.>
-Final pos is 46,48.v
+Drop car: 130,104.^#12
+Drop car: 131,104.>#7
+Crash: 131,104
+Drop car: 112,95.v#13
+Drop car: 112,95.>#15
+Crash: 112,95
+Drop car: 112,95.v#13
+Drop car: 112,95.v#3
+Crash: 112,95
+Drop car: 57,72.^#16
+Drop car: 57,73.^#5
+Crash: 57,73
+Last car is 126,85.^#2
+Final pos is 126,84.^#2
