@@ -15,11 +15,16 @@ class Map(object):
     this.width = 0
     this.height = 0
     this.rows = []
+    this.crash_x = -1
+    this.crash_y = -1
 
   def AddRow(this, text):
     this.rows.append(text)
     this.height += 1
     this.width = max(this.width, len(text))
+
+  def Get(this, x, y):
+    return this.rows[y][x]
 
   def Print(this, cars):
     for y in range(this.height):
@@ -31,8 +36,15 @@ class Map(object):
           c = car.dir
         else:
           c = row[x]
+        if this.crash_x == x and this.crash_y == y:
+          c = 'X'
         out_row += c
       print(out_row)
+    print('')
+
+  def Crash(this, x, y):
+    this.crash_x = x
+    this.crash_y = y
 
 
 class Car(object):
@@ -64,6 +76,82 @@ class Car(object):
   def __le__(this, other):
     return not other < this
 
+  def Move(this, map):
+
+    if this.dir == Car.LEFT:
+      this.x -= 1 
+    elif this.dir == Car.RIGHT:
+      this.x += 1 
+    elif this.dir == Car.UP:
+      this.y -= 1 
+    elif this.dir == Car.DOWN:
+      this.y += 1 
+    else:
+      raise ValueError('bad car direction: %s' % this)
+
+    m = map.Get(this.x, this.y)
+
+    if m == '|':
+      if not (this.dir == Car.UP or this.dir == Car.DOWN):
+        raise Exception('Impossible move on | for %s' % this)
+    elif m == '-':
+      if not (this.dir == Car.LEFT or this.dir == Car.RIGHT):
+        raise Exception('Impossible move on - for %s' % this)
+    elif m == '/':
+      if this.dir == Car.UP:
+        this.dir = Car.RIGHT
+      elif this.dir == Car.DOWN:
+        this.dir = Car.LEFT
+      elif this.dir == Car.LEFT:
+        this.dir = Car.DOWN
+      elif this.dir == Car.RIGHT:
+        this.dir = Car.UP
+      else:
+        raise Exception('Impossible move on / for %s' % this)
+    elif m == '\\':
+      if this.dir == Car.UP:
+        this.dir = Car.LEFT
+      elif this.dir == Car.DOWN:
+        this.dir = Car.RIGHT
+      elif this.dir == Car.LEFT:
+        this.dir = Car.UP
+      elif this.dir == Car.RIGHT:
+        this.dir = Car.DOWN
+      else:
+        raise Exception('Impossible move on / for %s' % this)
+    elif m == '+':
+       this.Turn()
+    else:
+      raise Exception('Impossible map marking %c' % m)
+
+
+  def Turn(this):
+    ret = None
+    if this.turn_count % 3 == 0:
+      # turn left
+      if this.dir == Car.LEFT:
+        this.dir = Car.DOWN
+      elif this.dir == Car.RIGHT:
+        this.dir = Car.UP
+      elif this.dir == Car.UP:
+        this.dir = Car.LEFT
+      elif this.dir == Car.DOWN:
+        this.dir = Car.RIGHT
+      else:
+        assert Exception('WTF')
+    elif this.turn_count % 3 == 2:
+      # turn right
+      if this.dir == Car.LEFT:
+        this.dir = Car.UP
+      elif this.dir == Car.RIGHT:
+        this.dir = Car.DOWN
+      elif this.dir == Car.UP:
+        this.dir = Car.RIGHT
+      elif this.dir == Car.DOWN:
+        this.dir = Car.LEFT
+      else:
+        assert Exception('WTF')
+    this.turn_count += 1
 
 class Cars(object):
 
@@ -82,6 +170,17 @@ class Cars(object):
     for c in sorted(this.cars):
       yield c
 
+  def Turn(this, map):
+    this.pos = {}
+    ret = None
+    for car in this.MoveOrdered():
+      car.Move(map)
+      if this.pos.get((car.x, car.y)):
+        map.Crash(car.x, car.y)
+        ret = 'Crash: %d,%d' % (car.x, car.y)
+        # raise Exception('Collision at %d,%d' % (car.x, car.y))
+      this.pos[(car.x, car.y)] = car
+    return ret
 
 def Load(inp):
   map = Map()
@@ -89,7 +188,7 @@ def Load(inp):
   for line in inp:
     lastc = ''
     row = ''
-    for x in range(len(line.strip())):
+    for x in range(len(line)):
       c = line[x]
       if c == '<' or c == '>':
         row += '-'
@@ -99,29 +198,43 @@ def Load(inp):
         row += '|'
         car = Car(x, map.height, c)
         cars.Add(car)
-      else:
+      elif c != '\n':
         row += c
     map.AddRow(row)
+    # print('loaded "%sXXX"' % row)
+  # print("last is '%s'" % line)
   return map, cars
 
 
-def part1(map, cars):
+
+def part1(map, cars, verbose):
   while True:
-    pass
+    crash = cars.Turn(map)
+    # print([str(c) for c in cars.MoveOrdered()])
+    if verbose:
+      map.Print(cars)
+    if crash:
+      print(crash)
+      break
 
 
 if __name__ == '__main__':
   verbose = False
   iarg = 1
-  if sys.argv[iarg] == '-v':
-    verbose = True
-    iarg += 1
+  do_part2 = False
+  while sys.argv[iarg][0] == '-':
+    if sys.argv[iarg] == '-v':
+      verbose = True
+      iarg += 1
+    if sys.argv[iarg] == '-2':
+      do_part2 = True
+      iarg += 1
   with open(sys.argv[iarg]) as inp:
     map, cars = Load(inp)
 
   if verbose:
     print([str(c) for c in cars.cars])
     map.Print(cars)
-    print([str(c) for c in cars.cars])
-    print([str(c) for c in cars.MovedOrdered()])
-  # part1(map, cars)
+    # print([str(c) for c in cars.cars])
+    # print([str(c) for c in cars.MoveOrdered()])
+  part1(map, cars, verbose)
