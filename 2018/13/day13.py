@@ -173,13 +173,25 @@ class Cars(object):
   def Turn(this, map):
     this.pos = {}
     ret = None
+    to_drop = []
     for car in this.MoveOrdered():
       car.Move(map)
-      if this.pos.get((car.x, car.y)):
+      other_car = this.pos.get((car.x, car.y))
+      if other_car:
         map.Crash(car.x, car.y)
         ret = 'Crash: %d,%d' % (car.x, car.y)
-        # raise Exception('Collision at %d,%d' % (car.x, car.y))
-      this.pos[(car.x, car.y)] = car
+        to_drop.append(other_car)
+        to_drop.append(car)
+      else:
+        this.pos[(car.x, car.y)] = car
+    for car in to_drop:
+      print('Drop car: %s' % car)
+    if to_drop:
+      new_car_list = []
+      for car in this.cars:
+        if not car in to_drop:
+          new_car_list.append(car)
+      this.cars = new_car_list
     return ret
 
 def Load(inp):
@@ -206,7 +218,7 @@ def Load(inp):
   return map, cars
 
 
-
+# stop on first crash
 def part1(map, cars, verbose):
   while True:
     crash = cars.Turn(map)
@@ -215,6 +227,21 @@ def part1(map, cars, verbose):
       map.Print(cars)
     if crash:
       print(crash)
+      break
+
+
+# stop on last cart
+def part2(map, cars, verbose):
+  while True:
+    crash = cars.Turn(map)
+    if verbose:
+      map.Print(cars)
+    if crash:
+      print(crash)
+    if len(cars.cars) < 2:
+      print('Last car is %s' % cars.cars[0])
+      crash = cars.Turn(map)
+      print('Final pos is %s' % cars.cars[0])
       break
 
 
@@ -237,4 +264,7 @@ if __name__ == '__main__':
     map.Print(cars)
     # print([str(c) for c in cars.cars])
     # print([str(c) for c in cars.MoveOrdered()])
-  part1(map, cars, verbose)
+  if do_part2:
+    part2(map, cars, verbose)
+  else:
+    part1(map, cars, verbose)
