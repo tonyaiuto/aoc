@@ -11,6 +11,7 @@ import sys
 
 _VERBOSE = 4
 
+_ATTACK_FAVOR_X = False
 
 class Unit(object):
 
@@ -79,24 +80,22 @@ class Unit(object):
     if can_attack:
       return can_attack
 
-    q = Queue.Queue()
     other_kind = Game.ELF if this.kind == Game.GOBLIN else Game.GOBLIN
     print(' ====================== %s' % this)
     distances = game.Flood(this.x, this.y, other_kind)
     closest = None
     nearest_distance = game.width + game.height
-    for u in sorted(game.units):
-      if this == u or this.kind == u.kind:
+    for u in game.units:
+      if this == u or this.kind == u.kind or u.hp < 0:
         continue
-      d = distances.get((u.x, u.y), nearest_distance + 100)
+      d = distances.get((u.x, u.y), 999)
       if _VERBOSE > 1:
         print('  => %s distance %d to %s' % (this, d, u))
       if d < nearest_distance:
         nearest_distance = d
         closest = u
-    if not can_attack:
-      if closest:
-        this.MoveTowards(closest, game)
+    if closest:
+      this.MoveTowards(closest, game)
     return this.CanAttack(game)
 
   def MoveTowards(this, targ, game):
@@ -152,11 +151,19 @@ class Unit(object):
       print('  => %s can attack %s' % (this, ','.join([str(u) for u in to_attack])))
     hp = 300
     targ = None
-    for u in to_attack:
-      assert this != u
-      if u.hp < hp:
-        hp = u.hp
-        targ = u
+    if _ATTACK_FAVOR_X:
+      for nx, ny in [(this.x-1, this.y), (this.x+1, this.y), (this.x,this.y-1), (this.x, this.y+1)]:
+        for u in sorted(to_attack):
+          if u.x == nx and u.y == ny:
+            if (u.hp > 0 and u.hp < hp) or (u.hp == hp and u < targ):
+              hp = u.hp
+              targ = u
+    else:
+      for u in sorted(to_attack):
+        assert this != u
+        if (u.hp > 0 and u.hp < hp) or (u.hp == hp and u < targ):
+          hp = u.hp
+          targ = u
     targ.hp -= this.power
     if targ.hp <= 0:
       if _VERBOSE > 0:
@@ -237,7 +244,7 @@ class Game(object):
         if what == Game.WALL:
           continue
         if distances.get((nx, ny)) == None:
-          if what == Game.OPEN or what == target_kind:
+          if what == Game.OPEN or what == target_kind: 
             q.put((nx, ny, dist+1))
             msg += ' %d,%d' % (nx, ny)
       # print(msg)
@@ -257,28 +264,29 @@ class Game(object):
   def Dead(this, unit):
     this.rows[unit.y][unit.x] = Game.OPEN
     del this.unit_locations[(unit.x, unit.y)]
-    this.units = [u for u in this.units if u != unit]
+    this.units = [u for u in this.units if u != unit and u.hp > 0]
 
   def Turn(this):
     this.gen += 1
     print('= turn %d' % this.gen)
-    this.units = sorted(this.units)
-    turn_list = list(this.units)
+    this.units = sorted([u for u in this.units if u.hp > 0])
     left = {
         Game.ELF: 0,
         Game.GOBLIN: 0,
     }
-    for u in turn_list:
-      left[u.kind] += 1
+    for u in this.units:
+      if u.hp > 0:
+        left[u.kind] += 1
     if left[Game.ELF] == 0 or left[Game.GOBLIN] == 0:
       this.gen -= 1
       return False
-    for unit in turn_list:
+    for unit in list(this.units):
       if _VERBOSE > 0:
         print('= Moving %s' % unit)
       # Move
+      if unit.hp <= 0:
+        continue
       to_attack = unit.Move(this)
-      # Attack
       unit.Attack(this, to_attack)
     return True
 
@@ -298,6 +306,9 @@ def Load(inp):
   game = Game()
   done_with_board = False
   for line in inp:
+    line = line.strip()
+    if not line:
+      continue
     if line.startswith('limit'):
       game.turn_limit = int(line[7:])
     elif line.startswith('='):
@@ -313,9 +324,8 @@ def Load(inp):
 # stop on first crash
 def part1(game, verbose):
   for i in range(game.turn_limit+1):
-    #if i in game.to_print:
-    #  game.Print()
-    game.Print()
+    if i in game.to_print:
+      game.Print()
     if not game.Turn():
       hp = sum([u.hp for u in game.units])
       print('Done: %d, hp=%d, score=%d' % (game.gen, hp, hp * (game.gen)))

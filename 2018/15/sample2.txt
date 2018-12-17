@@ -39,7 +39,7 @@ After 3:
 #...#E# E(191)
 #.....#
 #######
-//Combat ensues; eventually, the top Elf dies:
+// Combat ensues; eventually, the top Elf dies:
 After 23:
 #######
 #...G.# G(200)

@@ -10,8 +10,8 @@ part1:
 
 test:
 	rm sample*.out sample*.cur
-	$(MAKE) -$(MAKEFLAGS) sample.out sample2.out sample3.out sample4.out
-	$(MAKE) -$(MAKEFLAGS) sample.cur sample2.cur sample3.cur sample4.cur
+	$(MAKE) -$(MAKEFLAGS) sample.out sample2.out sample3.out sample4.out sample5.out
+	$(MAKE) -$(MAKEFLAGS) sample.cur sample2.cur sample3.cur sample4.cur sample5.cur
 
 tpart2:
 	python day15.py -v -2 sample.txt >sample.cur
@@ -33,8 +33,10 @@ t2:	sample2.txt sample2.out
 	sed -e '/lim/,/= expect/d' \
 	    -e '/^\/\//d' \
 	    -e 's/  */ /g' \
-	    -e 's/),/)/g' $? >$@
+	    -e 's/),/)/g' \
+            -e '/^$$/d' $? >$@
 
 .txt.cur:
+	$(MAKE) -$(MAKEFLAGS) $*.out
 	python day15.py -v $? | tee /tmp/run.out | grep -v '^ *=' >$@
 	diff -w $*.out $*.cur
