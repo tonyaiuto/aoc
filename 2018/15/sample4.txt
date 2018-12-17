@@ -111,8 +111,6 @@ After 46:
 #.E.#.# E(200)
 #...#.#
 #######
-
-MAR
 ///  They say this happens at 46
 After 47:
 #######   

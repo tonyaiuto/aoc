@@ -76,6 +76,7 @@ class Unit(object):
     In the above scenario, the Elf has three targets (the three Goblins):
 
     """
+    this.moved = False
     can_attack = this.CanAttack(game)
     if can_attack:
       return can_attack
@@ -95,6 +96,7 @@ class Unit(object):
         nearest_distance = d
         closest = u
     if closest:
+      this.moved = True
       this.MoveTowards(closest, game)
     return this.CanAttack(game)
 
@@ -266,10 +268,7 @@ class Game(object):
     del this.unit_locations[(unit.x, unit.y)]
     this.units = [u for u in this.units if u != unit and u.hp > 0]
 
-  def Turn(this):
-    this.gen += 1
-    print('= turn %d' % this.gen)
-    this.units = sorted([u for u in this.units if u.hp > 0])
+  def IsOver(this):
     left = {
         Game.ELF: 0,
         Game.GOBLIN: 0,
@@ -278,18 +277,25 @@ class Game(object):
       if u.hp > 0:
         left[u.kind] += 1
     if left[Game.ELF] == 0 or left[Game.GOBLIN] == 0:
-      this.gen -= 1
-      return False
+      return True
+    return False
+
+  def Turn(this):
+    this.gen += 1
+    print('= turn %d' % this.gen)
+    this.units = sorted([u for u in this.units if u.hp > 0])
     for unit in list(this.units):
       if _VERBOSE > 0:
         print('= Moving %s' % unit)
       # Move
       if unit.hp <= 0:
         continue
+      if this.IsOver():
+        return False
       to_attack = unit.Move(this)
-      unit.Attack(this, to_attack)
+      unit.Attack(this, to_attack) 
+    this.last_full = this.gen
     return True
-
 
 
 #########
@@ -326,9 +332,10 @@ def part1(game, verbose):
   for i in range(game.turn_limit+1):
     if i in game.to_print:
       game.Print()
-    if not game.Turn():
+    if not game.Turn() or game.IsOver():
+      game.Print()
       hp = sum([u.hp for u in game.units])
-      print('Done: %d, hp=%d, score=%d' % (game.gen, hp, hp * (game.gen)))
+      print('Done: %d, hp=%d, score=%d' % (game.last_full, hp, hp * (game.last_full)))
       break
 
 def part2():

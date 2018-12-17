@@ -143,6 +143,14 @@ After 37:
 #E..#E#   E(200), E(200)
 #.....#
 #######
+After 38:
+#######
+#...#E#   E(200)
+#E#...#   E(197)
+#.E##.#   E(185)
+#E..#E#   E(200), E(200)
+#.....#
+#######
 // Combat ends after 37 full rounds
 // Elves win with 982 total hit points left
 Done: 37, hp=982, score=36334
