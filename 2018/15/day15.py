@@ -57,17 +57,27 @@ class Unit(object):
     squares are in range and tied for being reachable in the fewest
     steps, the step which is first in reading order is chosen.
     """
+    can_attack = []
+    other_kind = Game.ELF if this.kind == Game.GOBLIN else Game.GOBLIN
+    for nx, ny in [(this.x, this.y-1), (this.x-1, this.y),
+                   (this.x+1, this.y), (this.x, this.y+1)]:
+      if game.Get(nx, ny) == other_kind:
+        for u in game.units:
+          if u.x == nx and u.y == ny:
+            can_attack.append(u)
+    if can_attack:
+      return can_attack
+
     q = Queue.Queue()
-    distances = game.Flood(this.x, this.y,
-                           Game.ELF if this.kind == Game.GOBLIN else Game.GOBLIN)
+    distances = game.Flood(this.x, this.y, other_kind)
     closest = None
     nearest_distance = game.width + game.height
-    can_attack = []
     for u in sorted(game.units):
       if this == u or this.kind == u.kind:
         continue
       d = distances.get((u.x, u.y), nearest_distance + 100)
-      print('  %s distance %d to %s' % (this, d, u))
+      if verbose > 1:
+        print('  => %s distance %d to %s' % (this, d, u))
       if d == 1:
         can_attack.append(u)
       elif d < nearest_distance:
@@ -96,9 +106,42 @@ class Unit(object):
         nearest = d
         to_x = nx
         to_y = ny
-    print('  %s towards %s via %d,%d' % (this, targ, to_x, to_y))
+    if verbose > 1:
+      print('  => %s towards %s via %d,%d' % (this, targ, to_x, to_y))
     if nx >= 0:
       game.MoveUnit(this, to_x, to_y)
+
+
+  def Attack(this, game, to_attack):
+    # To attack, the unit first determines all of the targets that are
+    # in range of it by being immediately adjacent to it. If there are
+    # no such targets, the unit ends its turn. Otherwise, the adjacent
+    # target with the fewest hit points is selected; in a tie, the adjacent
+    # target with the fewest hit points which is first in reading order
+    # is selected.
+    # 
+    # The unit deals damage equal to its attack power to the selected
+    # target, reducing its hit points by that amount. If this reduces its
+    # hit points to 0 or fewer, the selected target dies: its square
+    # becomes . and it takes no further turns.
+    if not to_attack:
+      return
+    if verbose > 1:
+      print('  => %s can attack %s' % (this, ','.join([str(u) for u in to_attack])))
+    hp = 300
+    targ = 0
+    for u in to_attack:
+      if u.hp < hp:
+        hp = u.hp
+      targ = u
+    targ.hp -= this.power
+    if targ.hp <= 0:
+      if verbose > 0:
+        print('  ==> kills %s' % targ)
+      game.Dead(targ)
+    else:
+      if verbose > 3:
+        print('  ==> does %d points against %s' % (this.power, targ))
 
 
 class Game(object):
@@ -156,7 +199,7 @@ class Game(object):
         if distances.get((nx, ny)) == None:
           if what == Game.OPEN or what == target_kind:
             q.put((nx, ny, dist+1))
-    if verbose > 1:
+    if verbose > 2:
       print('flood from %d,%d => %s' % (from_x, from_y, distances))
     # this.distances[(from_x, from_y)] = distances
     return distances
@@ -167,16 +210,21 @@ class Game(object):
     unit.y = y
     this.rows[unit.y][unit.x] = unit.kind
 
+  def Dead(this, unit):
+    this.rows[unit.y][unit.x] = Game.OPEN
+    this.units = [u for u in this.units if u != unit]
 
   def Turn(this):
     this.gen += 1
     this.units = sorted(this.units)
     turn_list = list(this.units)
     for unit in turn_list:
-      print('= Moving %s' % unit)
+      if verbose > 0:
+        print('= Moving %s' % unit)
       # Move
       to_attack = unit.Move(this)
       # Attack
+      unit.Attack(this, to_attack)
 
 
 
@@ -332,17 +380,6 @@ a target, and so none of the units can move until a unit dies.
 After moving (or if the unit began its turn in range of a target),
 the unit attacks.
 
-To attack, the unit first determines all of the targets that are
-in range of it by being immediately adjacent to it. If there are
-no such targets, the unit ends its turn. Otherwise, the adjacent
-target with the fewest hit points is selected; in a tie, the adjacent
-target with the fewest hit points which is first in reading order
-is selected.
-
-The unit deals damage equal to its attack power to the selected
-target, reducing its hit points by that amount. If this reduces its
-hit points to 0 or fewer, the selected target dies: its square
-becomes . and it takes no further turns.
 
 Each unit, either Goblin or Elf, has 3 attack power and starts with
 200 hit points.
