@@ -9,7 +9,7 @@ import heapq
 import Queue
 import sys
 
-verbose = 1
+_VERBOSE = 4
 
 
 class Unit(object):
@@ -24,7 +24,6 @@ class Unit(object):
     this.y = y
     this.power = 3
     this.hp = 200
-    this.turn_count = 0
 
   def __str__(this):
     # return '%c@%d,%d#%d' % (this.kind, this.x, this.y, this.id)
@@ -43,6 +42,16 @@ class Unit(object):
   def __le__(this, other):
     return not other < this
 
+  def CanAttack(this, game):
+    can_attack = []
+    other_kind = Game.ELF if this.kind == Game.GOBLIN else Game.GOBLIN
+    for nx, ny in [(this.x, this.y-1), (this.x-1, this.y),
+                   (this.x+1, this.y), (this.x, this.y+1)]:
+      if game.Get(nx, ny) == other_kind:
+        for u in game.units:
+          if u.x == nx and u.y == ny:
+            can_attack.append(u)
+    return can_attack
 
   def Move(this, game):
     """Move.
@@ -56,19 +65,22 @@ class Unit(object):
     of the squares that are in range, it ends its turn. If multiple
     squares are in range and tied for being reachable in the fewest
     steps, the step which is first in reading order is chosen.
+
+    Targets:      In range:     Reachable:    Nearest:      Chosen:
+    #######       #######       #######       #######       #######
+    #E..G.#       #E.?G?#       #E.@G.#       #E.!G.#       #E.+G.#
+    #...#.#  -->  #.?.#?#  -->  #.@.#.#  -->  #.!.#.#  -->  #...#.#
+    #.G.#G#       #?G?#G#       #@G@#G#       #!G.#G#       #.G.#G#
+    #######       #######       #######       #######       #######
+    In the above scenario, the Elf has three targets (the three Goblins):
+
     """
-    can_attack = []
-    other_kind = Game.ELF if this.kind == Game.GOBLIN else Game.GOBLIN
-    for nx, ny in [(this.x, this.y-1), (this.x-1, this.y),
-                   (this.x+1, this.y), (this.x, this.y+1)]:
-      if game.Get(nx, ny) == other_kind:
-        for u in game.units:
-          if u.x == nx and u.y == ny:
-            can_attack.append(u)
+    can_attack = this.CanAttack(game)
     if can_attack:
       return can_attack
 
     q = Queue.Queue()
+    other_kind = Game.ELF if this.kind == Game.GOBLIN else Game.GOBLIN
     distances = game.Flood(this.x, this.y, other_kind)
     closest = None
     nearest_distance = game.width + game.height
@@ -76,21 +88,30 @@ class Unit(object):
       if this == u or this.kind == u.kind:
         continue
       d = distances.get((u.x, u.y), nearest_distance + 100)
-      if verbose > 1:
+      if _VERBOSE > 1:
         print('  => %s distance %d to %s' % (this, d, u))
-      if d == 1:
-        can_attack.append(u)
-      elif d < nearest_distance:
+      if d < nearest_distance:
         nearest_distance = d
         closest = u
     if not can_attack:
       if closest:
         this.MoveTowards(closest, game)
-    return can_attack
+    return this.CanAttack(game)
 
   def MoveTowards(this, targ, game):
     """Pick the free square that is the closest to target.
 
+    Then, the unit identifies all of the open squares (.) that are in
+    range of each target; these are the squares which are adjacent
+    (immediately up, down, left, or right) to any target and which
+    aren't already occupied by a wall or another unit. Alternatively,
+    the unit might already be in range of a target. If the unit is not
+    already in range of a target, and there are no open squares which
+    are in range of a target, the unit ends its turn.
+
+    If the unit is already in range of a target, it does not move, but
+    continues its turn with an attack. Otherwise, since it is not in
+    range of a target, it moves.
     Ties done in reading order.
     """
     distances = game.Flood(targ.x, targ.y,
@@ -106,7 +127,7 @@ class Unit(object):
         nearest = d
         to_x = nx
         to_y = ny
-    if verbose > 1:
+    if _VERBOSE > 1:
       print('  => %s towards %s via %d,%d' % (this, targ, to_x, to_y))
     if nx >= 0:
       game.MoveUnit(this, to_x, to_y)
@@ -126,22 +147,23 @@ class Unit(object):
     # becomes . and it takes no further turns.
     if not to_attack:
       return
-    if verbose > 1:
+    if _VERBOSE > 1:
       print('  => %s can attack %s' % (this, ','.join([str(u) for u in to_attack])))
     hp = 300
-    targ = 0
+    targ = None
     for u in to_attack:
+      assert this != u
       if u.hp < hp:
         hp = u.hp
-      targ = u
+        targ = u
     targ.hp -= this.power
     if targ.hp <= 0:
-      if verbose > 0:
+      if _VERBOSE > 0:
         print('  ==> kills %s' % targ)
       game.Dead(targ)
     else:
-      if verbose > 3:
-        print('  ==> does %d points against %s' % (this.power, targ))
+      if _VERBOSE > 2:
+        print('  ==> does %d points against %s now at %d' % (this.power, targ, targ.hp))
 
 
 class Game(object):
@@ -158,6 +180,9 @@ class Game(object):
     this.rows = []
     this.units = []
     this.distances = {}
+    this.unit_locations = {}
+    this.turn_limit = 10
+    this.to_print = []
 
   def Add(this, text):
     this.rows.append([c for c in text.strip()])
@@ -167,6 +192,7 @@ class Game(object):
       if c == Game.ELF or c == Game.GOBLIN:
         u = Unit(c, x, this.height)
         this.units.append(u)
+        this.unit_locations[(x, this.height)] = u
     this.height += 1
 
 
@@ -177,13 +203,18 @@ class Game(object):
     print('After %d:' % this.gen)
     for y in range(this.height):
       row = this.rows[y]
-      print(''.join(row))
+      hit_points = ''
+      for x in range(len(row)):
+        u = this.unit_locations.get((x,y))
+        if u:
+          hit_points += ' %s(%d)' % (u.kind, u.hp)
+      print('%s%s' % (''.join(row), hit_points))
 
   def Flood(this, from_x, from_y, target_kind):
     #if this.distances.get(from_y*this.width + from_x):
     #cached = this.distances.get((from_x, from_y))
     #if cached:
-    #  if verbose > 0:
+    #  if _VERBOSE > 0:
     #    print('Can reuse flood map for %d,%d' % (from_x, from_y))
     #  return cached
 
@@ -199,32 +230,45 @@ class Game(object):
         if distances.get((nx, ny)) == None:
           if what == Game.OPEN or what == target_kind:
             q.put((nx, ny, dist+1))
-    if verbose > 2:
+    if _VERBOSE > 4:
       print('flood from %d,%d => %s' % (from_x, from_y, distances))
     # this.distances[(from_x, from_y)] = distances
     return distances
 
   def MoveUnit(this, unit, x, y):
     this.rows[unit.y][unit.x] = Game.OPEN
+    del this.unit_locations[(unit.x, unit.y)]
     unit.x = x
     unit.y = y
     this.rows[unit.y][unit.x] = unit.kind
+    this.unit_locations[(unit.x, unit.y)] = unit
 
   def Dead(this, unit):
     this.rows[unit.y][unit.x] = Game.OPEN
+    del this.unit_locations[(unit.x, unit.y)]
     this.units = [u for u in this.units if u != unit]
 
   def Turn(this):
     this.gen += 1
+    print('= Turn %d' % this.gen)
     this.units = sorted(this.units)
     turn_list = list(this.units)
+    left = {
+        Game.ELF: 0,
+        Game.GOBLIN: 0,
+    }
+    for u in turn_list:
+      left[u.kind] += 1
+    if left[Game.ELF] == 0 or left[Game.GOBLIN] == 0:
+      return False
     for unit in turn_list:
-      if verbose > 0:
+      if _VERBOSE > 0:
         print('= Moving %s' % unit)
       # Move
       to_attack = unit.Move(this)
       # Attack
       unit.Attack(this, to_attack)
+    return True
 
 
 
@@ -240,16 +284,29 @@ class Game(object):
 
 def Load(inp):
   game = Game()
+  done_with_board = False
   for line in inp:
-    game.Add(line)
+    if line.startswith('limit'):
+      game.turn_limit = int(line[7:])
+    elif line.startswith('='):
+       done_with_board = True
+    elif line.startswith('After '):
+       game.to_print.append(int(''.join([d for d in line[6:] if d.isdigit()])))
+    else:
+      if not done_with_board:
+        game.Add(line)
   return game
 
 
 # stop on first crash
 def part1(game, verbose):
-  for i in range(6):
-    game.Print()
-    crash = game.Turn()
+  for i in range(game.turn_limit+1):
+    if i in game.to_print:
+      game.Print()
+    if not game.Turn():
+      hp = sum([u.hp for u in game.units])
+      print('Done: %d, hp=%d, score=%d' % (game.gen, hp, hp * (game.gen-1)))
+      break
 
 def part2():
   pass
@@ -276,29 +333,6 @@ if __name__ == '__main__':
     part1(puzzle, verbose)
 
 """
-Then, the unit identifies all of the open squares (.) that are in
-range of each target; these are the squares which are adjacent
-(immediately up, down, left, or right) to any target and which
-aren't already occupied by a wall or another unit. Alternatively,
-the unit might already be in range of a target. If the unit is not
-already in range of a target, and there are no open squares which
-are in range of a target, the unit ends its turn.
-
-If the unit is already in range of a target, it does not move, but
-continues its turn with an attack. Otherwise, since it is not in
-range of a target, it moves.
-
-
-
-
-Targets:      In range:     Reachable:    Nearest:      Chosen:
-#######       #######       #######       #######       #######
-#E..G.#       #E.?G?#       #E.@G.#       #E.!G.#       #E.+G.#
-#...#.#  -->  #.?.#?#  -->  #.@.#.#  -->  #.!.#.#  -->  #...#.#
-#.G.#G#       #?G?#G#       #@G@#G#       #!G.#G#       #.G.#G#
-#######       #######       #######       #######       #######
-In the above scenario, the Elf has three targets (the three Goblins):
-
 Each of the Goblins has open, adjacent squares which are in range
 (marked with a ? on the map).  Of those squares, four are reachable
 (marked @); the other two (on the right) would require moving through

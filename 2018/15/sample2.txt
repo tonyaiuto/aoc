@@ -1,0 +1,105 @@
+limit: 50
+#######   
+#.G...#
+#...EG#
+#.#.#G#
+#..G#E#
+#.....#
+#######
+= expect
+After 0:
+#######
+#.G...# G(200)
+#...EG# E(200) G(200)
+#.#.#G# G(200)
+#..G#E# G(200) E(200)
+#.....#
+#######
+After 1:
+#######
+#..G..# G(200)
+#...EG# E(197) G(197)
+#.#G#G# G(200) G(197)
+#...#E# E(197)
+#.....#
+#######
+After 2:
+#######
+#...G.# G(200)
+#..GEG# G(200) E(188) G(194)
+#.#.#G# G(194)
+#...#E# E(194)
+#.....#
+#######
+After 3:
+#######
+#...G.# G(200)
+#..GEG# G(200) E(179) G(191)
+#.#.#G# G(191)
+#...#E# E(191)
+#.....#
+#######
+//Combat ensues; eventually, the top Elf dies:
+After 23:
+#######
+#...G.# G(200)
+#..G.G# G(200) G(131)
+#.#.#G# G(131)
+#...#E# E(131)
+#.....#
+#######
+After 24:
+#######
+#..G..# G(200)
+#...G.# G(131)
+#.#G#G# G(200) G(128)
+#...#E# E(128)
+#.....#
+#######
+After 25:
+#######
+#.G...# G(200)
+#..G..# G(131)
+#.#.#G# G(125)
+#..G#E# G(200) E(125)
+#.....#
+#######
+After 26:
+#######
+#G....# G(200)
+#.G...# G(131)
+#.#.#G# G(122)
+#...#E# E(122)
+#..G..# G(200)
+#######
+After 27:
+#######
+#G....# G(200)
+#.G...# G(131)
+#.#.#G# G(119)
+#...#E# E(119)
+#...G.# G(200)
+#######
+After 28:
+#######
+#G....# G(200)
+#.G...# G(131)
+#.#.#G# G(116)
+#...#E# E(113)
+#....G# G(200)
+#######
+// More combat ensues; eventually, the bottom Elf dies:
+After 47:
+#######
+#G....# G(200)
+#.G...# G(131)
+#.#.#G# G(59)
+#...#.#
+#....G# G(200)
+#######
+// Before the 48th round can finish, the top-left Goblin finds that
+// there are no targets remaining, and so combat ends. So, the number
+// of full rounds that were completed is 47, and the sum of the hit
+// points of all remaining units is 200+131+59+200 = 590. From these,
+// the outcome of the battle is 47 * 590 = 27730.
+Done: 48, hp=590, score=27730
