@@ -3,7 +3,11 @@
 x:	t2
 
 part2:
-	python day13.py -2 input.txt | tee part2.out
+	# python day15.py -2 input.txt 10 | tee part2.out | grep -v '^='
+	# python day15.py -2 input.txt 20 | tee part2.out | grep -v '^='
+	# python day15.py -2 input.txt 15 | tee part2.out | grep -v '^='
+	# python day15.py -2 input.txt 11 | tee part2.out | grep -v '^='
+	python day15.py -2 input.txt 12 | tee part2.out | grep -v '^='
 
 part1:
 	python day15.py input.txt | tee part1.out

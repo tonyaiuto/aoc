@@ -9,7 +9,7 @@ import heapq
 import Queue
 import sys
 
-_VERBOSE = 4
+_VERBOSE = 0
 
 _ATTACK_FAVOR_X = False
 
@@ -82,7 +82,6 @@ class Unit(object):
       return can_attack
 
     other_kind = Game.ELF if this.kind == Game.GOBLIN else Game.GOBLIN
-    print(' ====================== %s' % this)
     distances = game.Flood(this.x, this.y, other_kind)
     closest = None
     nearest_distance = game.width + game.height
@@ -338,8 +337,19 @@ def part1(game, verbose):
       print('Done: %d, hp=%d, score=%d' % (game.last_full, hp, hp * (game.last_full)))
       break
 
-def part2():
-  pass
+def part2(game, elf_power, verbose):
+  n_elfs = 0
+  for u in game.units:
+    if u.kind == Game.ELF:
+      n_elfs += 1
+      u.power = elf_power
+  part1(game, verbose) 
+  after_elfs = 0
+  for u in game.units:
+    if u.kind == Game.ELF:
+      after_elfs += 1
+  if after_elfs < n_elfs:
+    print('FAIL: killed elves')
 
 
 if __name__ == '__main__':
@@ -358,7 +368,7 @@ if __name__ == '__main__':
     puzzle = Load(inp)
 
   if do_part2:
-    part2(puzzle, verbose)
+    part2(puzzle, int(sys.argv[iarg+1]), verbose)
   else:
     part1(puzzle, verbose)
 
