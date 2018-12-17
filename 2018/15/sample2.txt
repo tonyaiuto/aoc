@@ -102,4 +102,4 @@ After 47:
 // of full rounds that were completed is 47, and the sum of the hit
 // points of all remaining units is 200+131+59+200 = 590. From these,
 // the outcome of the battle is 47 * 590 = 27730.
-Done: 48, hp=590, score=27730
+Done: 47, hp=590, score=27730

@@ -1,0 +1,20 @@
+limit: 50
+#######
+#E..EG#
+#.#G.E#
+#E.##E#
+#G..#.#
+#..E#.#
+#######
+= expect
+After 46:
+#######   
+#.E.E.# E(164) E(197)
+#.#E..# E(200)
+#E.##.# E(98)
+#.E.#.# E(200)
+#...#.#   
+#######   
+// Combat ends after 46 full rounds
+// Elves win with 859 total hit points left
+Done: 46, hp=859, score=39514

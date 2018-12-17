@@ -81,6 +81,7 @@ class Unit(object):
 
     q = Queue.Queue()
     other_kind = Game.ELF if this.kind == Game.GOBLIN else Game.GOBLIN
+    print(' ====================== %s' % this)
     distances = game.Flood(this.x, this.y, other_kind)
     closest = None
     nearest_distance = game.width + game.height
@@ -221,15 +222,25 @@ class Game(object):
     q = Queue.Queue()
     distances = {}
     q.put((from_x, from_y, 0))
+    visited = {}
     while not q.empty():
       x, y, dist = q.get()
       # distances[y*this.width + x] = dist
       distances[(x, y)] = dist
+      visited[(x, y)] = 1
+      msg = 'Flood  %d,%d d:%d size:%d, add:' % (x, y, dist, q.qsize())
       for nx, ny in [(x, y-1), (x-1, y), (x+1,y), (x, y+1)]:
+        if visited.get((nx, ny)):
+          continue
+        visited[(nx, ny)] = 1
         what = this.Get(nx, ny)
+        if what == Game.WALL:
+          continue
         if distances.get((nx, ny)) == None:
           if what == Game.OPEN or what == target_kind:
             q.put((nx, ny, dist+1))
+            msg += ' %d,%d' % (nx, ny)
+      # print(msg)
     if _VERBOSE > 4:
       print('flood from %d,%d => %s' % (from_x, from_y, distances))
     # this.distances[(from_x, from_y)] = distances
@@ -250,7 +261,7 @@ class Game(object):
 
   def Turn(this):
     this.gen += 1
-    print('= Turn %d' % this.gen)
+    print('= turn %d' % this.gen)
     this.units = sorted(this.units)
     turn_list = list(this.units)
     left = {
@@ -260,6 +271,7 @@ class Game(object):
     for u in turn_list:
       left[u.kind] += 1
     if left[Game.ELF] == 0 or left[Game.GOBLIN] == 0:
+      this.gen -= 1
       return False
     for unit in turn_list:
       if _VERBOSE > 0:
@@ -301,11 +313,12 @@ def Load(inp):
 # stop on first crash
 def part1(game, verbose):
   for i in range(game.turn_limit+1):
-    if i in game.to_print:
-      game.Print()
+    #if i in game.to_print:
+    #  game.Print()
+    game.Print()
     if not game.Turn():
       hp = sum([u.hp for u in game.units])
-      print('Done: %d, hp=%d, score=%d' % (game.gen, hp, hp * (game.gen-1)))
+      print('Done: %d, hp=%d, score=%d' % (game.gen, hp, hp * (game.gen)))
       break
 
 def part2():
