@@ -6,8 +6,10 @@ from __future__ import print_function
 
 import collections
 import heapq
-import queue
+import Queue
 import sys
+
+verbose = 1
 
 
 class Unit(object):
@@ -20,10 +22,13 @@ class Unit(object):
     this.kind = kind
     this.x = x
     this.y = y
+    this.power = 3
+    this.hp = 200
     this.turn_count = 0
 
   def __str__(this):
-    return '%c@%d,%d#%d' % (this.kind, this.x, this.y, this.id)
+    # return '%c@%d,%d#%d' % (this.kind, this.x, this.y, this.id)
+    return '%c@%d,%d' % (this.kind, this.x, this.y)
 
   def __lt__(this, other):
     return ((this.y < other.y) or (this.y == other.y and this.x < other.x))
@@ -38,23 +43,62 @@ class Unit(object):
   def __le__(this, other):
     return not other < this
 
-  @staticmethod
-  def spread(x, y, dist, q, game)
-    ZZ
-    for dy in [-1, 1]:
-      for dx in [-1, 1]:
-        
 
   def Move(this, game):
-    q = queue.Queue()
-
-    flood(this.x, this.y, 0, q, game)
-
-    for u in game.units:
+    """Move.
+    To move, the unit first considers the squares that are in range and
+    determines which of those squares it could reach in the fewest
+    steps. A step is a single movement to any adjacent (immediately up,
+    down, left, or right) open (.) square. Units cannot move into walls
+    or other units. The unit does this while considering the current
+    positions of units and does not do any prediction about where units
+    will be later. If the unit cannot reach (find an open path to) any
+    of the squares that are in range, it ends its turn. If multiple
+    squares are in range and tied for being reachable in the fewest
+    steps, the step which is first in reading order is chosen.
+    """
+    q = Queue.Queue()
+    distances = game.Flood(this.x, this.y,
+                           Game.ELF if this.kind == Game.GOBLIN else Game.GOBLIN)
+    closest = None
+    nearest_distance = game.width + game.height
+    can_attack = []
+    for u in sorted(game.units):
       if this == u or this.kind == u.kind:
         continue
+      d = distances.get((u.x, u.y), nearest_distance + 100)
+      print('  %s distance %d to %s' % (this, d, u))
+      if d == 1:
+        can_attack.append(u)
+      elif d < nearest_distance:
+        nearest_distance = d
+        closest = u
+    if not can_attack:
+      if closest:
+        this.MoveTowards(closest, game)
+    return can_attack
 
-    
+  def MoveTowards(this, targ, game):
+    """Pick the free square that is the closest to target.
+
+    Ties done in reading order.
+    """
+    distances = game.Flood(targ.x, targ.y,
+                           Game.ELF if this.kind == Game.GOBLIN else Game.GOBLIN)
+    # print(distances)
+    nearest = game.width + game.height + 1
+    to_x = to_y = -1
+    # reading order. up, left, right, down
+    for nx, ny in [(this.x, this.y-1), (this.x-1, this.y),
+                   (this.x+1, this.y), (this.x, this.y+1)]:
+      d = distances.get((nx, ny))
+      if d is not None and d < nearest:
+        nearest = d
+        to_x = nx
+        to_y = ny
+    print('  %s towards %s via %d,%d' % (this, targ, to_x, to_y))
+    if nx >= 0:
+      game.MoveUnit(this, to_x, to_y)
 
 
 class Game(object):
@@ -70,9 +114,10 @@ class Game(object):
     this.height = 0
     this.rows = []
     this.units = []
+    this.distances = {}
 
   def Add(this, text):
-    this.rows.append(text.strip())
+    this.rows.append([c for c in text.strip()])
     this.width = max(this.width, len(text))
     for x in range(len(text.strip())):
       c = text[x]
@@ -89,16 +134,48 @@ class Game(object):
     print('After %d:' % this.gen)
     for y in range(this.height):
       row = this.rows[y]
-      print(row)
+      print(''.join(row))
+
+  def Flood(this, from_x, from_y, target_kind):
+    #if this.distances.get(from_y*this.width + from_x):
+    #cached = this.distances.get((from_x, from_y))
+    #if cached:
+    #  if verbose > 0:
+    #    print('Can reuse flood map for %d,%d' % (from_x, from_y))
+    #  return cached
+
+    q = Queue.Queue()
+    distances = {}
+    q.put((from_x, from_y, 0))
+    while not q.empty():
+      x, y, dist = q.get()
+      # distances[y*this.width + x] = dist
+      distances[(x, y)] = dist
+      for nx, ny in [(x, y-1), (x-1, y), (x+1,y), (x, y+1)]:
+        what = this.Get(nx, ny)
+        if distances.get((nx, ny)) == None:
+          if what == Game.OPEN or what == target_kind:
+            q.put((nx, ny, dist+1))
+    if verbose > 1:
+      print('flood from %d,%d => %s' % (from_x, from_y, distances))
+    # this.distances[(from_x, from_y)] = distances
+    return distances
+
+  def MoveUnit(this, unit, x, y):
+    this.rows[unit.y][unit.x] = Game.OPEN
+    unit.x = x
+    unit.y = y
+    this.rows[unit.y][unit.x] = unit.kind
+
 
   def Turn(this):
     this.gen += 1
-    this.units = sorted(this.units):
+    this.units = sorted(this.units)
     turn_list = list(this.units)
     for unit in turn_list:
-      print('Moving %s' % u)
+      print('= Moving %s' % unit)
       # Move
-      unit.Move(game)
+      to_attack = unit.Move(this)
       # Attack
 
 
@@ -163,17 +240,8 @@ If the unit is already in range of a target, it does not move, but
 continues its turn with an attack. Otherwise, since it is not in
 range of a target, it moves.
 
-To move, the unit first considers the squares that are in range and
-determines which of those squares it could reach in the fewest
-steps. A step is a single movement to any adjacent (immediately up,
-down, left, or right) open (.) square. Units cannot move into walls
-or other units. The unit does this while considering the current
-positions of units and does not do any prediction about where units
-will be later. If the unit cannot reach (find an open path to) any
-of the squares that are in range, it ends its turn. If multiple
-squares are in range and tied for being reachable in the fewest
-steps, the step which is first in reading order is chosen. For
-example:
+
+
 
 Targets:      In range:     Reachable:    Nearest:      Chosen:
 #######       #######       #######       #######       #######
