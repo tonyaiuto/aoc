@@ -9,5 +9,5 @@ part2:	input.txt
 	python day17.py -v -2 input.txt | tee /tmp/run.out
 
 t1:	sample.txt
-	python day17.py -v sample.txt | tee /tmp/run.out
+	python day17.py -v sample.txt > /tmp/run.out
 	diff sample.out /tmp/run.out

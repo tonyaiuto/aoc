@@ -1,4 +1,4 @@
-"""aoc 2018 day 16"""
+"""aoc 2018 day 17"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -17,11 +17,11 @@ _PART2 = False
 class Ground(object):
 
   def __init__(this):
+    this.gen = 0
     this.x_min = 500
     this.x_max = 500
     this.y_max = 0
     this.columns = {}
-    this.Set(500, 0, '+')
 
   def Get(this, x, y):
     col = this.columns.get(x)
@@ -36,6 +36,14 @@ class Ground(object):
        col = ['.'] * 1900
        this.columns[x] = col
     col[y] = v
+
+  def nWet(this):
+    ret = 0
+    for x, col in this.columns.iteritems():
+      for cell in col:
+        if cell == '~' or cell == '|':
+          ret += 1
+    return ret - 1
 
   def Add(this, scan):
     if scan.x_min == scan.x_max:
@@ -52,12 +60,99 @@ class Ground(object):
       this.x_max = scan.x_max
 
   def Print(this):
-    print('%d' % (this.x_min-1))
+    print('gen:%d, x:%d' % (this.gen, this.x_min-1))
+    n_wet = 0
     for y in range(0, this.y_max+1):
       l = '%4d ' % y
       for x in range(this.x_min-1, this.x_max+2):
-        l += this.Get(x, y)
+        if y == 0 and x == 500:
+          l += '+'
+        else:
+          v = this.Get(x, y)
+          l += v
+          if v == '~' or v == '|':
+            n_wet += 1
       print(l)
+    print('%d tiles are wet' % n_wet)
+
+  def Fall(this, x, y):
+    # Returns the line you are on when blocked or -1 if off edge
+    for y in range(y, this.y_max+1):
+      v = this.Get(x, y)
+      if v == '.' or v == '|':
+        if v == '.':
+          this.Set(x, y, '|')
+      else:
+        return y-1
+    return -1
+
+  def CanFall(this, x, y):
+    v = this.Get(x, y+1)
+    return (v == '.' or v == '|')
+
+  def HasWall(this, x_range, y):
+    for x in x_range:
+      if this.CanFall(x, y):
+        return False
+      tile = this.Get(x, y)
+      if tile == '#':
+        return True
+    return False
+
+  def InWell(this, from_x, y):
+    if not this.HasWall(range(from_x, this.x_min-1, -1), y):
+      return False
+    return this.HasWall(range(from_x, this.x_max+1), y)
+
+
+  def FloodRange(this, x_range, y, in_well):
+    if _VERBOSE > 1:
+      print('Flood %s for y:%d x:%s' % (
+         'in well' if in_well else 'plain', y, x_range[0:10]))
+    # Move in range.
+    # fill with ~ and return position when done
+    # else return -1 if blocked
+    last_x = -1
+    # last_x = x_range[0]
+    # tile = this.Get(last_x, y)
+
+    for x in x_range:
+      tile = this.Get(x, y)
+      # Hit a hard edge
+      if tile == '#' or tile == '~':
+        if last_x > 0:
+          if _VERBOSE > 0 and in_well:
+            print('= set %d,%d = %c' % (last_x, y, '~' if in_well else '|'))
+          this.Set(last_x, y, '~' if in_well else '|')
+          return in_well
+        return False
+      if this.CanFall(x, y):
+        return this.Drop(x, y)
+      if tile == '.':
+        this.Set(x, y, '|')
+        last_x = x
+      if tile == '|':
+        last_x = x
+    return False
+
+  def Drop(this, from_x, from_y):
+    y = this.Fall(from_x, from_y)
+    if y < 0:
+      return False
+    in_well = this.InWell(from_x, y)
+    if this.FloodRange(range(from_x-1, this.x_min-1, -1), y, in_well):
+      return True
+    if this.FloodRange(range(from_x, this.x_max+1), y, in_well):
+      return True
+    # return this.FloodRange(range(from_x, from_x+1), y, in_well)
+    return False
+
+  def NewDrop(this):
+    global _VERBOSE
+    this.gen += 1
+    #if this.gen > 26:
+    #  _VERBOSE = 2
+    return this.Drop(500, 0)
 
 
 class Scan(object):
@@ -104,6 +199,31 @@ class Scan(object):
     raise ValueError('Unparseable line: %s' % s)
 
 
+def Sample(ground):
+  ground.Print()
+  for i in range(5):
+    ground.NewDrop()
+  ground.Print()
+  for i in range(5):
+    ground.NewDrop()
+  ground.Print()
+  for i in range(4):
+    ground.NewDrop()
+  ground.Print()
+  for i in range(13):
+    ground.NewDrop()
+  for i in range(3):
+    ground.NewDrop()
+    ground.Print()
+
+
+def part1(ground):
+  # ground.Print()
+  while True:
+    if not ground.NewDrop():
+      break
+
+
 if __name__ == '__main__':
   verbose = False
   iarg = 1
@@ -121,130 +241,15 @@ if __name__ == '__main__':
     for line in inp:
       ground.Add(Scan.FromString(line.strip()))
 
-  ground.Print()
+  if sys.argv[iarg] == 'sample.txt':
+    Sample(ground)
+    sys.exit(0)
+
+  part1(ground)
+  print('%d tiles are wet' % ground.nWet())
+
 
 """
-You scan a two-dimensional vertical slice of the ground nearby and
-discover that it is mostly sand with veins of clay. The scan only
-provides data with a granularity of square meters, but it should
-be good enough to determine how much water is trapped there. In the
-scan, x represents the distance to the right, and y represents the
-distance down. There is also a spring of water near the surface at
-x=500, y=0. The scan identifies which square meters are clay (your
-puzzle input).
-
-For example, suppose your scan shows the following veins of clay:
-
-x=495, y=2..7
-y=7, x=495..501
-x=501, y=3..7
-x=498, y=2..4
-x=506, y=1..2
-x=498, y=10..13
-x=504, y=10..13
-y=13, x=498..504
-Rendering clay as #, sand as ., and the water spring as +, and with
-x increasing to the right and y increasing downward, this becomes:
-
-   44444455555555
-   99999900000000
-   45678901234567
- 0 ......+.......
- 1 ............#.
- 2 .#..#.......#.
- 3 .#..#..#......
- 4 .#..#..#......
- 5 .#.....#......
- 6 .#.....#......
- 7 .#######......
- 8 ..............
- 9 ..............
-10 ....#.....#...
-11 ....#.....#...
-12 ....#.....#...
-13 ....#######...
-The spring of water will produce water forever. Water can move
-through sand, but is blocked by clay. Water always moves down when
-possible, and spreads to the left and right otherwise, filling space
-that has clay on both sides and falling out otherwise.
-
-For example, if five squares of water are created, they will flow
-downward until they reach the clay and settle there. Water that has
-come to rest is shown here as ~, while sand through which water has
-passed (but which is now dry again) is shown as |:
-
-......+.......
-......|.....#.
-.#..#.|.....#.
-.#..#.|#......
-.#..#.|#......
-.#....|#......
-.#~~~~~#......
-.#######......
-..............
-..............
-....#.....#...
-....#.....#...
-....#.....#...
-....#######...
-Two squares of water can't occupy the same location. If another
-five squares of water are created, they will settle on the first
-five, filling the clay reservoir a little more:
-
-......+.......
-......|.....#.
-.#..#.|.....#.
-.#..#.|#......
-.#..#.|#......
-.#~~~~~#......
-.#~~~~~#......
-.#######......
-..............
-..............
-....#.....#...
-....#.....#...
-....#.....#...
-....#######...
-Water pressure does not apply in this scenario. If another four
-squares of water are created, they will stay on the right side of
-the barrier, and no water will reach the left side:
-
-......+.......
-......|.....#.
-.#..#.|.....#.
-.#..#~~#......
-.#..#~~#......
-.#~~~~~#......
-.#~~~~~#......
-.#######......
-..............
-..............
-....#.....#...
-....#.....#...
-....#.....#...
-....#######...
-At this point, the top reservoir overflows. While water can reach
-the tiles above the surface of the water, it cannot settle there,
-and so the next five squares of water settle like this:
-
-......+.......
-......|.....#.
-.#..#||||...#.
-.#..#~~#|.....
-.#..#~~#|.....
-.#~~~~~#|.....
-.#~~~~~#|.....
-.#######|.....
-........|.....
-........|.....
-....#...|.#...
-....#...|.#...
-....#~~~~~#...
-....#######...
-Note especially the leftmost |: the new squares of water can reach
-this tile, but cannot stop there. Instead, eventually, they all
-fall to the right and settle in the reservoir below.
-
 After 10 more squares of water, the bottom reservoir is also full:
 
 ......+.......
@@ -282,6 +287,7 @@ the scanned data:
 ...|.......|..    (line not counted: below maximum y value)
 ...|.......|..    (line not counted: below maximum y value)
 ...|.......|..    (line not counted: below maximum y value)
+
 How many tiles can be reached by the water? To prevent counting
 forever, ignore tiles with a y coordinate smaller than the smallest
 y coordinate in your scan data or larger than the largest one. Any
