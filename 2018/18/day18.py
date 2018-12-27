@@ -34,7 +34,17 @@ class Forest(object):
     return that
 
   def Print(this):
-    print('gen:%d' % this.gen)
+    # Multiplying the number of wooded acres by the number of lumberyards
+    # gives the total resource value after ten minutes: 37 * 31 = 1147.
+    ny = nt = 0
+    for y in range(1, this.height+1):
+      for x in range(1, this.width+1):
+        cell = this.rows[y][x]
+        if cell == Forest.TREES:
+          nt += 1
+        elif cell == Forest.YARD:
+          ny += 1
+    print('gen:%d, wooded:%d, yards:%d => %d' % (this.gen, nt, ny, nt * ny))
     for y in range(1, this.height+1):
       print(''.join(this.rows[y][1:this.width+1]))
 
@@ -84,17 +94,15 @@ def part1(forest):
   for i in range(10):
     forest.Gen()
     forest.Print()
-  # Multiplying the number of wooded acres by the number of lumberyards
-  # gives the total resource value after ten minutes: 37 * 31 = 1147.
-  ny = nt = 0
-  for y in range(1, forest.height+1):
-    for x in range(1, forest.width+1):
-      cell = forest.rows[y][x]
-      if cell == Forest.TREES:
-        nt += 1
-      elif cell == Forest.YARD:
-        ny += 1
-  print('gen:%d, wooded:%d, yards:%d => %d' % (forest.gen, nt, ny, nt * ny))
+
+def part2(forest):
+  for l in range(10):
+    start = time.time()
+    for i in range(1000):
+      forest.Gen()
+    forest.Print()
+    finish = time.time()
+    print('speed: %d/1000' % int(finish - start))
 
 
 if __name__ == '__main__':
@@ -114,4 +122,7 @@ if __name__ == '__main__':
     forest = Forest.Load(inp)
   forest.Print()
 
-  part1(forest)
+  if do_part2:
+    part2(forest)
+  else:
+    part1(forest)
