@@ -42,10 +42,12 @@ class Ground(object):
   def nWet(this):
     ret = 0
     for x, col in this.columns.iteritems():
-      for cell in col:
+      for row in range(this.y_min, this.y_max+1):
+        cell = this.Get(x, row)
         if cell == '~' or cell == '|':
           ret += 1
-    return ret - 1
+    return ret
+    # print('%d tiles are wet' % ground.nWet())
 
   def Add(this, scan):
     if scan.x_min == scan.x_max:
