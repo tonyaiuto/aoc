@@ -2,8 +2,10 @@
 
 x:	t1
 
+# expect 31891
 part1:	input.txt
 	python day17.py -v input.txt | tee /tmp/run.out
+
 
 part2:	input.txt
 	python day17.py -v -2 input.txt | tee /tmp/run.out

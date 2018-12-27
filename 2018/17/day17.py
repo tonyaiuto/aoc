@@ -20,8 +20,10 @@ class Ground(object):
     this.gen = 0
     this.x_min = 500
     this.x_max = 500
+    this.y_min = 1000
     this.y_max = 0
     this.columns = {}
+    this.done_left = set()
 
   def Get(this, x, y):
     col = this.columns.get(x)
@@ -52,14 +54,23 @@ class Ground(object):
     else:
       for x in range(scan.x_min, scan.x_max+1):
         this.Set(x, scan.y_min, '#') 
+    if scan.y_min < this.y_min:
+      this.y_min = scan.y_min
     if scan.y_max > this.y_max:
       this.y_max = scan.y_max
     if this.x_min > scan.x_min:
       this.x_min = scan.x_min
     if this.x_max < scan.x_max:
-      this.x_max = scan.x_max
+      this.x_max = scan.x_max + 1
 
   def Print(this):
+    # How many tiles can be reached by the water? To prevent counting
+    # forever, ignore tiles with a y coordinate smaller than the smallest
+    # y coordinate in your scan data or larger than the largest one. Any
+    # x coordinate is valid. In this example, the lowest y coordinate
+    # given is 1, and the highest is 13, causing the water spring (in row
+    # 0) and the water falling off the bottom of the render (in rows 14
+    # through infinity) to be ignored.
     print('gen:%d, x:%d' % (this.gen, this.x_min-1))
     n_wet = 0
     for y in range(0, this.y_max+1):
@@ -70,7 +81,7 @@ class Ground(object):
         else:
           v = this.Get(x, y)
           l += v
-          if v == '~' or v == '|':
+          if y >= this.y_min and (v == '~' or v == '|'):
             n_wet += 1
       print(l)
     print('%d tiles are wet' % n_wet)
@@ -90,20 +101,19 @@ class Ground(object):
     v = this.Get(x, y+1)
     return (v == '.' or v == '|')
 
-  def HasWall(this, x_range, y):
+  def FindWall(this, x_range, y):
     for x in x_range:
       if this.CanFall(x, y):
-        return False
+        return -1
       tile = this.Get(x, y)
       if tile == '#':
-        return True
-    return False
+        return x
+    return -1
 
   def InWell(this, from_x, y):
-    if not this.HasWall(range(from_x, this.x_min-1, -1), y):
-      return False
-    return this.HasWall(range(from_x, this.x_max+1), y)
-
+    left_wall = this.FindWall(range(from_x, this.x_min-1, -1), y)
+    right_wall = this.FindWall(range(from_x, this.x_max+1), y)
+    return left_wall, right_wall
 
   def FloodRange(this, x_range, y, in_well):
     if _VERBOSE > 1:
@@ -113,9 +123,6 @@ class Ground(object):
     # fill with ~ and return position when done
     # else return -1 if blocked
     last_x = -1
-    # last_x = x_range[0]
-    # tile = this.Get(last_x, y)
-
     for x in x_range:
       tile = this.Get(x, y)
       # Hit a hard edge
@@ -139,12 +146,21 @@ class Ground(object):
     y = this.Fall(from_x, from_y)
     if y < 0:
       return False
-    in_well = this.InWell(from_x, y)
-    if this.FloodRange(range(from_x-1, this.x_min-1, -1), y, in_well):
+    l_w, r_w = this.InWell(from_x, y)
+    in_well = (l_w > 0 and r_w > 0)
+    if in_well:
+      for x in range(l_w + 1, r_w):
+        this.gen += 1
+        this.Set(x, y, '~')
+      this.gen -= 1
       return True
+
+    if not (from_x, y) in this.done_left:
+      if this.FloodRange(range(from_x-1, this.x_min-1, -1), y, in_well):
+        return True
+      this.done_left.add((from_x, y))
     if this.FloodRange(range(from_x, this.x_max+1), y, in_well):
       return True
-    # return this.FloodRange(range(from_x, from_x+1), y, in_well)
     return False
 
   def NewDrop(this):
@@ -200,29 +216,23 @@ class Scan(object):
 
 
 def Sample(ground):
+  to_print = [5, 10, 14, 28, 29, 30]
   ground.Print()
-  for i in range(5):
-    ground.NewDrop()
+  for i in range(100):
+    if not ground.NewDrop():
+      break
+    if ground.gen in to_print:
+      ground.Print()
   ground.Print()
-  for i in range(5):
-    ground.NewDrop()
-  ground.Print()
-  for i in range(4):
-    ground.NewDrop()
-  ground.Print()
-  for i in range(13):
-    ground.NewDrop()
-  for i in range(3):
-    ground.NewDrop()
-    ground.Print()
 
 
 def part1(ground):
-  # ground.Print()
   while True:
     if not ground.NewDrop():
       break
-
+    if ground.gen % 100 == 0:
+      ground.Print()
+  ground.Print()
 
 if __name__ == '__main__':
   verbose = False
@@ -288,13 +298,6 @@ the scanned data:
 ...|.......|..    (line not counted: below maximum y value)
 ...|.......|..    (line not counted: below maximum y value)
 
-How many tiles can be reached by the water? To prevent counting
-forever, ignore tiles with a y coordinate smaller than the smallest
-y coordinate in your scan data or larger than the largest one. Any
-x coordinate is valid. In this example, the lowest y coordinate
-given is 1, and the highest is 13, causing the water spring (in row
-0) and the water falling off the bottom of the render (in rows 14
-through infinity) to be ignored.
 
 So, in the example above, counting both water at rest (~) and other
 sand tiles the water can hypothetically reach (|), the total number
