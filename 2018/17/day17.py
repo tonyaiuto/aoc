@@ -47,7 +47,15 @@ class Ground(object):
         if cell == '~' or cell == '|':
           ret += 1
     return ret
-    # print('%d tiles are wet' % ground.nWet())
+
+  def nWell(this):
+    ret = 0
+    for x, col in this.columns.iteritems():
+      for row in range(this.y_min, this.y_max+1):
+        cell = this.Get(x, row)
+        if cell == '~':
+          ret += 1
+    return ret
 
   def Add(this, scan):
     if scan.x_min == scan.x_max:
@@ -255,10 +263,10 @@ if __name__ == '__main__':
 
   if sys.argv[iarg] == 'sample.txt':
     Sample(ground)
-    sys.exit(0)
 
   part1(ground)
   print('%d tiles are wet' % ground.nWet())
+  print('%d tiles are in wells' % ground.nWell())
 
 
 """
