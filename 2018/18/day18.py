@@ -20,6 +20,9 @@ class Forest(object):
     this.width = 0
     this.height = 0
     this.rows = [None]
+    this.res_to_gen = {}
+    this.gen_to_res = {}
+    this.last_periods = [0] * 5
 
   @staticmethod
   def Load(inp):
@@ -44,6 +47,7 @@ class Forest(object):
           nt += 1
         elif cell == Forest.YARD:
           ny += 1
+    res = nt * ny
     print('gen:%d, wooded:%d, yards:%d => %d' % (this.gen, nt, ny, nt * ny))
     for y in range(1, this.height+1):
       print(''.join(this.rows[y][1:this.width+1]))
@@ -62,6 +66,7 @@ class Forest(object):
     # of that same minute. Changes that happen during the minute don't
     # affect each other.
     this.gen += 1
+    start = time.time()
     nboard = [this.rows[0]]
     for y in range(1, this.height+1):
       nrow = [' ']
@@ -88,6 +93,40 @@ class Forest(object):
       nboard.append(nrow)
     nboard.append(this.rows[0])
     this.rows = nboard
+    finish = time.time()
+    this.gen_time = int(finish - start)
+
+    ny = nt = 0
+    for y in range(1, this.height+1):
+      for x in range(1, this.width+1):
+        cell = this.rows[y][x]
+        if cell == Forest.TREES:
+          nt += 1
+        elif cell == Forest.YARD:
+          ny += 1
+    res = nt * ny
+    this.gen_to_res[this.gen] = res
+
+    o_gen = this.res_to_gen.get(res)
+    if o_gen:
+      s_period = this.gen - o_gen
+      print('Suspect period of %d at gen %d' % (s_period, this.gen))
+      found = True
+      for p in this.last_periods:
+        if p != s_period:
+          found = False
+          break
+      if found:
+        print('This is it')
+        target = 1000000000 
+        #  gen + period * N = target
+        N = int((target - this.gen) / s_period) + 1
+        #  period * N = target - gen
+        want_gen = target - s_period * N
+        print('res at gen %d => %d' % (want_gen, this.gen_to_res[want_gen]))
+        sys.exit(0)
+      this.last_periods = this.last_periods[1:] + [s_period]
+    this.res_to_gen[res] = this.gen
 
 
 def part1(forest):
@@ -95,7 +134,7 @@ def part1(forest):
     forest.Gen()
     forest.Print()
 
-def part2(forest):
+def part2_phase1(forest):
   for l in range(10):
     start = time.time()
     for i in range(1000):
@@ -103,6 +142,15 @@ def part2(forest):
     forest.Print()
     finish = time.time()
     print('speed: %d/1000' % int(finish - start))
+
+def part2(forest):
+  for l in range(10):
+    start = time.time()
+    for i in range(100):
+      forest.Gen()
+    forest.Print()
+    finish = time.time()
+    print('speed: %d' % int(finish - start))
 
 
 if __name__ == '__main__':
