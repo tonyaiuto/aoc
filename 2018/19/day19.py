@@ -9,7 +9,7 @@ import heapq
 import Queue
 import sys
 
-_VERBOSE = 1
+_VERBOSE = 0
 
 _PART2 = False
 
@@ -150,13 +150,13 @@ def part1(proc):
       break
   print('r0=%d' % proc.reg[0])
 
+
 if __name__ == '__main__':
-  verbose = False
   iarg = 1
   do_part2 = False
   while len(sys.argv) > 1 and sys.argv[iarg][0] == '-':
     if sys.argv[iarg] == '-v':
-      verbose = True
+      _VERBOSE += 1
       iarg += 1
     if sys.argv[iarg] == '-2':
       _PART2 = True
