@@ -83,6 +83,11 @@ class Regex(object):
     c = inp_stream.next()
     branches = []
     while True:
+      if c == ')':
+        # print('got terminating )')
+        c = inp_stream.next()
+        return Regex(branches=branches), c
+
       v, c  = Regex._ParseExpr(c, inp_stream)
       if v:
         # print('got expr: %s' % v)
@@ -90,10 +95,9 @@ class Regex(object):
       elif c == '|':
         # print('got |')
         c = inp_stream.next()
-      elif c == ')':
-        # print('got terminating )')
-        c = inp_stream.next()
-        return Regex(branches=branches), c
+        if c == ')':
+          # print('======= null expr')
+          branches.append(Regex())
       else:
         break
     print('expected more in parse branch')
