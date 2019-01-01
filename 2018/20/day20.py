@@ -20,6 +20,9 @@ class Regex(object):
     this.fixed_path = fixed
     this.exprs = exprs or []
     this.branches = branches or []
+    this.nil = not (fixed or exprs or branches)
+    # if this.nil:
+    #   print('======= null expr')
 
   @staticmethod
   def FromString(s):
@@ -96,7 +99,6 @@ class Regex(object):
         # print('got |')
         c = inp_stream.next()
         if c == ')':
-          # print('======= null expr')
           branches.append(Regex())
       else:
         break
@@ -128,14 +130,36 @@ class Regex(object):
       out.write(')')
 
 
+def MaxPath(r):
+  if r.fixed_path:
+    # print('%s => %d' % (r.fixed_path, len(r.fixed_path)))
+    return len(r.fixed_path)
+  if r.exprs:
+    ret = 0
+    for e in r.exprs:
+      ret += MaxPath(e)
+    return ret
+  if r.branches:
+    best = 0
+    for b in r.branches:
+      if b.nil:
+        return 0
+      b_len = MaxPath(b)
+      if b_len > best:
+        best = b_len
+    return best
+  return 0
+
+
 def part1(regex):
-  pass
+  print('Furthest room requires passing %d doors' % MaxPath(regex))
 
 
 if __name__ == '__main__':
   dump = False
   iarg = 1
-  while len(sys.argv) > 1 and sys.argv[iarg][0] == '-':
+  expr = None
+  while iarg < len(sys.argv) and sys.argv[iarg][0] == '-':
     if sys.argv[iarg] == '-v':
       _VERBOSE += 1
       iarg += 1
@@ -145,9 +169,15 @@ if __name__ == '__main__':
     if sys.argv[iarg] == '-2':
       _PART2 = True
       iarg += 1
+    if sys.argv[iarg] == '-e':
+      expr = sys.argv[iarg+1]
+      iarg += 2
 
-  with open(sys.argv[iarg]) as inp:
-    regex = Regex.FromString(inp.read())
+  if expr:
+    regex = Regex.FromString(expr)
+  else:
+    with open(sys.argv[iarg]) as inp:
+      regex = Regex.FromString(inp.read())
   if dump:
     sys.stdout.write('^')
     regex.Print(sys.stdout)
