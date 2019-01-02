@@ -155,6 +155,69 @@ def part1(regex):
   print('Furthest room requires passing %d doors' % ShortestPath(regex))
 
 
+
+visited = set()
+
+def P2(r, path_so_far, x, y):
+  global visited
+
+  if r.fixed_path:
+    n_rooms = 0
+    for dir in r.fixed_path:
+       path_so_far += 1
+       if dir == 'E':
+         x += 1
+       elif dir == 'W':
+         x -= 1
+       elif dir == 'N':
+         y -= 1
+       elif dir == 'S':
+         y += 1
+       if (x, y) not in visited:
+         visited.add((x,y))
+         if path_so_far >= 1000:
+           n_rooms += 1
+    print('path_so_far=%d at %s' % (path_so_far, r.fixed_path))
+    return path_so_far, n_rooms, x, y
+  if r.exprs:
+    n_rooms = 0
+    e_i = 0
+    for e in r.exprs:
+      e_i += 1
+      print(' e[%d], path_so_far=%d' % (e_i, path_so_far))
+      path_so_far, n_r, x, y = P2(e, path_so_far, x, y)
+      n_rooms += n_r
+    return path_so_far, n_rooms, x, y
+  if r.branches:
+    best = 0
+    n_rooms = 0
+    b_i = 0
+    save_x = x
+    save_y = y
+    for b in r.branches:
+      b_i += 1
+      p_len, n_r, x, y = P2(b, path_so_far, save_x, save_y)
+      print('  branch %d, path_so_far=%d' % (b_i, path_so_far))
+      n_rooms += n_r   
+      if p_len > best:
+        best = p_len
+        best_x = x
+        best_y = y
+      if b.nil:
+        return path_so_far, n_rooms, save_x, save_y
+    print('  branches done, path_so_far=%d, %d rooms' % (path_so_far, n_rooms))
+    return best, n_rooms, best_x, best_y
+  print('Nil, path=%d' % path_so_far)
+  return path_so_far, 0, x, y
+
+
+def part2(regex):
+  visited.add((0, 0))
+  path_len, n_rooms, x, y = P2(regex, 0, 0, 0) 
+  print('%d rooms, max path=%d' % (n_rooms, path_len))
+  print('%d visited rooms' % len(visited))
+
+
 if __name__ == '__main__':
   dump = False
   iarg = 1
@@ -184,3 +247,4 @@ if __name__ == '__main__':
     print('$')
 
   part1(regex)
+  part2(regex)

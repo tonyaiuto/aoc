@@ -3,6 +3,12 @@ part1:
 	python day20.py input.txt
 	@echo Furthest room requires passing 4121 doors
 
+part2:
+	echo TOO LOW: 3122 rooms, max path=4121
+	echo TOO LOW: 7883 rooms, max path=4121
+	echo TOO HIGH: 9725 rooms, max path=4121
+
+
 test_part1:
 	python day20.py -e '^WNE$$'
 	@echo Furthest room requires passing 3 doors
