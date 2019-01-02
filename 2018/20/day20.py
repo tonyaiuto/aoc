@@ -130,21 +130,21 @@ class Regex(object):
       out.write(')')
 
 
-def MaxPath(r):
+def ShortestPath(r):
   if r.fixed_path:
     # print('%s => %d' % (r.fixed_path, len(r.fixed_path)))
     return len(r.fixed_path)
   if r.exprs:
     ret = 0
     for e in r.exprs:
-      ret += MaxPath(e)
+      ret += ShortestPath(e)
     return ret
   if r.branches:
     best = 0
     for b in r.branches:
       if b.nil:
         return 0
-      b_len = MaxPath(b)
+      b_len = ShortestPath(b)
       if b_len > best:
         best = b_len
     return best
@@ -152,7 +152,7 @@ def MaxPath(r):
 
 
 def part1(regex):
-  print('Furthest room requires passing %d doors' % MaxPath(regex))
+  print('Furthest room requires passing %d doors' % ShortestPath(regex))
 
 
 if __name__ == '__main__':
