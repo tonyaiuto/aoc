@@ -27,6 +27,7 @@ int prog() {
     // hex(1855046) = '0x1c4e46'
 
     while(1) {
+      preg(2);
       r2 = r5 & 0xff;                 // bani 5 255 2
       r4 = r4 + r2;                  // addr 4 2 4
       // clip to 24 bits
@@ -34,6 +35,7 @@ int prog() {
       r4 = r4 * 65899;               // muli 4 65899 4
       r4 = r4 & 0xffffff;            // bani 4 16777215 4
       r2 = 256 > r5;                 // gtir 256 5 2
+      preg(3);
       if (r2) break;              // addr 2 3 3
 
 #if 0
@@ -64,6 +66,7 @@ int prog() {
 
 int main(int argc, char *argv[]) {
   r0 = r1 = r2 = r4 = r5 = 0;
+  r0 = 9079325;
   prog();
 }
 /*
