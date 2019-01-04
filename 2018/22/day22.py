@@ -21,6 +21,15 @@ class Cave(object):
   WET = 1
   NARROW = 2
 
+  TORCH = 0
+  CLIMB = 1
+  NEITHER = 2
+
+  tool_names = ['TORCH', 'CLIMB', 'NEITHER']
+
+  # memoize cost function
+  costs = {(0, 0): (0, TORCH)}
+
   def __init__(this, depth=1, target_x=0, target_y=0):
     this.depth = depth
     this.target_x = target_x
@@ -88,9 +97,132 @@ class Cave(object):
         ret += this.type(x, y)
     return ret
 
-  @staticmethod
-  def TypeName(int):
-    return ['ROCKY', 'WET', 'NARROW'][int]
+  def MinimalCostToReach(this, x, y):
+    # Returns: minimal cost to reach x, y from 0,0 and what tool you would
+    # have.
+    if x == 0 and y == 0:
+      return 0, Cave.TORCH
+
+    cached = Cave.costs.get((x,y))
+    if cached:
+      return cached[0], cached[1]
+
+    dest_type = cave.type(x, y)
+    new_costs = []
+    for dx, dy in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
+      if x < 0 or y < 0:
+        continue
+      cached = Cave.costs.get((x+dx, y+dy))
+      if not cached:
+        continue
+      # cost, tool = this.MinimalCostToReach(x+dx, y+dy)
+      cost = cached[0]
+      tool = cached[1]
+
+      if cost < 0:
+        continue
+      from_type = cave.type(x+dx, y+dy)
+      if from_type == dest_type:
+        new_costs.append((cost+1, tool))
+      elif dest_type == Cave.ROCKY:
+        if tool == Cave.TORCH or tool == Cave.CLIMB:
+          new_costs.append((cost+1, tool))
+        else:
+          # tool==NEITHER => from_type==WET|NARROW
+          if from_type == Cave.WET:
+            new_costs.append((cost+8, Cave.CLIMB))
+          else:
+            new_costs.append((cost+8, Cave.TORCH))
+      elif dest_type == Cave.WET:
+        if tool == Cave.NEITHER or tool == Cave.CLIMB:
+          new_costs.append((cost+1, tool))
+        else:
+          # tool==TORCH => from_type==ROCKY|NARROW
+          new_costs.append((cost+8, Cave.NEITHER))
+          if from_type == Cave.ROCKY:
+            new_costs.append((cost+8, Cave.CLIMB))
+      elif dest_type == Cave.NARROW:
+        if tool == Cave.NEITHER or tool == Cave.TORCH:
+          new_costs.append((cost+1, tool))
+        else:
+          # tool==CLIMB => from_type==ROCKY|WET
+          new_costs.append((cost+8, Cave.NEITHER))
+          if from_type == Cave.ROCKY:
+            new_costs.append((cost+8, Cave.TORCH))
+      else:
+        raise ValueError(
+            'Impossible region type: %d at %d,%d' % (dest_type, x, y))
+
+    if not new_costs:
+      return -2, None
+
+    best_cost = new_costs[0][0]
+    tools = set()
+    for c in sorted(new_costs):
+      # print('%d with %s' % (c[0], Cave.tool_names[c[1]]))
+      if c[0] > best_cost:
+        break
+      tools.add(c[1])
+    # print('best = %d, tools=%s' % (best_cost, tools))
+    best_tool = -1
+    for t in tools:
+      if t > best_tool:
+        best_tool = t
+    Cave.costs[(x,y)] = (best_cost, best_tool)
+    return best_cost, best_tool
+
+  def PrimeCosts(this):
+    for x in range(this.target_x+20):
+      for y in range(this.target_y+20):
+        this.MinimalCostToReach(x, y)
+
+
+"""
+class Path(object):
+
+  def __init__(this):
+    this.time =  0
+    this.head_x = 0
+    this.head_y = 0
+    this.tool = Path.TORCH
+    this.region_type = ROCKY
+
+  def CostToMoveTo(this, cave, x, y):
+    # Tools can only be used in certain regions:
+    # - In rocky regions, you can use the climbing gear or the torch. You
+    #   cannot use neither (you'll likely slip and fall).
+    # - In wet regions, you can use the climbing gear or neither tool. You
+    #   cannot use the torch (if it gets wet, you won't have a light source).
+    # - In narrow regions, you can use the torch or neither tool. You cannot
+    #   use the climbing gear (it's too bulky to fit).
+    if x < 0 or y < 0:
+      return -1, None
+    region_type = cave.type(x, y)
+    if this.region_type == region_type:
+      return 1, None
+    if region_type == Cave.ROCKY:
+      if this.tool == Path.TORCH:
+        return 1, None
+      elif this.tool == Path.CLIMB:
+        return 1, None
+      else:
+        return 8, [Path.TORCH, Path.CLIMB]
+    elif region_type == Cave.WET:
+      if this.tool == Path.TORCH:
+        return 8, [Path.NEITHER, Path.CLIMB]
+      else:
+        return 1, None
+    elif region_type == Cave.NARROW:
+      if this.tool == Path.CLIMB:
+        return 8, [Path.NEITHER, Path.TORCH]
+      else:
+        return 1, None
+    else:
+      raise ValueError(
+          'Impossible region type: %d at %d,%d' % (region_type, x, y))
+"""
+
+
 
 def SelfCheck():
   # For example, suppose the cave system's depth is 510 and the target's
@@ -133,38 +265,13 @@ def SelfCheck():
   # is 114.
   assert cave.TotalRisk() == 114
 
-"""
-Drawing this same cave system with rocky
-as ., wet as =, narrow as |, the mouth as M, the target as T, with
-0,0 in the top-left corner, X increasing to the right, and Y
-increasing downward, the top-left corner of the map looks like this:
-
-M=.|=.|.|=.|=|=.
-.|=|=|||..|.=...
-.==|....||=..|==
-=.|....|.==.|==.
-=|..==...=.|==..
-=||.=.=||=|=..|=
-|.=.===|||..=..|
-|..==||=.|==|===
-.=..===..=|.|||.
-.======|||=|=.|=
-.===|=|===T===||
-=|||...|==..|=.|
-=.=|=.=..=.||==|
-||=|=...|==.=|==
-|=.=||===.|||===
-||.|==.|.|.||=||
-Before you go in, you should determine the risk level of the area.
-For the rectangle that has a top-left corner of region 0,0 and a
-bottom-right corner of the region containing the target, add up the
-risk level of each individual region: 0 for rocky regions, 1 for
-wet regions, and 2 for narrow regions.
-
-
-What is the total risk level for the smallest rectangle that includes
-0,0 and the target's coordinates?
-"""
+  cave.PrimeCosts()
+  assert cave.MinimalCostToReach(0, 0) == (0, Cave.TORCH)
+  assert cave.MinimalCostToReach(1, 0) == (8, Cave.NEITHER)
+  assert cave.MinimalCostToReach(0, 1) == (1, Cave.TORCH)
+  assert cave.MinimalCostToReach(1, 1) == (2, Cave.TORCH)
+  print(cave.MinimalCostToReach(4, 1))
+  # assert cave.MinimalCostToReach(4, 1) == (12, Cave.NEITHER)
 
 
 if __name__ == '__main__':
@@ -189,4 +296,295 @@ if __name__ == '__main__':
 
   # part1
   print('risk: %d' % cave.TotalRisk())
-  
+
+
+"""
+You start at 0,0 (the mouth of the cave) with the torch equipped
+and must reach the target coordinates as quickly as possible. The
+regions with negative X or Y are solid rock and cannot be traversed.
+The fastest route might involve entering regions beyond the X or Y
+coordinate of the target.
+
+You can move to an adjacent region (up, down, left, or right; never
+diagonally) if your currently equipped tool allows you to enter
+that region. Moving to an adjacent region takes one minute. (For
+example, if you have the torch equipped, you can move between rocky
+and narrow regions, but cannot enter wet regions.)
+
+You can change your currently equipped tool or put both away if
+your new equipment would be valid for your current region. Switching
+to using the climbing gear, torch, or neither always takes seven
+minutes, regardless of which tools you start with. (For example,
+if you are in a rocky region, you can switch from the torch to the
+climbing gear, but you cannot switch to neither.)
+
+Finally, once you reach the target, you need the torch equipped
+before you can find him in the dark. The target is always in a rocky
+region, so if you arrive there with climbing gear equipped, you
+will need to spend seven minutes switching to your torch.
+
+For example, using the same cave system as above, starting in the
+top left corner (0,0) and moving to the bottom right corner (the
+target, 10,10) as quickly as possible, one possible route is as
+follows, with your current position marked X:
+
+Initially:
+X=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Down:
+M=.|=.|.|=.|=|=.
+X|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Right:
+M=.|=.|.|=.|=|=.
+.X=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Switch from using the torch to neither tool:
+M=.|=.|.|=.|=|=.
+.X=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Right 3:
+M=.|=.|.|=.|=|=.
+.|=|X|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Switch from using neither tool to the climbing gear:
+M=.|=.|.|=.|=|=.
+.|=|X|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Down 7:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..X==..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Right:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..=X=..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Down 3:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||.X.|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Right:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||..X|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Down:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.X..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Right 4:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=X||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Up 2:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===X===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Switch from using the climbing gear to the torch:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===X===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+This is tied with other routes as the fastest way to reach the
+target: 45 minutes. In it, 21 minutes are spent switching tools
+(three times, seven minutes each) and the remaining 24 minutes are
+spent moving.
+
+What is the fewest number of minutes you can take to reach the target?
+
+"""
