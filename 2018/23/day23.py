@@ -9,7 +9,7 @@ import heapq
 import Queue
 import sys
 
-from memoized import memoized
+# from memoized import memoized
 
 _VERBOSE = 0
 _PART2 = False
@@ -59,6 +59,27 @@ def part1(bots):
   print('%d bots are in range' % n_close)
 
 
+def part2(bots):
+  # compute bounding box of search
+  x_min = x_max = bots[0].x
+  y_min = y_max = bots[0].y
+  z_min = z_max = bots[0].z
+  for b in bots:
+    if b.x < x_min:
+      x_min = b.x
+    if b.x > x_max:
+      x_max = b.x
+    if b.y < y_min:
+      y_min = b.y
+    if b.y > y_max:
+      y_max = b.y
+    if b.z < z_min:
+      z_min = b.z
+    if b.z > z_max:
+      z_max = b.z
+  print('bounds = %d-%d, %d-%d, %d-%d' % (x_min, x_max, y_min, y_max,
+                                          z_min, z_max))
+
 if __name__ == '__main__':
   iarg = 1
   dump = False
@@ -82,6 +103,6 @@ if __name__ == '__main__':
       print(b)
   SelfCheck(bots)
 
-  # part1
   part1(bots)
+  part2(bots)
 
