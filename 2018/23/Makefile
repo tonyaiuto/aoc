@@ -1,7 +1,11 @@
 
 
+p2:
+	python day23.py -2 input.txt | tee part2.out
+	# too high: 126751959
+	# too high: 126751889
 
-go:
+part1:
 	python day23.py input.txt
         # bot with max radius is pos=<39388501,117625326,59107899>, r=99445291
         # 297 bots are in range
@@ -9,4 +13,4 @@ go:
 s:
 	python day23.py -d sample.txt >/tmp/sample.out
 	diff sample.txt /tmp/sample.out
-
+	python day23.py -d -2 sample2.txt
