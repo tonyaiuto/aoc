@@ -167,43 +167,61 @@ class Cave(object):
     this.max_pos = max_pos
     return max_pos
 
-  def Reduce(this, max_pos):
-    divisor = 5
-    trim = int((this.x_max - this.x_min) / divisor)
+  def Reduce(this, max_pos, percentage):
+    # percentage to leave
+    trim = int(this.x_span * percentage/2.0)
     this.x_min = max_pos[0] - trim
     this.x_max = max_pos[0] + trim
-    trim = int((this.y_max - this.y_min) / divisor)
+    trim = int(this.y_span * percentage/2.0)
     this.y_min = max_pos[1] - trim
     this.y_max = max_pos[1] + trim
-    trim = int((this.z_max - this.z_min) / divisor)
+    trim = int(this.z_span * percentage/2.0)
     this.z_min = max_pos[2] - trim
     this.z_max = max_pos[2] + trim
 
 
   def FindTheMaximumRegion(this):
+    global _VERBOSE
+
     n_buckets = 8
     max_pos = None
+    n_passes_unchanged = 0
+    reduce_factor = .50
     while True:
       max_bots_before = this.max_bots
-      n_max_before = this.n_at_max
+      n_at_max_before = this.n_at_max
       try:
-        max_pos = cave.SampleSpace(n_buckets)
-        cave.Reduce(max_pos)
+        print('== Trying sample and reduce: x_span=%d' % this.x_span)
+        max_pos = this.SampleSpace(n_buckets)
+        this.Reduce(max_pos, reduce_factor)
       except ValueError as e:
         break
-      if (max_bots_before == cave.max_bots
-          and n_max_before == cave.n_at_max
+      if this.n_at_max > 10:
+        reduce_factor = .80
+      # if this.n_at_max > 30:
+      #   _VERBOSE = True
+      if (max_bots_before == this.max_bots
+          and n_at_max_before == this.n_at_max
           and max_bots_before > 900):
+        n_passes_unchanged += 1
+        print('  -> unchanged for %d passes' % n_passes_unchanged)
+      else:
+        n_passes_unchanged = 0
+      if n_passes_unchanged > 4:
+        print('  -> unchanged too long. done')
         break
-      if (cave.x_span < 100
-          or cave.y_span < 100
-          or cave.z_span < 100):
+      if (this.x_span < 100
+          or this.y_span < 100
+          or this.z_span < 100):
+        print('  -> spans got smaller than 100')
         break
+    this.max_pos = (int(this.max_pos[0] + this.x_span / n_buckets),
+                    int(this.max_pos[1] + this.y_span / n_buckets),
+                    int(this.max_pos[2] + this.z_span / n_buckets))
 
 
 def part2(cave):
   cave.FindTheMaximumRegion()
-
   cave.Print()
   part2_3(cave)
 
@@ -229,10 +247,16 @@ def NarrowFrom(cave, x, y, step):
   dec_x = True
   stale_count = 0
   while x > 0 and y > 0 and stale_count < 10:
+    print('NarrowFrom @ %d,%d' % (x, y))
     col = [0] * (cave.z_span + 1) 
+    n_fails = 0
     for b in cave.bots:
       r = b.ZRange(x, y)
       if not r:
+        n_fails += 1
+        if n_fails > len(cave.bots) - cave.max_bots:
+          print('=== easy skip')
+          break
         continue
       z_from = max(cave.z_min, r[0])
       z_to = min(cave.z_max+1, r[1]+1)
@@ -255,7 +279,6 @@ def NarrowFrom(cave, x, y, step):
           print('%d, cell %d,%d,%d' % (dist, x, y, z))
           sys.stdout.flush()
           cave.closest = dist
-
     if found_any:
       stale_count = 0
       print('Something at x,y=%d,%d' % (x, y))
@@ -427,7 +450,6 @@ def SelfTest(cave):
             best_dist = dist_from_origin
             best_pos = (x,y,z)
   print(best_pos)
-
   return 0
 
 
@@ -460,6 +482,7 @@ if __name__ == '__main__':
   if tests:
     sys.exit(SelfTest(cave))
 
-  part1(cave)
   if _PART2:
     part2(cave)
+  else:
+    part1(cave)
