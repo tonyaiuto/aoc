@@ -123,6 +123,14 @@ class Cave(object):
                                             this.y_min, this.y_max,
                                             this.z_min, this.z_max))
 
+  def ZRange(this, bot, x, y):
+    r = b.ZRange(x, y)
+    if not r:
+      return None
+    z_from = max(this.z_min, r[0])
+    z_to = min(this.z_max+1, r[1]+1)
+    return (z_from, z_to)
+
   def SampleSpace(this, n_buckets):
     cells = []
     max_bots = 0
@@ -171,26 +179,31 @@ class Cave(object):
     this.z_min = max_pos[2] - trim
     this.z_max = max_pos[2] + trim
 
+
+  def FindTheMaximumRegion(this):
+    n_buckets = 8
+    max_pos = None
+    while True:
+      max_bots_before = this.max_bots
+      n_max_before = this.n_at_max
+      try:
+        max_pos = cave.SampleSpace(n_buckets)
+        cave.Reduce(max_pos)
+      except ValueError as e:
+        break
+      if (max_bots_before == cave.max_bots
+          and n_max_before == cave.n_at_max
+          and max_bots_before > 900):
+        break
+      if (cave.x_span < 100
+          or cave.y_span < 100
+          or cave.z_span < 100):
+        break
+
+
 def part2(cave):
-  cave.ComputeBounds()
-  n_buckets = 8
-  max_pos = None
-  while True:
-    max_bots_before = cave.max_bots
-    n_max_before = cave.n_at_max
-    try:
-      max_pos = cave.SampleSpace(n_buckets)
-      cave.Reduce(max_pos)
-    except ValueError as e:
-      break
-    if (max_bots_before == cave.max_bots
-        and n_max_before == cave.n_at_max
-        and max_bots_before > 900):
-      break
-    if (cave.x_span < 100
-        or cave.y_span < 100
-        or cave.z_span < 100):
-      break
+  cave.FindTheMaximumRegion()
+
   cave.Print()
   part2_3(cave)
 
