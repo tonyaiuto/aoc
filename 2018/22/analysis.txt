@@ -1,0 +1,89 @@
+1. bounds for minimial time
+x+y < minimal time < 8(x+y)
+
+2. minimal cost of any path
+
+known cost to region + # of regions to cell
+
+3. Move from known minimal cost to new cell
+
+if cost is 1, then new cell has a minimal cost
+
+if all costs are 8, then 
+
+
+A is known cost cell. 0,0 is only known cost to start
+
+From cell A
+For each UNKNOWN neighbor B
+  If transition cost is 1
+    then B gets known cost.
+  else
+    if ALL have cost 8, then each get 8
+    Generate paths from A to B with bound max_cost
+      track lowest cost lowest path
+      
+paths less thatn 7 squares
+
+123
+AB4
+ 65
+
+23
+14
+AB
+
+234
+1.5
+AB6
+
+1234
+AB65
+
+NOPE
+2345
+1AB6
+  97
+
+
+0=.|=.|.|=.|=|=.
+12=|=|||..|.=...
+2==|....||=..|==
+k.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===X===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+
+
+
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===X===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+

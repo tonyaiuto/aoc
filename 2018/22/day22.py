@@ -14,7 +14,6 @@ from memoized import memoized
 _VERBOSE = 0
 _PART2 = False
 
-
 class Cave(object):
 
   ROCKY = 0
@@ -26,15 +25,15 @@ class Cave(object):
   NEITHER = 2
 
   tool_names = ['TORCH', 'CLIMB', 'NEITHER']
-
-  # memoize cost function
-  costs = {(0, 0): (0, TORCH)}
+  type_names = ['ROCKY', 'WET', 'NARROW']
 
   def __init__(this, depth=1, target_x=0, target_y=0):
     this.depth = depth
     this.target_x = target_x
     this.target_y = target_y
     this.mouth = (0,0)
+    # memoize cost function
+    this.costs = {(0, 0): (0, Cave.TORCH)}
 
   def __str__(this):
     return 'Cave(depth=%d, target=%d,%d)' % (this.depth, this.target_x,
@@ -97,78 +96,104 @@ class Cave(object):
         ret += this.type(x, y)
     return ret
 
+  def PossibleCostsToReach(this, to_x, to_y):
+    verbose = (to_x == 2 and to_y == 1)
+
+    dest_type = this.type(to_x, to_y)
+    # if x < 6 and y < 6:
+    #   print('dest %d,%d is %s' % (x, y, Cave.type_names[dest_type]))
+
+    new_costs = []
+    for x, y in [(to_x-1, to_y), (to_x, to_y-1),
+                 (to_x+1, to_y), (to_x, to_y+1)]:
+      if x < 0 or y < 0:
+        continue
+      cached = this.costs.get((x, y))
+      if not cached:
+        continue
+      cost = cached[0]
+      tool = cached[1]
+      if verbose:
+        print('cost/tool to %d,%d is %d/%s' %
+	    (x, y, cost, Cave.tool_names[tool]))
+      from_type = this.type(x+dx, y+dy)
+      if from_type == dest_type:
+        if verbose:
+          print('%d,%d is same from type: %s' % (x+dx, y+dy, Cave.type_names[from_type]))
+        new_costs.append((cost+1, tool, x, y))
+      elif dest_type == Cave.ROCKY:
+        if verbose:
+          print('FUCKING WRONG')
+        if tool == Cave.TORCH or tool == Cave.CLIMB:
+          new_costs.append((cost+1, tool, x, y))
+        else:
+          # tool==NEITHER => from_type==WET|NARROW
+          if from_type == Cave.WET:
+            new_costs.append((cost+8, Cave.CLIMB, x, y))
+          else:
+            new_costs.append((cost+8, Cave.TORCH, x, y))
+      elif dest_type == Cave.WET:
+        if verbose:
+          print('Got it right')
+        if tool == Cave.NEITHER or tool == Cave.CLIMB:
+          if verbose:
+            print('   ---> keeping tool')
+          new_costs.append((cost+1, tool, x, y))
+        else:
+          # print('moving from rocky or narrow to wet')
+          # tool==TORCH => from_type==ROCKY|NARROW
+          new_costs.append((cost+8, Cave.NEITHER, x, y))
+          if from_type == Cave.ROCKY:
+            new_costs.append((cost+8, Cave.CLIMB, x, y))
+      elif dest_type == Cave.NARROW:
+        if verbose:
+          print('FUCKING WRONG')
+        if tool == Cave.NEITHER or tool == Cave.TORCH:
+          new_costs.append((cost+1, tool, x, y))
+        else:
+          # tool==CLIMB => from_type==ROCKY|WET
+          new_costs.append((cost+8, Cave.NEITHER, x, y))
+          if from_type == Cave.ROCKY:
+            new_costs.append((cost+8, Cave.TORCH, x, y))
+      else:
+        raise ValueError(
+            'Impossible region type: %d at %d,%d' % (dest_type, x, y))
+    return new_costs
+
   def MinimalCostToReach(this, x, y):
     # Returns: minimal cost to reach x, y from 0,0 and what tool you would
     # have.
     if x == 0 and y == 0:
       return 0, Cave.TORCH
 
-    cached = Cave.costs.get((x,y))
+    cached = this.costs.get((x,y))
     if cached:
       return cached[0], cached[1]
 
-    dest_type = cave.type(x, y)
-    new_costs = []
-    for dx, dy in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
-      if x < 0 or y < 0:
-        continue
-      cached = Cave.costs.get((x+dx, y+dy))
-      if not cached:
-        continue
-      # cost, tool = this.MinimalCostToReach(x+dx, y+dy)
-      cost = cached[0]
-      tool = cached[1]
+    new_costs = PossibleCostsToReach(this, x, y):
 
-      if cost < 0:
-        continue
-      from_type = cave.type(x+dx, y+dy)
-      if from_type == dest_type:
-        new_costs.append((cost+1, tool))
-      elif dest_type == Cave.ROCKY:
-        if tool == Cave.TORCH or tool == Cave.CLIMB:
-          new_costs.append((cost+1, tool))
-        else:
-          # tool==NEITHER => from_type==WET|NARROW
-          if from_type == Cave.WET:
-            new_costs.append((cost+8, Cave.CLIMB))
-          else:
-            new_costs.append((cost+8, Cave.TORCH))
-      elif dest_type == Cave.WET:
-        if tool == Cave.NEITHER or tool == Cave.CLIMB:
-          new_costs.append((cost+1, tool))
-        else:
-          # tool==TORCH => from_type==ROCKY|NARROW
-          new_costs.append((cost+8, Cave.NEITHER))
-          if from_type == Cave.ROCKY:
-            new_costs.append((cost+8, Cave.CLIMB))
-      elif dest_type == Cave.NARROW:
-        if tool == Cave.NEITHER or tool == Cave.TORCH:
-          new_costs.append((cost+1, tool))
-        else:
-          # tool==CLIMB => from_type==ROCKY|WET
-          new_costs.append((cost+8, Cave.NEITHER))
-          if from_type == Cave.ROCKY:
-            new_costs.append((cost+8, Cave.TORCH))
-      else:
-        raise ValueError(
-            'Impossible region type: %d at %d,%d' % (dest_type, x, y))
+      # cost, tool = this.MinimalCostToReach(x+dx, y+dy)
+    verbose = (x == 2 and y == 1)
 
     if not new_costs:
       return -2, None
 
-    best_cost = new_costs[0][0]
+    best_cost = new_costs[0]
     tools = set()
     for c in sorted(new_costs):
-      # print('%d with %s' % (c[0], Cave.tool_names[c[1]]))
-      if c[0] > best_cost:
+      if verbose:
+        print('%d with %s' % (c[0], Cave.tool_names[c[1]]))
+      if c[0] > best_cost[0]:
         break
       tools.add(c[1])
-    # print('best = %d, tools=%s' % (best_cost, tools))
+    if verbose:
+      print('best = %d, tools=%s' % (best_cost[0], tools))
     best_tool = -1
     for t in tools:
       if t > best_tool:
         best_tool = t
-    Cave.costs[(x,y)] = (best_cost, best_tool)
+    this.costs[(x,y)] = (best_cost[0], best_tool)
+    print('move from %d,%d' % (best_cost[2], best_cost[3]))
     return best_cost, best_tool
 
   def PrimeCosts(this):
@@ -187,7 +212,7 @@ class Path(object):
     this.tool = Path.TORCH
     this.region_type = ROCKY
 
-  def CostToMoveTo(this, cave, x, y):
+  def CostToMoveTo(this, x, y):
     # Tools can only be used in certain regions:
     # - In rocky regions, you can use the climbing gear or the torch. You
     #   cannot use neither (you'll likely slip and fall).
@@ -259,6 +284,9 @@ def SelfCheck():
   assert cave.erosion(10, 10) == 510
   assert cave.type(10, 10) == Cave.ROCKY
 
+  assert cave.type(0, 3) == Cave.WET
+  assert cave.type(2, 2) == Cave.WET
+
   # In the cave system above, because the mouth is at 0,0 and the target
   # is at 10,10, adding up the risk level of all regions with an X
   # coordinate from 0 to 10 and a Y coordinate from 0 to 10, this total
@@ -267,11 +295,18 @@ def SelfCheck():
 
   cave.PrimeCosts()
   assert cave.MinimalCostToReach(0, 0) == (0, Cave.TORCH)
+  print("cost 1,1 = %d,%d" % cave.MinimalCostToReach(1, 1))
   assert cave.MinimalCostToReach(1, 0) == (8, Cave.NEITHER)
   assert cave.MinimalCostToReach(0, 1) == (1, Cave.TORCH)
   assert cave.MinimalCostToReach(1, 1) == (2, Cave.TORCH)
-  print(cave.MinimalCostToReach(4, 1))
-  # assert cave.MinimalCostToReach(4, 1) == (12, Cave.NEITHER)
+  # print("cost 1,1 = %d,%d" % cave.MinimalCostToReach(1, 1))
+  # print("type 1,1 = %d" % cave.type(1, 1))
+  # print("type 2,1 = %d" % cave.type(2, 1))
+  # print(cave.MinimalCostToReach(2, 1))
+  # print(cave.MinimalCostToReach(4, 1))
+  assert cave.MinimalCostToReach(4, 1) == (12, Cave.NEITHER)
+  print(cave.MinimalCostToReach(cave.target_x, cave.target_y))
+  # assert cave.MinimalCostToReach(cave.target_x, cave.target_y) == (45, Cave.TORCH)
 
 
 if __name__ == '__main__':
@@ -288,14 +323,17 @@ if __name__ == '__main__':
       _PART2 = True
       iarg += 1
 
+  SelfCheck()
+
+  """
   with open(sys.argv[iarg]) as inp:
     cave = Cave.Load(inp)
   if dump:
     print(cave)
-  SelfCheck()
 
   # part1
   print('risk: %d' % cave.TotalRisk())
+  """
 
 
 """
@@ -381,6 +419,17 @@ M=.|=.|.|=.|=|=.
 ||=|=...|==.=|==
 |=.=||===.|||===
 ||.|==.|.|.||=||
+
+cost/tool to 1,1 is 2/TORCH
+cost/tool to 2,0 is 16/CLIMB
+3 with TORCH
+17 with CLIMB
+best = 3, tools=set([0])
+cost 1,1 = 2,0
+type 1,1 = 2
+type 2,1 = 1
+(3, 0)
+(5, 0)
 
 Switch from using the torch to neither tool:
 M=.|=.|.|=.|=|=.
@@ -587,4 +636,6 @@ spent moving.
 
 What is the fewest number of minutes you can take to reach the target?
 
+
 """
+
