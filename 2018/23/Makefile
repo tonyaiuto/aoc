@@ -3,6 +3,7 @@ p2:
 	python day23.py -2 input.txt | tee part2.out
 	# too high: 126751959
 	# too high: 126751889
+	# wrong: 126624512
 
 part1:
 	python day23.py input.txt

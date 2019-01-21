@@ -221,7 +221,11 @@ class Cave(object):
 
 
 def part2(cave):
-  cave.FindTheMaximumRegion()
+  # cave.FindTheMaximumRegion()
+  cave.max_bots = 936
+  cave.max_pos = (44166763,43552646,38657871)
+  cave.z_min = 38651590
+  cave.z_max = 38665170
   cave.Print()
   part2_3(cave)
 
@@ -231,6 +235,9 @@ def part2_3(cave):
   x = cave.max_pos[0]
   y = cave.max_pos[1]
 
+  NarrowFrom(cave, x, y, 10000)
+  x = cave.last_x
+  y = cave.last_y
   NarrowFrom(cave, x, y, 1000)
   x = cave.last_x
   y = cave.last_y
@@ -247,7 +254,7 @@ def NarrowFrom(cave, x, y, step):
   dec_x = True
   stale_count = 0
   while x > 0 and y > 0 and stale_count < 10:
-    print('NarrowFrom @ %d,%d' % (x, y))
+    print('NarrowFrom @ %d,%d, zspan=%d' % (x, y, cave.z_span))
     col = [0] * (cave.z_span + 1) 
     n_fails = 0
     for b in cave.bots:
@@ -260,11 +267,12 @@ def NarrowFrom(cave, x, y, step):
         continue
       z_from = max(cave.z_min, r[0])
       z_to = min(cave.z_max+1, r[1]+1)
+      # print('  reaching z=%d-%d' % (z_from, z_to))
       for z in range(z_from, z_to):
         col[z - cave.z_min] += 1
 
     found_any = False
-    for zi in range(cave.z_span):
+    for zi in range(cave.z_span+1):
       z = cave.z_min + zi
       in_range = col[zi]
       if in_range > cave.max_bots:
@@ -272,13 +280,15 @@ def NarrowFrom(cave, x, y, step):
         sys.stdout.flush()
         cave.closest = cave.x_max + cave.y_max + cave.z_max
         cave.max_bots = in_range
-      if in_range == cave.max_bots:
+      elif in_range == cave.max_bots:
         found_any = True
         dist = x + y + z
         if dist < cave.closest:
-          print('%d, cell %d,%d,%d' % (dist, x, y, z))
-          sys.stdout.flush()
+          print('%d, cell %d,%d,%d new closest' % (dist, x, y, z))
           cave.closest = dist
+      # else:
+      #   print('cell %d,%d,%d not in range' % (x, y, z))
+      sys.stdout.flush()
     if found_any:
       stale_count = 0
       print('Something at x,y=%d,%d' % (x, y))
