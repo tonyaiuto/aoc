@@ -9,6 +9,8 @@ import heapq
 import sys
 
 
+_PART2 = False
+
 class Map(object):
 
   def __init__(this):
@@ -43,6 +45,9 @@ class Map(object):
     print('')
 
   def Crash(this, x, y):
+    global _PART2
+    if _PART2:
+      return
     this.crash_x = x
     this.crash_y = y
 
@@ -175,24 +180,26 @@ class Cars(object):
       yield c
 
   def Turn(this, map):
-    # print('=== %d cars left' % len(this.cars))
+    print('=== %d cars left' % len(this.cars))
     ret = None
     to_drop = []
     for car in this.MoveOrdered():
       old_x = car.x
       old_y = car.y
       car.Move(map)
+      del this.pos[(old_x, old_y)]
       other_car = this.pos.get((car.x, car.y))
       if other_car:
         map.Crash(car.x, car.y)
-        ret = 'Crash: %d,%d' % (car.x, car.y)
+        ret = 'Crash: %d,%d = %s,%s' % (car.x, car.y, car, other_car)
         to_drop.append(other_car)
         to_drop.append(car)
       else:
-        del this.pos[(old_x, old_y)]
         this.pos[(car.x, car.y)] = car
     for car in to_drop:
-      print('Drop car: %s' % car)
+      print('Droping car: %s' % car)
+      if (car.x, car.y) in this.pos:
+        del this.pos[(car.x, car.y)]
     if to_drop:
       new_car_list = []
       for car in this.cars:
@@ -261,6 +268,7 @@ if __name__ == '__main__':
       iarg += 1
     if sys.argv[iarg] == '-2':
       do_part2 = True
+      _PART2 = True
       iarg += 1
   with open(sys.argv[iarg]) as inp:
     map, cars = Load(inp)
