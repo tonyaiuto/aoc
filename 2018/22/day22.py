@@ -172,7 +172,7 @@ class Cave(object):
 
     new_costs = PossibleCostsToReach(this, x, y):
 
-      # cost, tool = this.MinimalCostToReach(x+dx, y+dy)
+    # cost, tool = this.MinimalCostToReach(x+dx, y+dy)
     verbose = (x == 2 and y == 1)
 
     if not new_costs:

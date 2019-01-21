@@ -11,7 +11,6 @@ if cost is 1, then new cell has a minimal cost
 
 if all costs are 8, then 
 
-
 A is known cost cell. 0,0 is only known cost to start
 
 From cell A
@@ -23,7 +22,7 @@ For each UNKNOWN neighbor B
     Generate paths from A to B with bound max_cost
       track lowest cost lowest path
       
-paths less thatn 7 squares
+paths less than 7 squares
 
 123
 AB4
@@ -87,3 +86,27 @@ M=.|=.|.|=.|=|=.
 |=.=||===.|||===
 ||.|==.|.|.||=||
 
+--------
+
+From tool to new_tool cost
+
+R c R c 1
+R c W c 1
+R c N t 8
+R t R t 1
+R t W c 8
+R t N t 1
+
+W c R c 1
+W c W c 1
+W c N n 8
+W n R t 1
+W n W n 1
+W n N n 8
+
+N t R t 1
+N t W n 8
+N t N t 1
+N n R t 8
+N n W n 1
+N n N n 1
