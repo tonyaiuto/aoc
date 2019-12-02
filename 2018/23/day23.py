@@ -64,9 +64,13 @@ class Cave(object):
     this.y_max = 0
     this.z_min = 0
     this.z_max = 0
+    # current guess at maximum number of bots reachable from any cell
     this.max_bots = 0
-    this.n_at_max = 0
     this.max_pos = (0,0,0)
+    # transient for reduce phase
+    this.n_at_max = 0
+    this.ComputeBounds()
+    this.closest = this.x_span + this.y_span + this.z_span
 
   def Print(this):
     print('%d cells are within range of %d bots' % (this.n_at_max, this.max_bots))
@@ -158,8 +162,39 @@ class Cave(object):
     this.z_min = max_pos[2] - trim
     this.z_max = max_pos[2] + trim
 
+  def SearchRange(this, x_from, x_to, y_from, y_to, z_from, z_to):
+    x_step = y_step = z_step = 1
+    if x_from > x_to:
+      x_step = -1
+    if y_from > y_to:
+      y_step = -1
+    if z_from > z_to:
+      z_step = -1
+    for z in range(z_from, z_to, z_step):
+      for y in range(y_from, y_to, y_step):
+        for x in range(x_from, x_to, x_step):
+          dist = x + y + z
+          # print('  check: %d,%d,%d at distance %d' % (x, y, z, dist))
+          if dist > this.closest:
+            break
+          in_range = 0
+          for b in cave.bots:
+            if b.InRange(x, y, z):
+              in_range += 1
+          if in_range > cave.max_bots:
+            raise ValueError('!!!! Too many in range %d > %d' % (
+                in_range, this.max_bots))
+          elif in_range == cave.max_bots:
+            print('..cell %d,%d,%d at distance %d' % (x, y, z, dist))
+            sys.stdout.flush()
+            if dist < this.closest:
+              this.closest = dist
+          else:
+            # print('wandered out of region')
+            break
+
+
 def part2(cave):
-  cave.ComputeBounds()
   n_buckets = 8
   max_pos = None
   while True:
@@ -179,7 +214,23 @@ def part2(cave):
         or cave.z_span < 100):
       break
   cave.Print()
+  # part2_1(cave)
 
+
+def part2_quick(cave):
+  cave.x_min = 44229168
+  cave.x_max = 44229328
+  cave.y_min = 43740050
+  cave.y_max = 43740180
+  cave.z_min = 38782806
+  cave.z_max = 38782906
+  cave.max_pos = (44229250,43740238,38782982)
+  cave.max_bots = 909
+  part2_1(cave)
+
+
+
+def part2_2(cave):
   closest = max_pos[0] + max_pos[1] + max_pos[2] + 500
   for z in range(max_pos[2]+100, 0, -1):
     print('Trying z=%d' % z)
@@ -205,25 +256,21 @@ def part2(cave):
           break
  
 
-def part2_b(cave):
+def part2_1(cave):
   # x: 44229168-44229328 (160)
   # y: 43740050-43740180 (130)
   # z: 38782806-38782906 (100)
-  cave.x_min -= 200
-  cave.y_min -= 300
-  cave.y_max -= 10 
-  cave.z_min -= 500
+  #cave.x_min -= 200
+  #cave.y_min -= 300
+  #cave.y_max -= 10 
+  #cave.z_min -= 500
 
   cave.Print()
 
-  # layers = []
-  closest = cave.x_max + cave.y_max + cave.z_max
   for z in range(cave.z_min, cave.z_max):
-    # rows = []
     for y in range(cave.y_min, cave.y_max):
-      # row = []
       for x in range(cave.x_min, cave.x_max):
-        if x + y + z > closest:
+        if x + y + z > cave.closest:
           break
         in_range = 0
         for b in cave.bots:
@@ -231,19 +278,27 @@ def part2_b(cave):
             in_range += 1
         if in_range > cave.max_bots:
           raise ValueError('!!!! Too many in range %d > %d' % (in_range, cave.max_bots))
-        if in_range == cave.max_bots:
+        elif in_range == cave.max_bots:
           dist = x + y + z
           print('cell %d,%d,%d at distance %d' % (x, y, z, dist))
           sys.stdout.flush()
-          if dist < closest:
-            closest = dist
-          if x == cave.x_min or y == cave.y_min or z == cave.z_min:
-            raise ValueError('Point too low: %d,%d,%d' % (x,y,z))
-          if x == cave.x_max or y == cave.y_max or z == cave.z_max:
-            raise ValueError('Point too high: %d,%d,%d' % (x,y,z))
-        # row.append(in_range)
-      # rows.append(row)
-    # layers.append(rows)
+          if dist < cave.closest:
+            cave.closest = dist
+            if x == cave.x_min:
+              print('Point x too low : %d,%d,%d' % (x,y,z))
+              cave.SearchRange(x, 0, y-1, y+1, z-1, z+1)
+            if y == cave.y_min:
+              print('Point y too low : %d,%d,%d' % (x,y,z))
+              cave.SearchRange(x-1, x+1, y, 0, z-1, z+1)
+            if z == cave.z_min:
+              print('Point y too low : %d,%d,%d' % (x,y,z))
+              cave.SearchRange(x, x, y, y, z, 0)
+            if x == cave.x_max or y == cave.y_max or z == cave.z_max:
+              raise ValueError('Point too high: %d,%d,%d' % (x,y,z))
+        else:
+          break
+
+
 
 def SelfCheck(bots):
   pass
@@ -287,5 +342,5 @@ if __name__ == '__main__':
 
   part1(cave)
   if _PART2:
-    part2(cave)
+    part2_quick(cave)
 

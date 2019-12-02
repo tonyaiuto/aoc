@@ -1,7 +1,8 @@
 
 
 p2:
-	python day23.py -2 input.txt | tee part2.out
+	python day23.py -2 input.txt
+	# python day23.py -2 input.txt | tee part2.out
 	# too high: 126751959
 	# too high: 126751889
 
