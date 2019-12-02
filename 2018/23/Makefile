@@ -1,10 +1,10 @@
 
-
 p2:
 	python day23.py -2 input.txt
 	# python day23.py -2 input.txt | tee part2.out
 	# too high: 126751959
 	# too high: 126751889
+	# wrong: 126624512
 
 part1:
 	python day23.py input.txt
@@ -13,5 +13,5 @@ part1:
 
 s:
 	python day23.py -d sample.txt >/tmp/sample.out
-	diff sample.txt /tmp/sample.out
-	python day23.py -d -2 sample2.txt
+	diff sample.out /tmp/sample.out
+	python day23.py -d -t sample2.txt

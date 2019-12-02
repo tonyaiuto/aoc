@@ -51,7 +51,19 @@ class Bot(object):
     return abs(b.x - this.x) + abs(b.y - this.y) + abs(b.z - this.z) 
 
   def InRange(this, x, y, z):
-    return (abs(x - this.x) + abs(y - this.y) + abs(z - this.z)) < this.radius
+    return (abs(x - this.x) + abs(y - this.y) + abs(z - this.z)) <= this.radius
+
+  def ZRange(this, x, y):
+    # returns range of z cells in range for an x, y coord
+    xy_dist = abs(x - this.x) + abs(y - this.y)
+    # inrange = xy_dist + abs(z - this.z)) < this.radius
+    # inrange = abs(this.z - z)) < (this.radius - xy_dist)
+    # inrange = this.z - Z < (this.radius - xy_dist)
+    #       or  this.z + Z < (this.radius - xy_dist)
+    delta = this.radius - xy_dist
+    if delta < 0:
+      return None
+    return (this.z - delta, this.z + delta)
 
 
 class Cave(object):
@@ -71,6 +83,7 @@ class Cave(object):
     this.n_at_max = 0
     this.ComputeBounds()
     this.closest = this.x_span + this.y_span + this.z_span
+    this.ComputeBounds()
 
   def Print(this):
     print('%d cells are within range of %d bots' % (this.n_at_max, this.max_bots))
@@ -82,15 +95,15 @@ class Cave(object):
 
   @property
   def x_span(this):
-    return this.x_max - this.x_min
+    return this.x_max - this.x_min + 1
 
   @property
   def y_span(this):
-    return this.y_max - this.y_min
+    return this.y_max - this.y_min + 1
 
   @property
   def z_span(this):
-    return this.z_max - this.z_min
+    return this.z_max - this.z_min + 1
 
   def ComputeBounds(this):
     # compute bounding box of search
@@ -113,6 +126,14 @@ class Cave(object):
     print('bounds = %d-%d, %d-%d, %d-%d' % (this.x_min, this.x_max,
                                             this.y_min, this.y_max,
                                             this.z_min, this.z_max))
+
+  def ZRange(this, bot, x, y):
+    r = b.ZRange(x, y)
+    if not r:
+      return None
+    z_from = max(this.z_min, r[0])
+    z_to = min(this.z_max+1, r[1]+1)
+    return (z_from, z_to)
 
   def SampleSpace(this, n_buckets):
     cells = []
@@ -150,15 +171,15 @@ class Cave(object):
     this.max_pos = max_pos
     return max_pos
 
-  def Reduce(this, max_pos):
-    divisor = 5
-    trim = int((this.x_max - this.x_min) / divisor)
+  def Reduce(this, max_pos, percentage):
+    # percentage to leave
+    trim = int(this.x_span * percentage/2.0)
     this.x_min = max_pos[0] - trim
     this.x_max = max_pos[0] + trim
-    trim = int((this.y_max - this.y_min) / divisor)
+    trim = int(this.y_span * percentage/2.0)
     this.y_min = max_pos[1] - trim
     this.y_max = max_pos[1] + trim
-    trim = int((this.z_max - this.z_min) / divisor)
+    trim = int(this.z_span * percentage/2.0)
     this.z_min = max_pos[2] - trim
     this.z_max = max_pos[2] + trim
 
@@ -193,6 +214,45 @@ class Cave(object):
             # print('wandered out of region')
             break
 
+  def FindTheMaximumRegion(this):
+    global _VERBOSE
+
+    n_buckets = 8
+    max_pos = None
+    n_passes_unchanged = 0
+    reduce_factor = .50
+    while True:
+      max_bots_before = this.max_bots
+      n_at_max_before = this.n_at_max
+      try:
+        print('== Trying sample and reduce: x_span=%d' % this.x_span)
+        max_pos = this.SampleSpace(n_buckets)
+        this.Reduce(max_pos, reduce_factor)
+      except ValueError as e:
+        break
+      if this.n_at_max > 10:
+        reduce_factor = .80
+      # if this.n_at_max > 30:
+      #   _VERBOSE = True
+      if (max_bots_before == this.max_bots
+          and n_at_max_before == this.n_at_max
+          and max_bots_before > 900):
+        n_passes_unchanged += 1
+        print('  -> unchanged for %d passes' % n_passes_unchanged)
+      else:
+        n_passes_unchanged = 0
+      if n_passes_unchanged > 4:
+        print('  -> unchanged too long. done')
+        break
+      if (this.x_span < 100
+          or this.y_span < 100
+          or this.z_span < 100):
+        print('  -> spans got smaller than 100')
+        break
+    this.max_pos = (int(this.max_pos[0] + this.x_span / n_buckets),
+                    int(this.max_pos[1] + this.y_span / n_buckets),
+                    int(this.max_pos[2] + this.z_span / n_buckets))
+
 
 def part2(cave):
   n_buckets = 8
@@ -217,6 +277,16 @@ def part2(cave):
   # part2_1(cave)
 
 
+def part2(cave):
+  # cave.FindTheMaximumRegion()
+  cave.max_bots = 936
+  cave.max_pos = (44166763,43552646,38657871)
+  cave.z_min = 38651590
+  cave.z_max = 38665170
+  cave.Print()
+  part2_3(cave)
+
+
 def part2_quick(cave):
   cave.x_min = 44229168
   cave.x_max = 44229328
@@ -228,6 +298,84 @@ def part2_quick(cave):
   cave.max_bots = 909
   part2_1(cave)
 
+def part2_3(cave):
+  cave.closest = cave.x_max + cave.y_max + cave.z_max
+  x = cave.max_pos[0]
+  y = cave.max_pos[1]
+
+  NarrowFrom(cave, x, y, 10000)
+  x = cave.last_x
+  y = cave.last_y
+  NarrowFrom(cave, x, y, 1000)
+  x = cave.last_x
+  y = cave.last_y
+  NarrowFrom(cave, x, y, 100)
+  x = cave.last_x
+  y = cave.last_y
+  NarrowFrom(cave, x, y, 10)
+  x = cave.last_x
+  y = cave.last_y
+  NarrowFrom(cave, x, y, 1)
+
+
+def NarrowFrom(cave, x, y, step):
+  dec_x = True
+  stale_count = 0
+  while x > 0 and y > 0 and stale_count < 10:
+    print('NarrowFrom @ %d,%d, zspan=%d' % (x, y, cave.z_span))
+    col = [0] * (cave.z_span + 1) 
+    n_fails = 0
+    for b in cave.bots:
+      r = b.ZRange(x, y)
+      if not r:
+        n_fails += 1
+        if n_fails > len(cave.bots) - cave.max_bots:
+          print('=== easy skip')
+          break
+        continue
+      z_from = max(cave.z_min, r[0])
+      z_to = min(cave.z_max+1, r[1]+1)
+      # print('  reaching z=%d-%d' % (z_from, z_to))
+      for z in range(z_from, z_to):
+        col[z - cave.z_min] += 1
+
+    found_any = False
+    for zi in range(cave.z_span+1):
+      z = cave.z_min + zi
+      in_range = col[zi]
+      if in_range > cave.max_bots:
+        print('!! Too many in range %d > %d' % (in_range, cave.max_bots))
+        sys.stdout.flush()
+        cave.closest = cave.x_max + cave.y_max + cave.z_max
+        cave.max_bots = in_range
+      elif in_range == cave.max_bots:
+        found_any = True
+        dist = x + y + z
+        if dist < cave.closest:
+          print('%d, cell %d,%d,%d new closest' % (dist, x, y, z))
+          cave.closest = dist
+      # else:
+      #   print('cell %d,%d,%d not in range' % (x, y, z))
+      sys.stdout.flush()
+    if found_any:
+      stale_count = 0
+      print('Something at x,y=%d,%d' % (x, y))
+      sys.stdout.flush()
+      cave.last_x = x
+      cave.last_y = y
+    else:
+      stale_count += 1
+      print('nothing for %d,%d' % (x, y))
+      sys.stdout.flush()
+
+    # move left or right
+    if dec_x:
+      dec_x = False
+      x -= step
+    else:
+      dec_x = True
+      y -= step
+>>>>>>> 8109833465f62f818801c002fc7d50994ab1e2c9
 
 
 def part2_2(cave):
@@ -254,8 +402,11 @@ def part2_2(cave):
             closest = dist
         else:
           break
- 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8109833465f62f818801c002fc7d50994ab1e2c9
 def part2_1(cave):
   # x: 44229168-44229328 (160)
   # y: 43740050-43740180 (130)
@@ -300,8 +451,6 @@ def part2_1(cave):
 
 
 
-def SelfCheck(bots):
-  pass
 
 
 def part1(cave):
@@ -316,16 +465,93 @@ def part1(cave):
       n_close += 1
   print('%d bots are in range' % n_close)
 
+def SelfTest(cave):
+  bots = []
+  sample = """
+      pos=<10,12,12>, r=2
+      pos=<12,14,12>, r=2
+      pos=<16,12,12>, r=4
+      pos=<14,14,14>, r=6
+      pos=<50,50,50>, r=200
+      pos=<10,10,10>, r=5
+      """
+  for line in sample.split('\n'):
+    l = line.strip()
+    if l:
+      bots.append(Bot.Parse(l))
+  cave = Cave(bots)
+  cave.Print()
+  assert cave.x_min == 10 and cave.x_max == 50
+  assert cave.y_min == 10 and cave.y_max == 50
+  assert cave.z_min == 10 and cave.z_max == 50
+  for x in range(cave.x_min, cave.x_max+1):
+    for y in range(cave.y_min, cave.y_max+1):
+      # print('== %d,%d ==' % (x, y))
+      for b in cave.bots:
+        r = b.ZRange(x, y)
+        if not r:
+          # print('  %s: NIL' % b)
+          continue
+        # print('  %s: %d-%d' % (b, r[0], r[1]))
+        for z in range(r[0], r[1]+1):
+          if not b.InRange(x, y, z):
+            print('  %s: %d-%d: %d,%d,%d should be in range, is not' % (
+                b, r[0], r[1], x, y, z))
+            return 1
+        assert not b.InRange(x, y, r[0]-1)
+        assert not b.InRange(x, y, r[1]+2)
+
+  cells = []
+  cave.max_bots = 0
+  for x in range(cave.x_min, cave.x_max+1):
+    y_vec = []
+    for y in range(cave.y_min, cave.y_max+1):
+      col = [0] * cave.z_span
+      for b in cave.bots:
+        r = b.ZRange(x, y)
+        if not r:
+          continue
+        z_from = max(cave.z_min, r[0])
+        z_to = min(cave.z_max+1, r[1]+1)
+        for z in range(z_from, z_to):
+          col[z - cave.z_min] += 1
+          if cave.max_bots < col[z - cave.z_min]:
+            cave.max_bots = col[z - cave.z_min]
+      y_vec.append(col)
+    cells.append(y_vec)
+  best_dist = cave.x_span + cave.y_span + cave.z_span
+  for xi in range(cave.x_span):
+    x_row = cells[xi]
+    for yi in range(cave.y_span):
+      z_col = x_row[yi]
+      for zi in range(cave.z_span):
+        assert z_col[zi] <= cave.max_bots
+        if z_col[zi] == cave.max_bots:
+          x = cave.x_min + xi
+          y = cave.y_min + yi
+          z = cave.z_min + zi
+          print(' -> %d,%d,%d is at max' % (x, y, z))
+          dist_from_origin = x + y + z
+          if dist_from_origin < best_dist:
+            best_dist = dist_from_origin
+            best_pos = (x,y,z)
+  print(best_pos)
+  return 0
+
 
 if __name__ == '__main__':
   iarg = 1
   dump = False
+  tests = False
   while iarg < len(sys.argv) and sys.argv[iarg][0] == '-':
     if sys.argv[iarg] == '-v':
       _VERBOSE += 1
       iarg += 1
     if sys.argv[iarg] == '-d':
       dump = True
+      iarg += 1
+    if sys.argv[iarg] == '-t':
+      tests = True
       iarg += 1
     if sys.argv[iarg] == '-2':
       _PART2 = True
@@ -339,8 +565,15 @@ if __name__ == '__main__':
   if dump:
     for b in cave.bots:
       print(b)
+  if tests:
+    sys.exit(SelfTest(cave))
 
-  part1(cave)
   if _PART2:
+<<<<<<< HEAD
     part2_quick(cave)
 
+=======
+    part2(cave)
+  else:
+    part1(cave)
+>>>>>>> 8109833465f62f818801c002fc7d50994ab1e2c9
