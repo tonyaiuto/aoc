@@ -7,8 +7,8 @@ def run_phases(mem, phases):
   amp= []
   thrust = 0
   for phase in phases:
-    ic = intcode.IntCode(list(mem), input=[phase, thrust])
-    output = ic.run()
+    amp = intcode.IntCode(list(mem), input=[phase, thrust])
+    output = amp.run()
     thrust = output[0]
   # print('== Phases:', phases, 'thrust:', thrust)
   return thrust
@@ -19,7 +19,6 @@ def check_07(mem, phases, expect_thrust):
   assert thrust == expect_thrust
 
 check_07([3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0], [4,3,2,1,0], 43210)
-
 
 check_07([3,23,3,24,1002,24,10,24,1002,23,-1,23,101,5,23,23,1,24,23,23,4,23,99,0,0],
          [0,1,2,3,4],
@@ -69,21 +68,32 @@ def part1():
 
 
 def run_phases_feedback(mem, phases):
-  amp= []
-  thrust = 0
-  while True:
-    for phase in phases:
-      ic = intcode.IntCode(list(mem), input=[phase, thrust])
-      output = ic.run()
-      thrust = output[0]
-    # print('== Phases:', phases, 'thrust:', thrust)
-  return thrust
+  amps = []
+  for phase in phases:
+    amps.append(intcode.IntCode(list(mem), input=[phase]))
+
+  amps[0].push_input(0)
+  last_out = 0
+  while all([not amp.is_halted for amp in amps]):
+    for i in range(len(amps)):
+      next = (i + 1) % len(amps) 
+      if not amps[i].is_halted:
+        output = amps[i].run_until_output()
+      if amps[i].is_halted:
+        # print('halted:', i)
+        pass
+      else:
+        amps[next].push_input(output)
+        if i == len(amps) - 1:
+          last_out = output
+        # print('%d -> %d value %d, last=%d' % (i, next, output, last_out))
+  # print('== Phases:', phases, 'thrust:', last_out)
+  return last_out
 
 
 def check_07_feedback(mem, phases, expect_thrust):
-  # thrust = run_phases_feedback(mem, phases)
-  # assert thrust == expect_thrust
-  pass
+  thrust = run_phases_feedback(mem, phases)
+  assert thrust == expect_thrust
 
 
 check_07_feedback(mem=[3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,
@@ -96,10 +106,10 @@ def part2():
   mem = intcode.load_intcode('input_07.txt')
   max_thrust, max_phases = find_maximum_thrust([5, 6, 7, 8, 9], mem, run_phases_feedback)
   print('part2:', max_phases, max_thrust)
-  #assert max_phases == [0, 3, 4, 2, 1]
-  #assert max_thrust == 65464
+  assert max_phases == [7, 9, 5, 6, 8]
+  assert max_thrust == 1518124
 
 
 if __name__ == '__main__':
   part1()
-  # part2()
+  part2()

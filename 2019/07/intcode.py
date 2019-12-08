@@ -6,7 +6,14 @@ class IntCode(object):
     self.pc = 0
     self.mem = mem
     self.input = input
-    self.input_pos = 0
+    self.halted = False
+
+  def push_input(self, more_input):
+    self.input.append(more_input)
+
+  @property
+  def is_halted(self):
+    return self.halted
 
   def fetch_p(self, mode):
     word = self.mem[self.pc]
@@ -20,8 +27,17 @@ class IntCode(object):
 
   def run(self):
     self.pc = 0
-    output = []
+    ret = []
+    while True:
+      out = self.run_until_output()
+      if self.halted:
+        return ret
+      else:
+        ret.append(out)
 
+  def run_until_output(self):
+    if self.halted:
+      return None
     while True:
       word = self.mem[self.pc]
       op = word % 100
@@ -34,6 +50,7 @@ class IntCode(object):
       self.pc += 1
       if op == 99:
         # print('STOP')
+        self.halted = True
         break
       elif op == 1:
         arg1 = self.fetch_p(p1_mode)
@@ -50,12 +67,12 @@ class IntCode(object):
       elif op == 3:
         arg1 = self.mem[self.pc]
         self.pc = self.pc + 1
-        self.mem[arg1] = self.input[self.input_pos]
-        self.input_pos += 1
+        self.mem[arg1] = self.input[0]
+        self.input = self.input[1:]
       elif op == 4:
         arg1 = self.fetch_p(p1_mode)
-        output.append(arg1)
         # print(arg1)
+        return arg1
       elif op == 5:
         arg1 = self.fetch_p(p1_mode)
         arg2 = self.fetch_p(p2_mode)
@@ -85,9 +102,7 @@ class IntCode(object):
         else:
           self.mem[store] = 0
       else:
-        print('illegal op:%d at %d' % (op, self.pc-1))
-        return
-    return output
+        raise Exception('illegal op:%d at %d' % (op, self.pc-1))
 
 
 def load_intcode(inp_path):
