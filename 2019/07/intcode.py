@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 
-def load_intcode(inp_path):
-  with open(inp_path, 'r') as inp:
-    return [int(i) for i in inp.read().split(',')]
-  return None
-
-
 class IntCode(object):
 
   def __init__(self, mem, input=None):
     self.pc = 0
     self.mem = mem
     self.input = input
+    self.input_pos = 0
 
   def fetch_p(self, mode):
     word = self.mem[self.pc]
@@ -23,9 +18,9 @@ class IntCode(object):
     else:
       assert mode in [0, 1]
 
-
   def run(self):
     self.pc = 0
+    output = []
 
     while True:
       word = self.mem[self.pc]
@@ -39,7 +34,7 @@ class IntCode(object):
       self.pc += 1
       if op == 99:
         # print('STOP')
-        return
+        break
       elif op == 1:
         arg1 = self.fetch_p(p1_mode)
         arg2 = self.fetch_p(p2_mode)
@@ -55,10 +50,12 @@ class IntCode(object):
       elif op == 3:
         arg1 = self.mem[self.pc]
         self.pc = self.pc + 1
-        self.mem[arg1] = self.input
+        self.mem[arg1] = self.input[self.input_pos]
+        self.input_pos += 1
       elif op == 4:
         arg1 = self.fetch_p(p1_mode)
-        print('out:', arg1)
+        output.append(arg1)
+        # print(arg1)
       elif op == 5:
         arg1 = self.fetch_p(p1_mode)
         arg2 = self.fetch_p(p2_mode)
@@ -90,57 +87,44 @@ class IntCode(object):
       else:
         print('illegal op:%d at %d' % (op, self.pc-1))
         return
+    return output
 
 
-def check(mem, expect_mem):
-  ic = IntCode(mem)
-  ic.run()
-  for i in range(len(mem)):
-    if mem[i] != expect_mem[i]:
-      print('FAIL: %s !=> %s' % (mem, expect_mem))
+def load_intcode(inp_path):
+  with open(inp_path, 'r') as inp:
+    return [int(i) for i in inp.read().split(',')]
+  return None
 
 
-check([1,0,0,0,99], [2,0,0,0,99])
-check([2,3,0,3,99], [2,3,0,6,99])
-check([2,4,4,5,99,0], [2,4,4,5,99,9801])
-check([1,1,1,4,99,5,6,0,99], [30,1,1,4,2,5,6,0,99])
-check([1002,4,3,4,33], [1002,4,3,4,99])
+def check(mem, expect_mem=None, input=None, expect_out=None):
+  ic = IntCode(mem, input=input)
+  out = ic.run()
+  if expect_mem:
+    for i in range(len(expect_mem)):
+      if mem[i] != expect_mem[i]:
+        print('FAIL: %s !=> %s' % (mem, expect_mem))
+        return False
+  if expect_out:
+    for i in range(len(expect_out)):
+      if out[i] != expect_out[i]:
+        print('FAIL: output %s !=> %s' % (out, expect_out))
+        return False
+  return True
 
 
-def part1():
-  mem = load_intcode('input_05.txt')
-  ic = IntCode(mem, input=1)
-  ic.run()
-  print('part1:', mem[0])
-  # part1: 5482655
-
-def part2():
-  mem = load_intcode('input_05.txt')
-  ic = IntCode(mem, input=5)
-  ic.run()
+def test05():
+  mem = load_intcode('../05/input_05.txt')
+  return check(mem, expect_mem=[3], input=[1],
+               expect_out=[0, 0, 0, 0, 0, 0, 0, 0, 0, 9938601])
 
 
-if __name__ == '__main__':
-  part1()
-  part2()
+def self_check():
+  assert check([1,0,0,0,99], expect_mem=[2,0,0,0,99])
+  assert check([2,3,0,3,99], expect_mem=[2,3,0,6,99])
+  assert check([2,4,4,5,99,0], expect_mem=[2,4,4,5,99,9801])
+  assert check([1,1,1,4,99,5,6,0,99], expect_mem=[30,1,1,4,2,5,6,0,99])
+  assert check([1002,4,3,4,33], expect_mem=[1002,4,3,4,99])
+  assert test05()
+  print('PASS: intcode self_check')
 
-"""
-"With terminology out of the way, we're ready to proceed. To complete
-the gravity assist, you need to determine what pair of inputs produces
-the output 19690720."
-
-The inputs should still be provided to the program by replacing the values
-at addresses 1 and 2, just like before. In this program, the value placed
-in address 1 is called the noun, and the value placed in address 2 is
-called the verb. Each of the two input values will be between 0 and 99,
-inclusive.
-
-Once the program has halted, its output is available at address 0, also
-just like before. Each time you try a pair of inputs, make sure you first
-reset the computer's memory to the values in the program (your puzzle
-input) - in other words, don't reuse memory from a previous attempt.
-
-Find the input noun and verb that cause the program to produce the output
-19690720. What is 100 * noun + verb? (For example, if noun=12 and verb=2,
-the answer would be 1202.)
-"""
+self_check()
