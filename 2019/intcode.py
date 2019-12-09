@@ -4,6 +4,7 @@ import collections
 
 OpCode = collections.namedtuple('OpCode', 'mnemonic op n_args n_store')
 
+_DEFAULT_TRACE = False
 
 class IntCode(object):
 
@@ -20,7 +21,7 @@ class IntCode(object):
     OpCode('HALT', 99, 0, 0),
   ]}
 
-  modifiers = ['', '#', '.']
+  modifiers = ['', '#', 'rel+']
 
   def __init__(self, mem, input=None):
     self.pc = 0
@@ -28,7 +29,7 @@ class IntCode(object):
     self.input = input
     self.halted = False
     self.rel_base = 0
-    self.trace = False
+    self.trace = _DEFAULT_TRACE
 
   def set_trace(self, trace):
     ret = self.trace
@@ -96,7 +97,7 @@ class IntCode(object):
       mode = word // 100
 
       opcode = IntCode.opcodes[op]
-      msg = 'OP: %s %s' % (opcode.mnemonic, self.mem[self.pc-1])
+      msg = 'OP: pc=%d, %s %s' % (self.pc-1, opcode.mnemonic, self.mem[self.pc-1])
       if opcode.n_args >= 1:
         arg1 = self.fetch_p(mode % 10)
         msg += ' %s%d (=%d)' % (IntCode.modifiers[mode % 10], self.mem[self.pc-1], arg1)
@@ -202,5 +203,8 @@ def self_check():
   assert check([104,1125899906842624,99], expect_out=[1125899906842624])
   print('PASS: intcode self_check_09')
 
+
+if __name__ == '__main__':
+  _DEFAULT_TRACE = True
 
 self_check()
