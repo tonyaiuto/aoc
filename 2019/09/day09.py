@@ -16,12 +16,26 @@ def part1():
   # BOOST keycode does it produce?
   mem = intcode.load_intcode('input_09.txt')
   ic = intcode.IntCode(list(mem), input=[1])
-  ic.set_trace(True)
   output = ic.run()
   print('part1: boost keycode =', output[0])
   assert 3533056970 == output[0]
 
 
+def part2():
+  # The program runs in sensor boost mode by providing the input
+  # instruction the value 2. Once run, it will boost the sensors
+  # automatically, but it might take a few seconds to complete the
+  # operation on slower hardware. In sensor boost mode, the program
+  # will output a single value: the coordinates of the distress signal.
+
+  # Run the BOOST program in sensor boost mode. What are the coordinates
+  # of the distress signal?
+  mem = intcode.load_intcode('input_09.txt')
+  ic = intcode.IntCode(list(mem), input=[2])
+  output = ic.run()
+  print('part2: distress =', output[0])
+  assert 72852 == output[0]
+
 if __name__ == '__main__':
   part1()
-  # part2()
+  part2()

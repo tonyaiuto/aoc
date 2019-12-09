@@ -94,26 +94,21 @@ class IntCode(object):
       self.pc += 1
       op = word % 100
       mode = word // 100
-      p1_mode = (word // 100) % 10
-      p2_mode = (word // 1000) % 10
-      p3_mode = (word // 10000) % 10
-      if p3_mode > 0:
-        print('immediate p3:', word)
 
       opcode = IntCode.opcodes[op]
       msg = 'OP: %s %s' % (opcode.mnemonic, self.mem[self.pc-1])
       if opcode.n_args >= 1:
         arg1 = self.fetch_p(mode % 10)
+        msg += ' %s%d (=%d)' % (IntCode.modifiers[mode % 10], self.mem[self.pc-1], arg1)
         mode = mode // 10
-        msg += ' %s%d (=%d)' % (IntCode.modifiers[p1_mode], self.mem[self.pc-1], arg1)
       if opcode.n_args >= 2:
         arg2 = self.fetch_p(mode % 10)
+        msg += ' %s%d (=%d)' % (IntCode.modifiers[mode % 10], self.mem[self.pc-1], arg2)
         mode = mode // 10
-        msg += ' %s%d (=%d)' % (IntCode.modifiers[p2_mode], self.mem[self.pc-1], arg2)
       if opcode.n_store >= 1:
         store = self.fetch_store(mode % 10)
+        msg += ' %s%d (=%d)' % (IntCode.modifiers[mode % 10], self.mem[self.pc-1], store)
         mode = mode // 10
-        msg += ' %s%d (=%d)' % (IntCode.modifiers[p3_mode], self.mem[self.pc-1], store)
       if self.trace:
         print(msg)
 
