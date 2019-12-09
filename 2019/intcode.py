@@ -16,7 +16,7 @@ class IntCode(object):
     OpCode('BEQ', 6, 2, 0),
     OpCode('LT', 7, 2, 1),
     OpCode('EQ', 8, 2, 1),
-    OpCode('RELBASE', 9, 0, 0),
+    OpCode('RELBASE', 9, 1, 0),
     OpCode('HALT', 99, 0, 0),
   ]}
 
@@ -59,15 +59,19 @@ class IntCode(object):
     elif mode == 1:
       return word
     elif mode == 2:
-      addr = self.rel_base+word
+      addr = self.rel_base + word
       self.extend_mem(addr)
       return self.mem[addr]
     else:
       assert mode in [0, 1, 2]
 
-  def fetch_store(self):
+  def fetch_store(self, mode):
     store = self.mem[self.pc]
     self.pc = self.pc + 1
+    if mode == 2:
+      store = self.rel_base + store
+    else:
+      assert mode in [0, 2]
     self.extend_mem(store)
     return store
 
@@ -89,6 +93,7 @@ class IntCode(object):
       word = self.mem[self.pc]
       self.pc += 1
       op = word % 100
+      mode = word // 100
       p1_mode = (word // 100) % 10
       p2_mode = (word // 1000) % 10
       p3_mode = (word // 10000) % 10
@@ -98,13 +103,16 @@ class IntCode(object):
       opcode = IntCode.opcodes[op]
       msg = 'OP: %s %s' % (opcode.mnemonic, self.mem[self.pc-1])
       if opcode.n_args >= 1:
-        arg1 = self.fetch_p(p1_mode)
+        arg1 = self.fetch_p(mode % 10)
+        mode = mode // 10
         msg += ' %s%d (=%d)' % (IntCode.modifiers[p1_mode], self.mem[self.pc-1], arg1)
       if opcode.n_args >= 2:
-        arg2 = self.fetch_p(p2_mode)
+        arg2 = self.fetch_p(mode % 10)
+        mode = mode // 10
         msg += ' %s%d (=%d)' % (IntCode.modifiers[p2_mode], self.mem[self.pc-1], arg2)
       if opcode.n_store >= 1:
-        store = self.fetch_store()
+        store = self.fetch_store(mode % 10)
+        mode = mode // 10
         msg += ' %s%d (=%d)' % (IntCode.modifiers[p3_mode], self.mem[self.pc-1], store)
       if self.trace:
         print(msg)
@@ -120,7 +128,8 @@ class IntCode(object):
         self.mem[store] = self.input[0]
         self.input = self.input[1:]
       elif op == 4:
-        # print(arg1)
+        if self.trace:
+          print('output: ', arg1)
         return arg1
       elif op == 5:
         if arg1 != 0:
@@ -139,8 +148,7 @@ class IntCode(object):
         else:
           self.mem[store] = 0
       elif op == 9:
-        self.rel_base += self.mem[self.pc]
-        self.pc = self.pc + 1
+        self.rel_base += arg1
       else:
         raise Exception('illegal op:%d at %d' % (op, self.pc-1))
 

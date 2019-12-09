@@ -19,6 +19,7 @@ def part1():
   ic.set_trace(True)
   output = ic.run()
   print('part1: boost keycode =', output[0])
+  assert 3533056970 == output[0]
 
 
 if __name__ == '__main__':
