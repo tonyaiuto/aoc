@@ -16,6 +16,7 @@ def part1():
   # BOOST keycode does it produce?
   mem = intcode.load_intcode('input_09.txt')
   ic = intcode.IntCode(list(mem), input=[1])
+  ic.set_trace(True)
   output = ic.run()
   print('part1: boost keycode =', output[0])
 

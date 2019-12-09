@@ -1,6 +1,26 @@
 #!/usr/bin/env python3
 
+import collections
+
+OpCode = collections.namedtuple('OpCode', 'mnemonic op n_args n_store')
+
+
 class IntCode(object):
+
+  opcodes = {op.op: op for op in [
+    OpCode('+', 1, 2, 1),
+    OpCode('*', 2, 2, 1),
+    OpCode('INPUT', 3, 0, 1),
+    OpCode('OUTPUT', 4, 1, 0),
+    OpCode('BNE', 5, 2, 0),
+    OpCode('BEQ', 6, 2, 0),
+    OpCode('LT', 7, 2, 1),
+    OpCode('EQ', 8, 2, 1),
+    OpCode('RELBASE', 9, 0, 0),
+    OpCode('HALT', 99, 0, 0),
+  ]}
+
+  modifiers = ['', '#', '.']
 
   def __init__(self, mem, input=None):
     self.pc = 0
@@ -8,6 +28,12 @@ class IntCode(object):
     self.input = input
     self.halted = False
     self.rel_base = 0
+    self.trace = False
+
+  def set_trace(self, trace):
+    ret = self.trace
+    self.trace = trace
+    return ret
 
   def extend_mem(self, max_addr):
     if len(self.mem) < max_addr + 1:
@@ -37,7 +63,7 @@ class IntCode(object):
       self.extend_mem(addr)
       return self.mem[addr]
     else:
-      assert mode in [0, 1]
+      assert mode in [0, 1, 2]
 
   def fetch_store(self):
     store = self.mem[self.pc]
@@ -59,7 +85,9 @@ class IntCode(object):
     if self.halted:
       return None
     while True:
+      op_start = self.pc
       word = self.mem[self.pc]
+      self.pc += 1
       op = word % 100
       p1_mode = (word // 100) % 10
       p2_mode = (word // 1000) % 10
@@ -67,51 +95,45 @@ class IntCode(object):
       if p3_mode > 0:
         print('immediate p3:', word)
 
-      self.pc += 1
+      opcode = IntCode.opcodes[op]
+      msg = 'OP: %s %s' % (opcode.mnemonic, self.mem[self.pc-1])
+      if opcode.n_args >= 1:
+        arg1 = self.fetch_p(p1_mode)
+        msg += ' %s%d (=%d)' % (IntCode.modifiers[p1_mode], self.mem[self.pc-1], arg1)
+      if opcode.n_args >= 2:
+        arg2 = self.fetch_p(p2_mode)
+        msg += ' %s%d (=%d)' % (IntCode.modifiers[p2_mode], self.mem[self.pc-1], arg2)
+      if opcode.n_store >= 1:
+        store = self.fetch_store()
+        msg += ' %s%d (=%d)' % (IntCode.modifiers[p3_mode], self.mem[self.pc-1], store)
+      if self.trace:
+        print(msg)
+
       if op == 99:
-        # print('STOP')
         self.halted = True
         break
       elif op == 1:
-        arg1 = self.fetch_p(p1_mode)
-        arg2 = self.fetch_p(p2_mode)
-        store = self.fetch_store()
         self.mem[store] = arg1 + arg2
       elif op == 2:
-        arg1 = self.fetch_p(p1_mode)
-        arg2 = self.fetch_p(p2_mode)
-        store = self.fetch_store()
         self.mem[store] = arg1 * arg2
       elif op == 3:
-        store = self.fetch_store()
         self.mem[store] = self.input[0]
         self.input = self.input[1:]
       elif op == 4:
-        arg1 = self.fetch_p(p1_mode)
         # print(arg1)
         return arg1
       elif op == 5:
-        arg1 = self.fetch_p(p1_mode)
-        arg2 = self.fetch_p(p2_mode)
         if arg1 != 0:
           self.pc = arg2
       elif op == 6:
-        arg1 = self.fetch_p(p1_mode)
-        arg2 = self.fetch_p(p2_mode)
         if arg1 == 0:
           self.pc = arg2
       elif op == 7:
-        arg1 = self.fetch_p(p1_mode)
-        arg2 = self.fetch_p(p2_mode)
-        store = self.fetch_store()
         if arg1 < arg2:
           self.mem[store] = 1
         else:
           self.mem[store] = 0
       elif op == 8:
-        arg1 = self.fetch_p(p1_mode)
-        arg2 = self.fetch_p(p2_mode)
-        store = self.fetch_store()
         if arg1 == arg2:
           self.mem[store] = 1
         else:
