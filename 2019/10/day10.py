@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import math
+
 class Map(object):
 
   def __init__(self):
@@ -102,39 +104,78 @@ class Map(object):
       yield x, 0
 
 
-  def blast(self, center):
-    blasted = set()
+  def to_polar(self, center, pos):
+    """
+     -x -y    |  +x -y
+       -L  4  |    +L    1
+    ----------|-------------
+     -x +y    |  +x +y
+       -H  3  |    +H    2
+    
+    atan2(y, x)
+    -x +y +H 2   |  +x +y   +L   1
+    ------------------------------- 
+    -x +y -H 3   |  +x +y   -L   4
+
+    """
     center_x = center[0]
     center_y = center[1]
-    x = center_x
-    y = center_y
-    for edge_x, edge_y in self.gen_sweep(center):
-      dx, dy = self.reduce(edge_x - center_x, edge_y - center_y)
-      while True:
-        x = x + dx
-        y = y + dy
-        if x < 0 or y < 0:
-          break
-        if x >= self.width or y >= self.height:
-          break
+    dist_x = pos[0] - center_x
+    dist_y = pos[1] - center_y
+    dist = abs(dist_x) + abs(dist_y)
+    dx, dy = self.reduce(dist_x, dist_y)
+    theta = math.atan2(dx, -dy)
+    if theta < 0:
+       theta = 2 * math.pi + theta
+    if dx >= 0 and dy <= 0:
+      if theta < 0:
+         print(dx, dy, theta, 'expected positive theta')
+      assert theta >= 0
+    elif dx >= 0 and dy >= 0:
+      assert theta >= math.pi / 2
+      if theta < 0:
+         print(dx, dy, theta, 'expected positive theta')
+    elif dx < 0 and dy >= 0:
+      assert theta > math.pi 
+    else:
+      assert dx < 0 and dy < 0
+      assert theta > math.pi * 3 / 2
+    return theta, dist
 
-        probe_pos = (x, y)
-        if self.trace:
-          print('probe:', probe_pos)
-        if probe_pos in self.is_occupied and probe_pos != center:
-          blasted.add(probe_pos)
-          self.n_blasted += 1
-          print('blast', self.n_blasted, probe_pos)
+
+  def blast(self, center, stop_at=0):
+    blasted = set()
+    tmp = []
+    for pos in self.is_occupied:
+      if pos == center:
+        continue
+      theta, dist = self.to_polar(center, pos)
+      # print('%s -> %s = %f, %d' % (center, pos, theta, dist))
+      tmp.append((theta, dist, pos))
+
+    s = sorted(tmp, key=lambda x: x[1])
+    s = sorted(s, key=lambda x: x[0])
+    last_theta = -1111
+    for p in s:
+      theta = p[0]
+      pos = p[2]
+      if last_theta != theta:
+        last_theta = theta
+        blasted.add(pos)
+        self.n_blasted += 1
+        print('blast', self.n_blasted, pos)
+        if stop_at > 0 and self.n_blasted >= stop_at:
           break
-    print("Blasted", len(blasted))
+      #else:
+      #  print('NO blast:', pos)
     self.is_occupied = self.is_occupied - blasted
-    print("is_occ", len(self.is_occupied))
 
 
 def load_and_pick_best(path):
   map = Map()
   map.load(path)
   return pick_best(map)
+
 
 def pick_best(map):
   # print(map.positions)
@@ -187,18 +228,45 @@ TEST_BLAST="""
 ..#.#.....#....##
 """
 
+def test_to_polar():
+  map = Map()
+  map.load('day10_map_3.txt')
+  max_pos, max_vis = pick_best(map)
+  print('%s sees %d others' % (max_pos, max_vis))
+  assert max_pos == (11, 13)
+
+  last_theta = -0.0001
+  for pos in [(11, 4), (14, 4), (15, 13),
+              (15, 15), (14, 15), (11, 15)]:
+    theta, dist = map.to_polar(max_pos, pos)
+    assert theta > last_theta
+    last_theta = theta
+    if pos == (11, 4):
+      assert theta == 0 and dist == 9
+
+  pos = (10, 15)
+  theta, dist = map.to_polar(max_pos, pos)
+  if theta <= last_theta:
+    print('%s -> %s = %f, %d' % (max_pos, pos, theta, dist))
+  assert theta > last_theta
+  last_theta = theta
+
+  #while map.n_blasted < 20:
+  #  map.blast(max_pos)
+
+
 def test2():
+  test_to_polar()
   map = Map()
   map.load_from_string(TEST_BLAST)
   max_pos, max_vis = pick_best(map)
   print('%s sees %d others' % (max_pos, max_vis))
   assert max_pos == (8, 3)
   map.trace = True
-  for i in range(5):
+  for i in range(10):
     map.blast(max_pos)
 
-
-def part2():
+def test_gen_sweep():
   map = Map()
   map.load('input_10.txt')
   best = (17, 22)
@@ -206,13 +274,20 @@ def part2():
   for x, y in map.gen_sweep(best):
     n_edge += 1
   assert n_edge == 30 * 4
+
+
+def part2():
+  map = Map()
+  map.load('input_10.txt')
+  best = (17, 22)
   # map.trace = True
   while map.n_blasted < 200:
-    map.blast(best)
+    map.blast(best, stop_at=200)
+  # Expect: blast 200 (6, 16)
 
 
 test1()
 part1()
 
 test2()
-# part2()
+part2()
