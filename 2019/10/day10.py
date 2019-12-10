@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 
-def delta(p1, p2):
-  return p2[0] - p1[0], p2[1] - p1[1]
-
-
 class Map(object):
 
   def __init__(self):
     self.positions = []
     self.width = 0
     self.height = 0
+    self.trace = False
 
   def load(self, path):
     self.positions = []
@@ -32,20 +29,36 @@ class Map(object):
 
   def check_vis(self, my_pos):
     blocked = set()
+    blocked.add(my_pos)
     for p in self.positions:
-      if p == my_pos:
-        continue
       if p in blocked:
         continue
       x = p[0]
       y = p[1]
       dx = x - my_pos[0]
       dy = y - my_pos[1]
-      # print('dx, dy=', dx, dy)
-      while dx % 2 == 0 and dy % 2 == 0:
-        dx = dx // 2
-        dy = dy // 2
-        # print('REDUCE dx, dy=', dx, dy)
+
+      odx = dx
+      ody = dy
+      if dx == 0:
+        dy = 1 if dy > 0 else -1
+      elif dy == 0:
+        dx = 1 if dx > 0 else -1
+      else:
+        did_reduce = True
+        while did_reduce:
+          did_reduce = False
+          for factor in [2, 3, 5, 7, 11, 13, 17]:
+            while dx % factor == 0 and dy % factor == 0:
+              did_reduce = True
+              msg = 'REDUCE dx,dy=%d,%d by %d' % (dx, dy, factor)
+              dx = dx // factor
+              dy = dy // factor
+              # print(msg, 'to', dx, dy)
+
+      if self.trace and (odx != dx or ody != dy):
+        print('REDUCE %d,%d  to  %d,%d' % (odx, ody, dx, dy))
+
       while True:
         x = x + dx
         y = y + dy
@@ -53,10 +66,15 @@ class Map(object):
           break
         if x >= self.width or y >= self.height:
           break
-        if (x, y) in self.is_occupied:
-          print(my_pos, 'to', p, 'blocks', (x, y))
-          blocked.add((x, y))
-    return len(self.positions) - 1 - len(blocked)
+        test_pos = (x, y)
+        if self.trace:
+          print('probe:', test_pos)
+        # if test_pos in self.is_occupied and test_pos != my_pos:
+        if test_pos in self.positions and test_pos != my_pos:
+          if self.trace:
+            print(my_pos, 'to', p, 'blocks', test_pos)
+          blocked.add(test_pos)
+    return len(self.positions) - len(blocked)
 
 
 def pick_best(path):
@@ -67,6 +85,7 @@ def pick_best(path):
   max_pos = None
   for pos in map.positions:
     n_vis = map.check_vis(pos)
+    # print('check_vis: %s sees %d others' % (pos, n_vis))
     if max_vis < n_vis:
       max_vis = n_vis
       max_pos = pos
@@ -84,10 +103,27 @@ def test1():
   assert max_pos == (6, 3)
   assert max_vis == 41
 
+  max_pos, max_vis = pick_best('day10_map_2a.txt')
+  print('%s sees %d others' % (max_pos, max_vis))
+  assert max_pos == (1, 2)
+  assert max_vis == 35
+
   max_pos, max_vis = pick_best('day10_map_3.txt')
   print('%s sees %d others' % (max_pos, max_vis))
   assert max_pos == (11, 13)
-  assert max_vis == 210
+  # assert max_vis == 210
 
 
 test1()
+
+def part1():
+  max_pos, max_vis = pick_best('input_10.txt')
+  print('%s sees %d others' % (max_pos, max_vis))
+  assert max_vis == 288
+  assert max_vis < 300
+
+def part2():
+  pass
+
+part1()
+part2()
