@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+import io
+import sys
+import textwrap
+
 from PIL import Image
 
 class ElfImage(object):
@@ -59,11 +63,18 @@ class ElfImage(object):
       ret.image[y * width + x] = to_color(color)
     return ret
 
-  def print(self):
+  def print(self, color_map=None, out=sys.stdout):
+    if not color_map:
+      color_map = (lambda pix:
+          ' 'if pix == 0
+          else '#' if pix == 1
+          else pix if (isinstance(pix, str) and 1 == len(pix))
+          else '?')
     start = 0
     for row in range(self.height):
-      print(''.join([' ' if pix == 0 else '#'
-                     for pix in self.image[start:start+self.width]]))
+      print(''.join(
+          [color_map(pix) for pix in self.image[start:start+self.width]]),
+          file=out)
       start += self.width
 
   def toPng(self, out_file):
@@ -78,5 +89,35 @@ def self_check():
   # print(i.image)
   assert i.image == [1, 8, 3, 4, 5, 6]
 
+  points = {(0,0): 'C'}
+  points.update({(1,1): 1})
+  points.update({(-1,1): '-'})
+  points.update({pos: 1 for pos in [(-5, i) for i in range(-4, 4)]})
+  points.update({pos: 1 for pos in [(i, 2) for i in range(-6, 4)]})
+  i = ElfImage.fromPoints(points)
+  expected = [
+      0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 1, 0, 0, 0, 0, 'C', 0, 0, 0,
+      0, 1, 0, 0, 0, '-', 0, 1, 0, 0,
+      1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+      0, 1, 0, 0, 0, 0, 0, 0, 0, 0
+  ]
+  assert expected == i.image
+  expected = textwrap.dedent("""\
+       #        
+       #        
+       #        
+       #        
+       #    C   
+       #   - #  
+      ##########
+       #        
+      """)
+  got = io.StringIO()
+  i.print(out=got)
+  assert expected == got.getvalue()
 
 self_check()
