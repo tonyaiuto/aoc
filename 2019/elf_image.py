@@ -67,7 +67,7 @@ class ElfImage(object):
       start += self.width
 
   def toPng(self, out_file):
-    im = Image.frombytes('L', (25,6),
+    im = Image.frombytes('L', (self.width, self.height),
         bytes([255 if pix == 0 else 0 for pix in self.image]))
     im.save(out_file)
 

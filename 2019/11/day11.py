@@ -20,13 +20,14 @@ class Robot(object):
     else:
       self.dir = (self.dir + 1) % 4
 
+
   def move(self):
     if self.dir == 0:
-      self.y += 1
+      self.y -= 1
     elif self.dir == 1:
       self.x += 1
     elif self.dir == 2:
-      self.y -= 1
+      self.y += 1
     elif self.dir == 3:
       self.x -= 1
     else:
@@ -38,10 +39,10 @@ class Robot(object):
       computer.push_input(self.painted.get((self.x, self.y), 0))
       color = computer.run_until_output()
       dir = computer.run_until_output()
-      self.painted[(self.x, self.y)] = color
       # print('paint %d,%d %s' % (self.x, self.y, 'black' if color == 0 else 'white'))
       if computer.is_halted:
         break
+      self.painted[(self.x, self.y)] = color
       self.turn(dir)
       self.move()
 
@@ -60,9 +61,17 @@ def part2():
   robot.painted[(0, 0)] = 1
   robot.paint(ic)
 
-
   image = ElfImage.fromPoints(robot.painted)
   image.print()
+  """
+   #  # ####  ##  #### #  # ###  #    ###    
+   #  #    # #  # #    # #  #  # #    #  #   
+   #  #   #  #  # ###  ##   ###  #    #  #   
+   #  #  #   #### #    # #  #  # #    ###    
+   #  # #    #  # #    # #  #  # #    #      
+    ##  #### #  # #### #  # ###  #### #      
+  """
+  image.toPng('out_11.png')
 
 
 if __name__ == '__main__':
