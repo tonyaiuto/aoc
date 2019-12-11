@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from PIL import Image
-
 import elf_image
 
 
@@ -31,12 +29,8 @@ def part2():
   with open('input_08.txt', 'r') as inp:
     image = elf_image.ElfImage(25, 6)
     image.parse(inp.read().strip())
-    for h in range(6):
-      row = ['#' if pix == 1 else ' ' for pix in image.image[h*25:(h+1)*25]]
-      print(''.join(row))
-
-  im = Image.frombytes('L', (25,6), bytes([255 if pix == 0 else 0 for pix in image.image]))
-  im.save('aoc.png')
+    image.print()
+    image.toPng('out_08.png')
 
 
 if __name__ == '__main__':
