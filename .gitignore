@@ -1,3 +1,4 @@
 sample.cur
 *.o
 *.pyc
+out_*.png
