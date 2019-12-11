@@ -21,15 +21,15 @@ class Robot(object):
       self.dir = (self.dir + 1) % 4
 
 
-  def move(self):
+  def move(self, dist=1):
     if self.dir == 0:
-      self.y -= 1
+      self.y -= dist
     elif self.dir == 1:
-      self.x += 1
+      self.x += dist
     elif self.dir == 2:
-      self.y += 1
+      self.y += dist
     elif self.dir == 3:
-      self.x -= 1
+      self.x -= dist
     else:
       raise Exception('bad dir: %d' % self.dir)
 
