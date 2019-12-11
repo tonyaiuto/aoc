@@ -26,7 +26,7 @@ class IntCode(object):
   def __init__(self, mem, input=None):
     self.pc = 0
     self.mem = mem
-    self.input = input
+    self.input = input or []
     self.halted = False
     self.rel_base = 0
     self.trace = _DEFAULT_TRACE
