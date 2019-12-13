@@ -23,10 +23,11 @@ class IntCode(object):
 
   modifiers = ['', '#', 'rel+']
 
-  def __init__(self, mem, input=None):
+  def __init__(self, mem, input=None, get_input=None):
     self.pc = 0
     self.mem = mem
     self.input = input or []
+    self.get_input = get_input
     self.halted = False
     self.rel_base = 0
     self.trace = _DEFAULT_TRACE
@@ -42,8 +43,14 @@ class IntCode(object):
       self.mem += [0] * (max_addr + 1 - len(self.mem))
       # print("EXTEND: New len", len(self.mem))
 
+  def poke(self, address, value):
+    self.mem[address] = value
+
   def push_input(self, more_input):
-    self.input.append(more_input)
+    if isinstance(more_input, list):
+      self.input.extend(more_input)
+    else:
+      self.input.append(more_input)
 
   @property
   def is_halted(self):
@@ -121,6 +128,9 @@ class IntCode(object):
       elif op == 2:
         self.mem[store] = arg1 * arg2
       elif op == 3:
+        if not self.input:
+          assert self.get_input
+          self.push_input(self.get_input())
         self.mem[store] = self.input[0]
         self.input = self.input[1:]
       elif op == 4:

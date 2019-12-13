@@ -8,9 +8,11 @@ from PIL import Image
 
 class ElfImage(object):
 
-  def __init__(self, width, height):
+  def __init__(self, width, height, min_x=0, min_y=0):
     self.width = width
     self.height = height
+    self.min_x = min_x
+    self.min_y = min_y
     self.layer_span = width * height
     self.do_histograms = True
     self.histos = None
@@ -19,10 +21,6 @@ class ElfImage(object):
   @property
   def histograms(self):
     return self.histos
-
-  #@property
-  #def image(self):
-  #  return self.final
 
   def parse(self, image):
     self.n_layers = len(image) // (self.layer_span)
@@ -55,13 +53,16 @@ class ElfImage(object):
     # print(min_x, max_x, min_y, max_y)
     width = max_x - min_x + 1
     height = max_y - min_y + 1
-    ret = ElfImage(width=width, height=height)
+    ret = ElfImage(width=width, height=height, min_x=min_x, min_y=min_y)
     ret.image = [0] * (width * height)
-    for pos, color in points.items():
-      x = pos[0] - min_x
-      y = pos[1] - min_y
-      ret.image[y * width + x] = to_color(color)
+    ret.update(points, to_color)
     return ret
+
+  def update(self, points, to_color=lambda x: x):
+    for pos, color in points.items():
+      x = pos[0] - self.min_x
+      y = pos[1] - self.min_y
+      self.image[y * self.width + x] = to_color(color)
 
   def print(self, color_map=None, out=sys.stdout):
     if not color_map:
