@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import sys
+
 import elf_image
 import intcode
 
@@ -54,11 +56,12 @@ def part1():
 
 class Game(object):
 
-  def __init__(self, mem):
+  def __init__(self, mem, **kwargs):
 
     self.computer = intcode.IntCode(
         list(mem),
-        get_input=lambda: self.get_joystick())
+        get_input=lambda: self.get_joystick(),
+        **kwargs)
     # The game didn't run because you didn't put in any quarters.
     # Unfortunately, you did not bring any quarters. Memory address 0
     # represents the number of quarters that have been inserted; set
@@ -67,6 +70,7 @@ class Game(object):
     self.points = {}
     self.high_score = 0
     self.display = None
+    self.joy_hist = []
 
   def play(self):
     # The arcade cabinet also has a segment display capable of showing
@@ -107,23 +111,38 @@ class Game(object):
       self.display.update(self.points)
     self.points = {}
     self.display.print()
+    print('High score:', self.high_score)
     stick = input('Joystick L, N, R: ')
-    if stick.lower() == 'l':
+    stick = (stick or 'n').lower()
+    if stick == 'l':
+      self.joy_hist.append(-1)
       return -1
-    elif stick.lower() == 'r':
+    elif stick == 'r':
+      self.joy_hist.append(1)
       return 1
     else:
+      self.joy_hist.append(0)
       return 0
 
 
-def part2():
-  mem = intcode.load_intcode('input_13.txt')
-  game = Game(mem)
-  game.play()
-
+def part2(args):
   # Beat the game by breaking all the blocks.
   # What is your score after the last block is broken?
 
+  pre_play=None
+  if len(args) > 0:
+    with open(args[0], 'r') as inp:
+      stick_pre = inp.read().replace('[', '').replace(']', '').split(',')
+      pre_play = [int(i) for i in stick_pre]
+
+  mem = intcode.load_intcode('input_13.txt')
+  game = Game(mem, input=pre_play)
+  game.play()
+  with open('stick.txt', 'w') as save:
+    save.write(str(game.joy_hist))
+  print('High score:', game.high_score)
+
+
 if __name__ == '__main__':
   part1()
-  part2()
+  part2(sys.argv[1:])
