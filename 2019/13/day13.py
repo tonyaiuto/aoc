@@ -77,6 +77,8 @@ class Game(object):
     self.joy_hist = []
     self.ball = None
     self.auto_play = False
+    self.frame = 0
+    self.capture_frames = True
 
 
   def play(self):
@@ -117,13 +119,17 @@ class Game(object):
     # If the joystick is in the neutral position, provide 0.
     # If the joystick is tilted to the left, provide -1.
     # If the joystick is tilted to the right, provide 1.
+    if not self.keep_going:
+      return
     if not self.display:
       self.display = elf_image.ElfImage.fromPoints(self.points)
     else:
       self.display.update(self.points)
     self.points = {}
     self.display.print()
-    self.display.toPng2('frame.png')
+    if self.capture_frames:
+      self.display.toPng('mov/frame%05d.png' % self.frame)
+    self.frame += 1
     print('High score:', self.high_score)
 
     stick = 'n'
@@ -147,6 +153,7 @@ class Game(object):
       return 1
     elif stick == 'q':
       self.keep_going = False
+      return 0
     else:
       return 0
 
@@ -162,7 +169,7 @@ def part2(args):
 
   mem = intcode.load_intcode('input_13.txt')
   game = Game(mem, pre_play=pre_play)
-  # game.auto_play = True
+  game.auto_play = True
   game.play()
   with open('stick.txt', 'w') as save:
     save.write(''.join(game.joy_hist))

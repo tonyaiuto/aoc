@@ -86,9 +86,25 @@ class ElfImage(object):
     start = 0
     for row in range(self.height):
       for col in range(self.width):
-        pix = self.image[start+col]
         bounds = [(col*scale, row*scale), ((col+1)*scale, (row+1)*scale)]
-        draw.rectangle(bounds, fill=255 if pix == 0 else 0)
+        pix = self.image[start+col]
+        if pix == ' ' or pix == 0:
+          fill = 255
+        elif pix == 'b':
+          fill = 128
+        elif pix == '-':
+          bounds = [(col*scale, row*scale+scale/3),
+                    ((col+1)*scale, (row+1)*scale-scale/3)]
+          draw.rectangle(bounds, fill=42)
+          continue
+        elif pix == 'o':
+          bounds = [(col*scale+1, row*scale+1),
+                    ((col+1)*scale-1, (row+1)*scale-1)]
+          draw.arc(bounds, start=0, end=360, fill=0, width=5)
+          continue
+        else:
+          fill = 0
+        draw.rectangle(bounds, fill=fill)
       start += self.width
     im.save(out_file)
 

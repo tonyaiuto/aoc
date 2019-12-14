@@ -56,6 +56,7 @@ class IntCode(object):
   def is_halted(self):
     return self.halted
 
+  # Fetch parameter
   def fetch_p(self, mode):
     word = self.mem[self.pc]
     self.pc += 1
