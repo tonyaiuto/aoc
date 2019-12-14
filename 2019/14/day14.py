@@ -8,6 +8,7 @@ import textwrap
 QUANT_CHEM_RE = re.compile(r'(\d+) *([A-Za-z]+)')
 
 
+
 class Node(object):
 
   def __init__(self):
@@ -67,6 +68,7 @@ class NanoFactory(object):
       with open(path, 'r') as inp:
         reactions = inp.read()
     self.to_get = {}
+    self.trace = False
     self._parse(textwrap.dedent(reactions))
 
   def _parse(self, s):
@@ -88,15 +90,17 @@ class NanoFactory(object):
       return state
 
     # How many times do we have to run the reaction.
+    # t_need -= state[t_chem]  # actual need
     n_times = (t_need + target_node.out_quant - 1) // target_node.out_quant
 
     for (need, chem) in target_node.inputs:
       need = need * n_times
-      # print('need %5d of %-8.8s: %s' % (need, chem, P(state)))
+      if self.trace:
+        print('need %5d of %-8.8s: %s' % (need, chem, P(state)))
       if chem == 'ORE':
         state['ORE'] += need
       else:
-        state = self.make(need-state[chem], chem, state)
+        self.make(need-state[chem], chem, state)
         state[chem] -= need
     state[t_chem] += target_node.out_quant * n_times
     return state
@@ -165,6 +169,7 @@ def test_part1():
       7 XCVML => 6 RJRHP
       5 BHXH, 4 VRPVC => 5 LTCX
       """)
+  nf.trace = True
   state = nf.make(1, 'FUEL')
   print('test_part1: Need %d ORE' % state['ORE'])
   assert 2210736 == state['ORE']
