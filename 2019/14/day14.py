@@ -7,6 +7,60 @@ import textwrap
 QUANT_CHEM_RE = re.compile(r'(\d+) *([A-Za-z]+)')
 
 
+class Node(object):
+
+  def __init__(self):
+    self.chems = []
+    self.quants = []
+    self.out_chem = None
+    self.out_quant = 0
+
+  def __str__(self):
+    input = ', '.join(['%d %s' % (x[0], x[1])
+                      for x in zip(self.quants, self.chems)])
+    return '%s => %d %s' % (input, self.out_quant, self.out_chem)
+
+  @staticmethod
+  def fromText(text):
+    node = Node()
+    state_inputs = True
+    for tok in Node.tokenize(text):
+      # print(str(tok))
+      if tok == '=>':
+        state_inputs = False
+      elif state_inputs:
+        node.quants.append(tok[0])
+        node.chems.append(tok[1])
+      else:
+        node.out_quant = tok[0]
+        node.out_chem = tok[1]
+    return node
+
+  @staticmethod
+  def tokenize(line):
+    while line:
+      c = line[0]
+      if c == ' ' or c == ',':
+        line = line[1:]
+        continue
+      elif line[0:2] == '=>':
+        line = line[2:]
+        yield '=>'
+        continue
+  
+      m = QUANT_CHEM_RE.match(line)
+      if m:
+        quantity = int(m.group(1))
+        chem = m.group(2)
+        line = line[len(m.group(0)):]
+        yield (quantity, chem)
+        continue
+      else:
+        line = line[1:]
+        yield 'WTF'
+
+
+
 class NanoFactory(object):
 
   def __init__(self, reactions=None, path=None):
@@ -17,39 +71,9 @@ class NanoFactory(object):
 
   def _parse(self, s):
     for line in s.strip().split('\n'):
-      for tok in self.tokenize(line):
-        print(str(tok))
- 
+      n = Node.fromText(line)
+      print(n)
 
-  @staticmethod
-  def tokenize(line):
-    while line:
-      if line[0] == ' ':
-        line = line[1:]
-        continue
-      if line[0] == '\n':
-        line = line[1:]
-        yield '\n'
-        continue
-      elif line[0:2] == '=>':
-        line = line[2:]
-        yield '=>'
-        continue
-      elif line[0] == ',':
-        line = line[1:]
-        yield ','
-        continue
-  
-      m = QUANT_CHEM_RE.match(line)
-      if m:
-        quantity = int(m.group(1))
-        chem = m.group(2)
-        line = line[len(m.group(0)):]
-        yield (chem, quantity)
-        continue
-      else:
-        line = line[1:]
-        yield 'WTF'
 
 
 def test_part1():
