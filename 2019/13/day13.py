@@ -22,8 +22,6 @@ def paint(computer):
     color = computer.run_until_output()
     # print(x, y, color)
     pos = (x, y)
-    if pos in points:
-      print("repaint!", pos)
     points[pos] = color
   return points
 
@@ -80,6 +78,7 @@ class Game(object):
     self.ball = None
     self.auto_play = False
 
+
   def play(self):
     # The arcade cabinet also has a segment display capable of showing
     # a single number that represents the player's current score. When
@@ -92,7 +91,8 @@ class Game(object):
     #                 0    1    2    3    4
     color_to_disp = [' ', '#', 'b', '-', 'o']
 
-    while True:
+    self.keep_going = True
+    while self.keep_going:
       x = self.computer.run_until_output()
       if self.computer.is_halted:
         break
@@ -104,8 +104,6 @@ class Game(object):
         print('new score:', color)
         self.high_score = max(self.high_score, color)
       else:
-        if pos in self.points:
-          print("repaint!", pos)
         self.points[pos] = color_to_disp[color]
         if color == 3:  # paddle
           self.paddle = pos
@@ -125,6 +123,7 @@ class Game(object):
       self.display.update(self.points)
     self.points = {}
     self.display.print()
+    self.display.toPng2('frame.png')
     print('High score:', self.high_score)
 
     stick = 'n'
@@ -146,6 +145,8 @@ class Game(object):
       return -1
     elif stick == 'r':
       return 1
+    elif stick == 'q':
+      self.keep_going = False
     else:
       return 0
 
@@ -161,7 +162,7 @@ def part2(args):
 
   mem = intcode.load_intcode('input_13.txt')
   game = Game(mem, pre_play=pre_play)
-  game.auto_play = True
+  # game.auto_play = True
   game.play()
   with open('stick.txt', 'w') as save:
     save.write(''.join(game.joy_hist))
