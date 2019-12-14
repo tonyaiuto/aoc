@@ -111,6 +111,10 @@ class Game(object):
           self.paddle = pos
         elif color == 4:  # ball
           self.ball = pos
+    if self.capture_frames:
+      self.display.toPng('mov/frame%05d.png' % self.frame,
+                         legend='Score: %d'  % self.high_score)
+    self.frame += 1
 
 
   def get_joystick(self):
@@ -128,7 +132,8 @@ class Game(object):
     self.points = {}
     self.display.print()
     if self.capture_frames:
-      self.display.toPng('mov/frame%05d.png' % self.frame)
+      self.display.toPng('mov/frame%05d.png' % self.frame,
+                         legend='Score: %d'  % self.high_score)
     self.frame += 1
     print('High score:', self.high_score)
 
