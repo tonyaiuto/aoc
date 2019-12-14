@@ -18,6 +18,7 @@ class ElfImage(object):
     self.do_histograms = True
     self.histos = None
     self.image = None
+    self.text_font = None
 
   @property
   def histograms(self):
@@ -79,9 +80,11 @@ class ElfImage(object):
           file=out)
       start += self.width
 
-  def toPng(self, out_file, scale=10):
-    scale = 10
-    im = Image.new('L', (self.width*scale, self.height*scale), 255)
+  def toPng(self, out_file, scale=10, legend=None):
+    image_height = self.height*scale
+    if legend:
+      image_height += 20
+    im = Image.new('L', (self.width*scale, image_height), 255)
     draw = ImageDraw.Draw(im)
     start = 0
     for row in range(self.height):
@@ -106,6 +109,9 @@ class ElfImage(object):
           fill = 0
         draw.rectangle(bounds, fill=fill)
       start += self.width
+    if legend:
+      xy = (0, self.height*scale)
+      draw.text(xy, text=legend, fill=0)
     im.save(out_file)
 
 
