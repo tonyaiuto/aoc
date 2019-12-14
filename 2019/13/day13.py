@@ -6,6 +6,12 @@ import elf_image
 import intcode
 
 
+def X(pos):
+  return pos[0]
+
+def Y(pos):
+  return pos[1]
+
 def paint(computer):
   points = {}
   while True:
@@ -56,21 +62,23 @@ def part1():
 
 class Game(object):
 
-  def __init__(self, mem, **kwargs):
+  def __init__(self, mem, pre_play=None):
 
     self.computer = intcode.IntCode(
         list(mem),
-        get_input=lambda: self.get_joystick(),
-        **kwargs)
+        get_input=lambda: self.get_joystick())
     # The game didn't run because you didn't put in any quarters.
     # Unfortunately, you did not bring any quarters. Memory address 0
     # represents the number of quarters that have been inserted; set
     # it to 2 to play for free.
     self.computer.poke(0, 2)
+    self.pre_play = pre_play
     self.points = {}
     self.high_score = 0
     self.display = None
     self.joy_hist = []
+    self.ball = None
+    self.auto_play = False
 
   def play(self):
     # The arcade cabinet also has a segment display capable of showing
@@ -81,6 +89,7 @@ class Game(object):
     # output values like -1,0,12345 would show 12345 as the player's
     # current score.
 
+    #                 0    1    2    3    4
     color_to_disp = [' ', '#', 'b', '-', 'o']
 
     while True:
@@ -98,6 +107,11 @@ class Game(object):
         if pos in self.points:
           print("repaint!", pos)
         self.points[pos] = color_to_disp[color]
+        if color == 3:  # paddle
+          self.paddle = pos
+        elif color == 4:  # ball
+          self.ball = pos
+
 
   def get_joystick(self):
     # The arcade cabinet has a joystick that can move left and right.
@@ -112,16 +126,27 @@ class Game(object):
     self.points = {}
     self.display.print()
     print('High score:', self.high_score)
-    stick = input('Joystick L, N, R: ')
+
+    stick = 'n'
+    if self.auto_play:
+      if X(self.ball) < X(self.paddle):
+       stick = 'l'
+      elif X(self.ball) > X(self.paddle):
+       stick = 'r'
+    else:
+      if self.pre_play:
+        stick = self.pre_play[0]
+        self.pre_play = self.pre_play[1:]
+      else:
+        stick = input('Joystick L, N, R: ').strip()
+
     stick = (stick or 'n').lower()
+    self.joy_hist.append(stick)
     if stick == 'l':
-      self.joy_hist.append(-1)
       return -1
     elif stick == 'r':
-      self.joy_hist.append(1)
       return 1
     else:
-      self.joy_hist.append(0)
       return 0
 
 
@@ -132,14 +157,14 @@ def part2(args):
   pre_play=None
   if len(args) > 0:
     with open(args[0], 'r') as inp:
-      stick_pre = inp.read().replace('[', '').replace(']', '').split(',')
-      pre_play = [int(i) for i in stick_pre]
+      pre_play = inp.read().strip()
 
   mem = intcode.load_intcode('input_13.txt')
-  game = Game(mem, input=pre_play)
+  game = Game(mem, pre_play=pre_play)
+  game.auto_play = True
   game.play()
   with open('stick.txt', 'w') as save:
-    save.write(str(game.joy_hist))
+    save.write(''.join(game.joy_hist))
   print('High score:', game.high_score)
 
 
