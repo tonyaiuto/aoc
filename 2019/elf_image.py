@@ -5,6 +5,7 @@ import sys
 import textwrap
 
 from PIL import Image
+from PIL import ImageDraw
 
 class ElfImage(object):
 
@@ -78,9 +79,17 @@ class ElfImage(object):
           file=out)
       start += self.width
 
-  def toPng(self, out_file):
-    im = Image.frombytes('L', (self.width, self.height),
-        bytes([255 if pix == 0 else 0 for pix in self.image]))
+  def toPng(self, out_file, scale=10):
+    scale = 10
+    im = Image.new('L', (self.width*scale, self.height*scale), 255)
+    draw = ImageDraw.Draw(im)
+    start = 0
+    for row in range(self.height):
+      for col in range(self.width):
+        pix = self.image[start+col]
+        bounds = [(col*scale, row*scale), ((col+1)*scale, (row+1)*scale)]
+        draw.rectangle(bounds, fill=255 if pix == 0 else 0)
+      start += self.width
     im.save(out_file)
 
 
