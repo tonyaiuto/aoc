@@ -130,9 +130,9 @@ class NanoFactory(object):
     pass
 
 
-  def min_ore(self):
+  def min_ore(self, target=1):
     state = defaultdict(int)
-    self.ensure(1, 'FUEL', state)
+    self.ensure(target, 'FUEL', state)
     print('min_or NODE:', str(self.ore))
     print('min_or: Need %d ORE' % state['ORE'])
 
@@ -151,6 +151,17 @@ class NanoFactory(object):
     return self.ore.used
 
   def max_ore(self, limit=1000000000000):
+    min_ore = self.min_ore(target=1)
+    target = limit / min_ore
+    last_good = 1
+    while True:
+      self.reset()
+      min_ore = self.min_ore(target=target)
+      print('Made %d with %d ORE' % (target, min_ore))
+      if min_ore > limit:
+        break
+      last_good = target
+      target += 1024
     pass
 
 
@@ -256,6 +267,6 @@ def part2():
 
 if __name__ == '__main__':
   test_min_ore()
-  part1()
+  # part1()
   test_max_ore()
   part2()
