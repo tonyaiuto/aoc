@@ -15,10 +15,13 @@ class Node(object):
     self.inputs = []
     self.out_chem = None
     self.out_quant = 0
+    self.made = 0  # total made
+    self.used = 0  # total used
 
   def __str__(self):
     input = ', '.join(['%d %s' % (q, c) for (q,c) in self.inputs])
-    return '%s => %d %s' % (input, self.out_quant, self.out_chem)
+    return '%s => %d %s (made:%d, used:%d)' % (
+        input, self.out_quant, self.out_chem, self.made, self.used)
 
   @staticmethod
   def fromText(text):
@@ -71,6 +74,15 @@ class NanoFactory(object):
     self.nodes = []
     self.trace = False
     self._parse(textwrap.dedent(reactions))
+    self.ore = Node()
+    self.ore.out_chem = 'ORE'
+    self.ore.out_quant = 1
+    self.to_get['ORE'] = self.ore
+
+  def reset(self):
+    for node in self.nodes:
+      node.made = 0
+      node.used = 0
 
   def _parse(self, s):
     for line in s.strip().split('\n'):
@@ -82,34 +94,49 @@ class NanoFactory(object):
             '%s is yielded two ways. Violates premise' % node.out_chem)
       self.to_get[node.out_chem] = node
 
-  def make(self, t_need, t_chem, state, g_need):
+  def ensure(self, t_need, t_chem, state, g_need):
     target_node = self.to_get[t_chem]
-    if state[t_chem] >= t_need:
-      # state[t_chem] -= t_need
-      return state
 
-    # How many times do we have to run the reaction.
-    # t_need -= state[t_chem]  # actual need
-    n_times = (t_need + target_node.out_quant - 1) // target_node.out_quant
+    # reduce need by what we have on hand
+    on_hand = target_node.made - target_node.used
+    if on_hand > 0:
+      use = min(t_need, on_hand)
+      t_need -= use
+      # state[t_chem] -= use
+    if self.trace:
+      print('Have %d leftover %s on hand. Making %d' % (
+          on_hand, t_chem, t_need))
 
-    for (need, chem) in target_node.inputs:
-      need = need * n_times
-      g_need[chem] += need
-      if self.trace:
-        print('need %5d of %-8.8s: %s' % (need, chem, P(state)))
-      if chem == 'ORE':
-        state['ORE'] += need
-      else:
-        self.make(need-state[chem], chem, state=state, g_need=g_need)
-        if state[chem] < need:
-          print('WTF?', chem, 'need:', need, str(target_node), P(state))
+    while t_need > 0:
+      # How many times do we have to run the reaction.
+      # t_need -= state[t_chem]  # actual need
+      n_times = (t_need + target_node.out_quant - 1) // target_node.out_quant
+
+      # run reaction
+      for (need, chem) in target_node.inputs:
+        input_node = self.to_get[chem]
+
+        # need = need * n_times  # number needed for output required
+        g_need[chem] += need
+
+        if self.trace:
+          print('need %5d of %-8.8s: %s' % (need, chem, P(state)))
+        self.ensure(need, chem, state=state, g_need=g_need)
+        #XXXif state[chem] < need:
+        #  print('WTF?', chem, 'need:', need, str(target_node), P(state))
         state[chem] -= need
-    state[t_chem] += target_node.out_quant * n_times
+        input_node.used += need
+      t_need -= target_node.out_quant
+      state[t_chem] += target_node.out_quant
+      target_node.made += target_node.out_quant
+    pass
+
 
   def min_ore(self):
     state = defaultdict(int)
     need = defaultdict(int)
-    self.make(1, 'FUEL', state, need)
+    self.ensure(1, 'FUEL', state, need)
+    print('min_or NODE:', str(self.ore))
     print('min_or: Need %d %d ORE' % (state['ORE'], need['ORE']))
 
     need_ore = 0
@@ -121,10 +148,14 @@ class NanoFactory(object):
           n_times = (t_need + node.out_quant - 1) // node.out_quant
           need_ore += i_need * n_times
     print('need_ore:', need_ore)
-    return min(need_ore, state['ORE'])
+    #XX return min(need_ore, state['ORE'])
+    return self.ore.used
+
+  def max_ore(self, limit=1000000000000):
+    pass
 
 
-def test_part1():
+def test_min_ore():
   nf = NanoFactory(reactions="""\
       10 ORE => 10 A
       1 ORE => 1 B
@@ -133,7 +164,7 @@ def test_part1():
       7 A, 1 D => 1 E
       7 A, 1 E => 1 FUEL
       """)
-  assert 6 == len(nf.to_get)
+  assert 7 == len(nf.to_get)
   min_ore = nf.min_ore()
   assert 31 == min_ore
 
@@ -146,10 +177,9 @@ def test_part1():
       4 C, 1 A => 1 CA
       2 AB, 3 BC, 4 CA => 1 FUEL
       """)
-  assert 7 == len(nf.to_get)
+  assert 8 == len(nf.to_get)
   min_ore = nf.min_ore()
   assert 165 == min_ore
-
 
   nf = NanoFactory(reactions="""\
       2 VPVL, 7 FWMGM, 2 CXFTF, 11 MNCFX => 1 STKFG
@@ -187,9 +217,28 @@ def test_part1():
       5 BMBT => 4 WPTQ
       6 BHXH, 18 KTJDG, 12 WPTQ, 7 PLWSL, 31 FHTLT, 37 ZDVW => 1 FUEL
       """)
-  # nf.trace = True
   min_ore = nf.min_ore()
   assert 2210736 == min_ore
+
+
+def test_max_ore():
+  nf = NanoFactory(reactions="""\
+      2 VPVL, 7 FWMGM, 2 CXFTF, 11 MNCFX => 1 STKFG
+      17 NVRVD, 3 JNWZP => 8 VPVL
+      53 STKFG, 6 MNCFX, 46 VJHF, 81 HVMC, 68 CXFTF, 25 GNMV => 1 FUEL
+      22 VJHF, 37 MNCFX => 5 FWMGM
+      139 ORE => 4 NVRVD
+      144 ORE => 7 JNWZP
+      5 MNCFX, 7 RFSQX, 2 FWMGM, 2 VPVL, 19 CXFTF => 3 HVMC
+      5 VJHF, 7 MNCFX, 9 VPVL, 37 CXFTF => 6 GNMV
+      145 ORE => 6 MNCFX
+      1 NVRVD => 8 CXFTF
+      1 VJHF, 6 MNCFX => 4 RFSQX
+      176 ORE => 6 VJHF
+      """)
+  min_ore = nf.min_ore()
+  assert 180697 == min_ore
+  max_ore = nf.max_ore()
 
 
 def part1():
@@ -199,9 +248,15 @@ def part1():
   #  445745 445745 is too low
   # need_ore: 445869 still wrong
   assert 445745 < min_ore
+  assert 469536 == min_ore
+
+
+def part2():
+  pass
 
 
 if __name__ == '__main__':
-  test_part1()
-  # part1()
-
+  test_min_ore()
+  part1()
+  test_max_ore()
+  part2()
