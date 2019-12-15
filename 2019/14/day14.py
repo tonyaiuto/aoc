@@ -8,7 +8,6 @@ import textwrap
 QUANT_CHEM_RE = re.compile(r'(\d+) *([A-Za-z]+)')
 
 
-
 class Node(object):
 
   def __init__(self):
@@ -94,7 +93,7 @@ class NanoFactory(object):
             '%s is yielded two ways. Violates premise' % node.out_chem)
       self.to_get[node.out_chem] = node
 
-  def ensure(self, t_need, t_chem, state, g_need):
+  def ensure(self, t_need, t_chem, state):
     target_node = self.to_get[t_chem]
 
     # reduce need by what we have on hand
@@ -117,11 +116,10 @@ class NanoFactory(object):
         input_node = self.to_get[chem]
 
         # need = need * n_times  # number needed for output required
-        g_need[chem] += need
 
         if self.trace:
           print('need %5d of %-8.8s: %s' % (need, chem, P(state)))
-        self.ensure(need, chem, state=state, g_need=g_need)
+        self.ensure(need, chem, state=state)
         #XXXif state[chem] < need:
         #  print('WTF?', chem, 'need:', need, str(target_node), P(state))
         state[chem] -= need
@@ -134,21 +132,22 @@ class NanoFactory(object):
 
   def min_ore(self):
     state = defaultdict(int)
-    need = defaultdict(int)
-    self.ensure(1, 'FUEL', state, need)
+    self.ensure(1, 'FUEL', state)
     print('min_or NODE:', str(self.ore))
-    print('min_or: Need %d %d ORE' % (state['ORE'], need['ORE']))
+    print('min_or: Need %d ORE' % state['ORE'])
 
+    """ XXX
     need_ore = 0
     for node in self.nodes:
       for (i_need, i_chem) in node.inputs:
         if i_chem == 'ORE':
           # How much do we need of this precursor
-          t_need = need[node.out_chem]
+          t_need = node.used
           n_times = (t_need + node.out_quant - 1) // node.out_quant
           need_ore += i_need * n_times
     print('need_ore:', need_ore)
-    #XX return min(need_ore, state['ORE'])
+    # return min(need_ore, state['ORE'])
+    """
     return self.ore.used
 
   def max_ore(self, limit=1000000000000):
