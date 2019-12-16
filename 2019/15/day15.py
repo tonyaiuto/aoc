@@ -38,6 +38,10 @@ class Droid(object):
     self.span = 0
     self.points = {}
     self.dist_to_here = {}
+    self.min_x = 0
+    self.max_x = 0
+    self.min_y = 0
+    self.max_y = 0
 
     self.display = None
     self.frame = 0
@@ -48,6 +52,14 @@ class Droid(object):
 
   def move(self, dir):
     target_pos = move_pos(self.droid_pos, dir)
+    if target_pos[0] < self.min_x:
+      self.min_x = target_pos[0]
+    if target_pos[0] > self.max_x:
+      self.max_x = target_pos[0]
+    if target_pos[1] < self.min_y:
+      self.min_y = target_pos[1]
+    if target_pos[1] > self.max_y:
+      self.max_y = target_pos[1]
     self.computer.push_input(dir)
     status = self.computer.run_until_output()
     if status == 0:
@@ -75,7 +87,7 @@ class Droid(object):
     self.last_dir = dir
     if status == 2:
       self.oxygen = target_pos
-      self.points[target_pos] = 'O'
+      self.points[self.oxygen] = 'O'
       print('dist to oxygen', self.dist_to_here[target_pos])
     return True
 
@@ -96,7 +108,6 @@ class Droid(object):
     return ret
 
   def map_to_oxygen(self):
-
     max_span = 0
     last_dir = 0
     while not self.oxygen:
@@ -106,11 +117,69 @@ class Droid(object):
         dir = move[1]
       self.move(dir)
       self.frame += 1
-      if self.frame % 20 == 0:
-        print('=======================================')
+      if self.frame % 100 == 0:
+        print('========= frame %d =============' % self.frame)
         img = ElfImage.fromPoints(self.points)
         img.print()
-    print('=======================================')
+    print('========= frame %d =============' % self.frame)
+    self.points[(0,0)] = 'I'
+    img = ElfImage.fromPoints(self.points)
+    img.print()
+
+  def finish_map(self):
+    max_span = 0
+    last_dir = 0
+    while len(self.points) < (self.max_x - self.min_x + 1) * (self.max_y - self.min_y + 1) - 20:
+      moves = self.rank_moves()
+      if len(moves) == 0:
+        break
+      dir = moves[0]
+      if dir == last_dir and self.span >= last_span and len(moves) > 1:
+        dir = move[1]
+      self.move(dir)
+      self.points[self.oxygen] = 'O'
+      self.frame += 1
+      if self.frame % 20 == 0:
+        print('========= frame %d =============' % self.frame)
+        img = ElfImage.fromPoints(self.points)
+        img.print()
+    print('========= frame %d =============' % self.frame)
+    self.points[(0,0)] = 'I'
+    img = ElfImage.fromPoints(self.points)
+    img.print()
+
+
+  def o_flood(self):
+    gas_edge = [self.oxygen]
+
+    minute = 0
+    while len(gas_edge) > 0:
+      new_edge = []
+      for pos in gas_edge:
+        for neighbor in all_dirs(pos):
+          if (neighbor[0] < self.min_x
+              or neighbor[0] > self.max_x
+              or neighbor[1] < self.min_y
+              or neighbor[1] > self.max_y):
+            continue
+          what = self.points.get(neighbor)
+          if what == '#' or what == 'O' or what == 'o':
+            continue
+          if neighbor in self.visited:
+            self.points[neighbor] = 'O'
+          else:
+            self.points[neighbor] = 'o'
+          new_edge.append(neighbor)
+      if not new_edge:
+        break
+      gas_edge = new_edge
+      minute += 1
+      if minute % 20 == 0:
+        print('========= minute %d =============' % minute)
+        img = ElfImage.fromPoints(self.points)
+        img.print()
+
+    print('========= minute %d =============' % minute)
     self.points[(0,0)] = 'I'
     img = ElfImage.fromPoints(self.points)
     img.print()
@@ -122,15 +191,16 @@ def part1():
   droid.map_to_oxygen()
 
 
-def part2(args):
-  # Beat the game by breaking all the blocks.
-  # What is your score after the last block is broken?
-
-  mem = intcode.load_intcode('input_13.txt')
-  game = Game(mem)
-  game.play()
+def part2():
+  mem = intcode.load_intcode('input_15.txt')
+  droid = Droid(list(mem))
+  droid.map_to_oxygen()
+  droid.finish_map()
+  droid.o_flood()
+  # 283 is too low.
+  # 291 is too hight
 
 
 if __name__ == '__main__':
-  part1()
-  # part2(sys.argv[1:])
+  # part1()
+  part2()
