@@ -133,7 +133,7 @@ class NanoFactory(object):
     while True:
       self.reset()
       min_ore = self.min_ore(target=target)
-      print('Made %d with %13d ORE' % (target, min_ore))
+      # print('Made %d with %13d ORE' % (target, min_ore))
       if min_ore < limit:
         last_good = target
         max_f = max(max_f, target)
@@ -255,6 +255,6 @@ def part2():
 
 if __name__ == '__main__':
   test_min_ore()
-  part1()
+  # part1()
   test_max_fuel()
   part2()
