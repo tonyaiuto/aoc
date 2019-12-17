@@ -18,23 +18,30 @@ def base(digit_pos, pos):
 
 
 def do_mul(input, digit):
-  sum = 0
+  # digit is 1 based
+  tot = 0
   # For thinking about it
   #for i, d in enumerate(input):
-  #  sum += d * BASE_PATTERN[((i+1) // digit) % 4]
+  #  tot += d * BASE_PATTERN[((i+1) // digit) % 4]
   #  But note the diagonal of the 0
+  if digit > len(input) // 2:
+    return sum(input[digit-1:]) % 10
   for i in range(digit-1, len(input)):
-    sum += input[i] * BASE_PATTERN[((i+1) // digit) % 4]
-  return abs(sum) % 10
+    b = BASE_PATTERN[((i+1) // digit) % 4]
+    if b == 1:
+       tot += input[i]
+    elif b == -1:
+       tot -= input[i]
+  return abs(tot) % 10
 
 
 def do_fft(input, passes=1):
-  out = [0] * len(input)
+  # not property of mask, that after computing digit i, it is not needed
+  # any more
   for _ in range(passes):
     for i in range(len(input)):
-      out[i] = do_mul(input, i+1)
-    input = list(out)
-  return out
+      input[i] = do_mul(input, i+1)
+  return input
 
 
 def check_100(input_s, first8):
@@ -68,8 +75,11 @@ def test_fft():
 
 def part1():
   input = str_to_list(INP)
+  assert len(input) % 2 == 0
   got = do_fft(input, passes=100)
-  print('pass1', ''.join([str(d) for d in got[0:8]]))
+  first8 = ''.join([str(d) for d in got[0:8]])
+  print('pass1', first8)
+  assert '19239468' == first8
 
 
 def part2():
