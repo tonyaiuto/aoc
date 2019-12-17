@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import textwrap
 
 from elf_image import ElfImage
 import intcode
@@ -25,7 +26,7 @@ def X(pos):
 def Y(pos):
   return pos[1]
 
-def all_dirs(pos):
+def neighbors(pos):
   return [(pos[0], pos[1]-1), (pos[0], pos[1]+1),
           (pos[0]-1, pos[1]), (pos[0]+1, pos[1])]
 
@@ -41,6 +42,8 @@ class VacuumRobot(object):
     self.points = {}
     self.intersections = {}
     self.visited = set()
+    self.pos = None
+    self.dir = 0
 
     """
     self.droid_pos = (0,0)
@@ -63,7 +66,7 @@ class VacuumRobot(object):
 
   def get_map(self):
     x = 0
-    y = 0
+    self.height = 0
     # line = ''
     while True:
       out = self.computer.run_until_output()
@@ -71,25 +74,43 @@ class VacuumRobot(object):
         break
       c = chr(out)
       if c == '\n':
-        y += 1
+        self.height += 1
         x = 0
         # print(line)
         # line = ''
         continue
-
       # line += c
-      self.points[(x, y)] = c
-      self.width = max(self.width, x)
+      self.points[(x, self.height)] = c
       if c == '#':
-        self.scaffold.add((x, y))
+        self.scaffold.add((x, self.height))
+      if c == '^':
+        self.start = (x, self.height)
+        self.visited.add(self.start)
       x += 1
-    self.height = y
-  
+      self.width = max(self.width, x)
+
+
+  def load_sample_map(self, map):
+    self.height = 0
+    for line in textwrap.dedent(map).split('\n'):
+      if line.strip():
+        x = 0
+        for c in line:
+          self.points[(x, self.height)] = c
+          if c == '#':
+            self.scaffold.add((x, self.height))
+          if c == '^':
+            self.start = (x, self.height)
+            self.visited.add(self.start)
+          x += 1
+          self.width = max(self.width, x)
+        self.height += 1
+
   def compute_alignment(self):
     alignment = 0
     for pos in self.scaffold:
       is_intersection = True
-      for neighbor in all_dirs(pos):
+      for neighbor in neighbors(pos):
         if not neighbor in self.scaffold:
           is_intersection = False
       if is_intersection:      
@@ -99,140 +120,57 @@ class VacuumRobot(object):
         alignment += a
     return alignment
 
-
-  def move(self, dir):
-    target_pos = move_pos(self.droid_pos, dir)
-    if target_pos[0] < self.min_x:
-      self.min_x = target_pos[0]
-    if target_pos[0] > self.max_x:
-      self.max_x = target_pos[0]
-    if target_pos[1] < self.min_y:
-      self.min_y = target_pos[1]
-    if target_pos[1] > self.max_y:
-      self.max_y = target_pos[1]
-    self.computer.push_input(dir)
-    status = self.computer.run_until_output()
-    if status == 0:
-      self.points[target_pos] = '#'
-      self.no_go.add(target_pos)
-      return False
-    self.visited.add(target_pos)
-    self.points[self.droid_pos] = '.'
-    self.droid_pos = target_pos
-    self.points[self.droid_pos] = 'D'
-
-    min_dist = 999999999
-    for neighbor in all_dirs(target_pos):
-      if not neighbor in self.visited:
+  def find_paths(self, pos):
+    for pos in self.intersections:
+      self.points[pos] = 'O'
+    for path in self.find_path(pos):
+      if len(path) < len(self.scaffold):
         continue
-      dist = self.dist_to_here[neighbor]
-      if dist < min_dist:
-        min_dist = dist
-    self.dist_to_here[target_pos] = 1 + min_dist
+      print('Complete path: ', len(path), path)
+    print('# scaffold', len(self.scaffold))
 
-    if self.last_dir == dir:
-      self.span += 1
-    else:
-      self.span = 0
-    self.last_dir = dir
-    if status == 2:
-      self.oxygen = target_pos
-      self.points[self.oxygen] = 'O'
-      print('dist to oxygen', self.dist_to_here[target_pos])
-    return True
+  def path_to_code(self, path):
+    pass
+    
 
-  def rank_moves(self):
-    unexplored = []
-    visited = []
-    for dir in range(1, 5):
-      target_pos = move_pos(self.droid_pos, dir)
-      if target_pos in self.no_go:
-        continue
-      elif target_pos in self.visited:
-        visited.append(dir)
+  def find_path(self, pos, visited=None, level=1):
+    if not visited:
+      visited = set()
+    # print('finding path from', pos)
+    visited.add(pos)
+    path = []
+    while True:
+      moves = self.get_moves(pos, visited)
+      # print('at', pos, 'moves', moves)
+      if not moves:
+        # print('Done at: ', pos)
+        if pos == self.end:
+          yield path
+        return
+      if len(moves) == 1:
+        pos = moves[0]
+        path.append(pos)
+        visited.add(pos)
       else:
-        unexplored.append(dir)
-    ret = unexplored + visited
-    if len(ret) == 1:  # dead end
-      self.no_go.add(self.droid_pos)
+        break
+    # At an intersection
+    print('level', level, 'path so far', path, 'moves:', moves)
+    for move in moves:
+      for rest in self.find_path(move, visited=set(visited), level=level+1):
+        if rest:
+          print('follow', move, 'rest:', rest)
+          yield path + [move] + rest 
+
+
+  def get_moves(self, pos, visited):
+    ret = []
+    for neighbor in neighbors(pos):
+      n = self.points.get(neighbor)
+      if n in ('#', 'O'):
+        if n == '#' and neighbor in visited:
+          continue
+        ret.append(neighbor)
     return ret
-
-  def map_to_oxygen(self):
-    max_span = 0
-    last_dir = 0
-    while not self.oxygen:
-      moves = self.rank_moves()
-      dir = moves[0]
-      if dir == last_dir and self.span >= last_span and len(moves) > 1:
-        dir = move[1]
-      self.move(dir)
-      self.frame += 1
-      if self.frame % 100 == 0:
-        print('========= frame %d =============' % self.frame)
-        img = ElfImage.fromPoints(self.points)
-        img.print()
-    print('========= frame %d =============' % self.frame)
-    self.points[(0,0)] = 'I'
-    img = ElfImage.fromPoints(self.points)
-    img.print()
-
-  def finish_map(self):
-    max_span = 0
-    last_dir = 0
-    while len(self.points) < (self.max_x - self.min_x + 1) * (self.max_y - self.min_y + 1) - 20:
-      moves = self.rank_moves()
-      if len(moves) == 0:
-        break
-      dir = moves[0]
-      if dir == last_dir and self.span >= last_span and len(moves) > 1:
-        dir = move[1]
-      self.move(dir)
-      self.points[self.oxygen] = 'O'
-      self.frame += 1
-      if self.frame % 20 == 0:
-        print('========= frame %d =============' % self.frame)
-        img = ElfImage.fromPoints(self.points)
-        img.print()
-    print('========= frame %d =============' % self.frame)
-    self.points[(0,0)] = 'I'
-    img = ElfImage.fromPoints(self.points)
-    img.print()
-
-
-  def o_flood(self):
-    gas_edge = [self.oxygen]
-
-    minute = 0
-    while len(gas_edge) > 0:
-      new_edge = []
-      for pos in gas_edge:
-        for neighbor in all_dirs(pos):
-          if (neighbor[0] < self.min_x
-              or neighbor[0] > self.max_x
-              or neighbor[1] < self.min_y
-              or neighbor[1] > self.max_y):
-            continue
-          what = self.points.get(neighbor)
-          if what == '#' or what == 'O' or what == 'o':
-            continue
-          if neighbor in self.visited:
-            self.points[neighbor] = 'O'
-          else:
-            self.points[neighbor] = 'o'
-          new_edge.append(neighbor)
-      if not new_edge:
-        break
-      gas_edge = new_edge
-      minute += 1
-      if minute % 20 == 0:
-        print('========= minute %d =============' % minute)
-        img = ElfImage.fromPoints(self.points)
-        img.print()
-
-    print('========= minute %d =============' % minute)
-    self.points[(0,0)] = 'I'
-    img = ElfImage.fromPoints(self.points)
-    img.print()
 
 
 def part1():
@@ -249,17 +187,94 @@ def part1():
   assert 3428 == alignment
 
 
+def test_part2():
+  mem = intcode.load_intcode('input_17.txt')
+  robot = VacuumRobot(list(mem))
+  robot.computer.poke(0, 2)
+  robot.load_sample_map("""
+      #######...#####
+      #.....#...#...#
+      #.....#...#...#
+      ......#...#...#
+      ......#...###.#
+      ......#.....#.#
+      ^########...#.#
+      ......#.#...#.#
+      ......#########
+      ........#...#..
+      ....#########..
+      ....#...#......
+      ....#...#......
+      ....#...#......
+      ....#####......
+      """)
+  img = ElfImage.fromPoints(robot.points)
+  img.print(ruler=True)
+  print('')
+  alignment = robot.compute_alignment()
+  img.update(robot.intersections)
+  img.print(ruler=True)
+  robot.end = (0, 2)
+  robot.find_paths(robot.start)
+
+
+
+
 def part2():
   mem = intcode.load_intcode('input_17.txt')
-  droid = Droid(list(mem))
-  droid
-  droid.map_to_oxygen()
-  droid.finish_map()
-  droid.o_flood()
-  # 283 is too low.
-  # 291 is too hight
-
+  robot = VacuumRobot(list(mem))
+  robot.computer.poke(0, 2)
+  robot.get_map()
+  robot.end = (22, 14)
 
 if __name__ == '__main__':
   part1()
+  test_part2()
   # part2()
+
+"""
+   0123456789012345678901234567890123456
+ 0 ..........................#######....
+ 1 ..........................#.....#....
+ 2 ..........................#.####O####
+ 3 ..........................#.#...#...#
+ 4 ..........................#.#...#...#
+ 5 ..........................#.#...#...#
+ 6 ..........................##O##.#...#
+ 7 ............................#.#.#...#
+ 8 ............................#.#.#...#
+ 9 ............................#.#.#...#
+10 ............................##O##...#
+11 ..............................#.....#
+12 ............................##O######
+13 ............................#.#......
+14 ......................######O##......
+15 ............................#........
+16 ............................#........
+17 ............................#........
+18 ....####^...........#########........
+19 ....#...............#................
+20 ....#...............#................
+21 ....#...............#................
+22 ....#...............#................
+23 ....#...............#................
+24 ####O######.....####O######..........
+25 #...#.....#.....#...#.....#..........
+26 #...#.####O####.#...#####.#..........
+27 #...#.#...#...#.#.......#.#..........
+28 #...##O####...#.#.......#.#..........
+29 #.....#.......#.#.......#.#..........
+30 #######.......#.#.......#.#..........
+31 ..............#.#.......#.#..........
+32 ..............#.#########.#######....
+33 ..............#.................#....
+34 ..............#######.#########.#....
+35 ....................#.#.......#.#....
+36 ....................#.#.......#.#....
+37 ....................#.#.......#.#....
+38 ....................#.########O##....
+39 ....................#.........#......
+40 ....................#.........#......
+41 ....................#.........#......
+42 ....................###########......
+"""
