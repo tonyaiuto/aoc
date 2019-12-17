@@ -66,15 +66,22 @@ class ElfImage(object):
       y = pos[1] - self.min_y
       self.image[y * self.width + x] = to_color(color)
 
-  def print(self, color_map=None, out=sys.stdout):
+  def print(self, color_map=None, out=sys.stdout, ruler=False):
     if not color_map:
       color_map = (lambda pix:
           ' 'if pix == 0
           else '#' if pix == 1
           else pix if (isinstance(pix, str) and 1 == len(pix))
           else '?')
+    if ruler:
+      line = '   '
+      for i in range(self.width):
+        line += str(i % 10)
+      print(line)
     start = 0
     for row in range(self.height):
+      if ruler:
+        out.write('%2d ' % row)
       print(''.join(
           [color_map(pix) for pix in self.image[start:start+self.width]]),
           file=out)
