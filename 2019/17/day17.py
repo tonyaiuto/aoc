@@ -11,33 +11,42 @@ import intcode
 def need_turn(from_pos, dir, to):
   dx = to[0] - from_pos[0]
   dy = to[1] - from_pos[1]
+  if dy < 0:  # moving up
+    new_dir = 0
+  elif dy > 0:  # moving down
+    new_dir = 2
+  elif dx > 0:  # moving right
+    new_dir = 1
+  else:
+    new_dir = 3
   if dx == 0 and dir in [1, 3]:
     # changing y but facing left or right
     if dy > 0:  # moving down
       if dir == 1:  # but facing right
-        return 'R', 2
+        return 'R', new_dir
       else:
-        return 'L', 2
+        return 'L', new_dir
     else:  # moving up
       if dir == 1:  # but facing right
-        return 'L', 0
+        return 'L', new_dir
       else:
-        return 'R', 0
+        return 'R', new_dir
   elif dy == 0 and dir in [0, 2]:
     if dx > 0:  # moving right
       if dir == 0:  # facing up
-        return 'R', 1
+        return 'R', new_dir
       else:
-        return 'L', 1
+        return 'L', new_dir
     else:  # moving left
       if dir == 0:  # facing up
-        return 'L', 3
+        return 'L', new_dir
       else:
-        return 'R', 3
-  return None, None
+        return 'R', new_dir
+  return None, new_dir
 
 assert ('R', 1) == need_turn((0,6), 0, (1,6))
-assert (None, None) == need_turn((1,6), 1, (2,6))
+assert (None, 1) == need_turn((1,6), 1, (2,6))
+assert (None, 3) == need_turn((4,6), 1, (3,6))
 
 def X(pos):
   return pos[0]
@@ -137,17 +146,56 @@ class VacuumRobot(object):
         a = X(pos) * Y(pos)
         print('%s => %d' % (pos, a))
         alignment += a
+    for pos in self.intersections:
+      self.points[pos] = 'O'
     return alignment
 
   def find_paths(self, pos):
-    for i_pos in self.intersections:
-      self.points[i_pos] = 'O'
     for path in self.find_path(pos):
       if len(path) < len(self.scaffold) + len(self.intersections):
         continue
       print('Complete path: ', len(path), path)
       print(self.path_to_code(path))
     print('# scaffold', len(self.scaffold))
+
+
+  def find_straighest_path(self, pos):
+    print('finding straighest path from', pos)
+    visited = set()
+    visited.add(pos)
+    path = []
+    dir = 0
+    while True:
+      moves = self.get_moves(pos, visited)
+      if not moves:
+        # print('Done at: ', pos)
+        if pos == self.end:
+          break
+        raise Exception('got to wrong end at', pos)
+
+      if len(moves) == 1:
+        move = moves[0]
+        _, new_dir = need_turn(pos, dir, move)
+        if new_dir is not None:
+          # print('turning to', new_dir)
+          dir = new_dir
+      else:
+        move = None
+        # print('at', pos, 'dir:', dir, 'moves', moves)
+        for m in moves:
+          _, new_dir = need_turn(pos, dir, m)
+          # print('    ', m, '=> dir', new_dir)
+          if new_dir == dir:
+            move = m
+        assert move
+      pos = move
+      path.append(pos)
+      visited.add(pos)
+
+    # print('Complete straight path: ', len(path), path)
+    # print(self.path_to_code(path))
+    return path
+
 
   def path_to_code(self, path):
     #  80 [(1, 6), (2, 6), (3, 6), (4, 6), (5, 6), (6, 6), (7, 6), (8, 6), (8, 7), (8, 8), (9, 8), (10, 8), (11, 8), (12, 8), (13, 8), (14, 8), (14, 7), (14, 6), (14, 5), (14, 4), (14, 3), (14, 2), (14, 1), (14, 0), (13, 0), (12, 0), (11, 0), (10, 0), (10, 1), (10, 2), (10, 3), (10, 4), (11, 4), (12, 4), (12, 5), (12, 6), (12, 7), (12, 8), (12, 9), (12, 10), (11, 10), (10, 10), (9, 10), (8, 10), (7, 10), (6, 10), (5, 10), (4, 10), (4, 11), (4, 12), (4, 13), (4, 14), (5, 14), (6, 14), (7, 14), (8, 14), (8, 13), (8, 12), (8, 11), (8, 10), (8, 9), (8, 8), (7, 8), (6, 8), (6, 7), (6, 6), (6, 5), (6, 4), (6, 3), (6, 2), (6, 1), (6, 0), (5, 0), (4, 0), (3, 0), (2, 0), (1, 0), (0, 0), (0, 1), (0, 2)]
@@ -166,8 +214,8 @@ class VacuumRobot(object):
         dist = 0
       else:
         dist += 1
+    ret.append(dist+1)
     return ret
-
 
   def find_path(self, pos, visited=None, level=1):
     if not visited:
@@ -253,23 +301,78 @@ def test_part2():
   img.print(ruler=True)
   robot.end = (0, 2)
   print('robot start=', robot.start)
+  # robot.find_paths(robot.start)
+  path = robot.find_straighest_path(robot.start)
+  print(robot.path_to_code(path))
 
-  robot.find_paths(robot.start)
 
-
+def code_to_ascii(code):
+  ret = []
+  for word in code:
+    if ret:
+      ret.append(ord(','))
+    if isinstance(word, str):
+      ret.append(ord(word))
+    else:
+      if word > 10:
+        ret.append(ord('1'))
+      ret.append(ord(str(word % 10)))
+  assert len(ret) <= 20
+  ret.append(10)
+  print(ret)
+  return ret
 
 
 def part2():
   mem = intcode.load_intcode('input_17.txt')
   robot = VacuumRobot(list(mem))
-  robot.computer.poke(0, 2)
   robot.get_map()
+  alignment = robot.compute_alignment()
   robot.end = (22, 14)
+  path = robot.find_straighest_path(robot.start)
+  move_program = robot.path_to_code(path)
+  print(move_program)
+
+  X = ['L', 4, 'L', 10, 'L', 6, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'L', 4, 'R', 8, 'R', 8, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 6, 'L', 4, 'R', 8, 'R', 8, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'L', 4, 'R', 8, 'R']
+
+  A = ['L', 4, 'L', 10, 'L', 6]
+  B = ['L', 6, 'L', 4, 'R', 8, 'R', 8]
+  C = ['L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8]
+  main_program = A + A + B + C + A + C + B + C + A + B
+  assert move_program == main_program
+
+  main_code = code_to_ascii(['A', 'A', 'B', 'C', 'A', 'C', 'B', 'C', 'A', 'B'])
+  a_code = code_to_ascii(A)
+  b_code = code_to_ascii(B)
+  c_code = code_to_ascii(C)
+
+
+  assert mem[0] == 1
+  robot = VacuumRobot(list(mem))
+  robot.computer.run()
+  robot.computer.poke(0, 2)
+
+  robot.computer.push_input(main_code)
+  robot.computer.push_input(a_code)
+  robot.computer.push_input(b_code)
+  robot.computer.push_input(c_code)
+  robot.computer.push_input([ord('n'), 10])
+
+  print(robot.computer.run_until_newline())
+  print(robot.computer.run_until_newline())
+  print(robot.computer.run_until_newline())
+  print(robot.computer.run_until_newline())
+  print(robot.computer.run_until_newline())
+
+  out = robot.computer.run()
+  print(out)
+  print(''.join([chr(c) for c in out]))
+
 
 if __name__ == '__main__':
   part1()
   test_part2()
-  # part2()
+  part2()
 
 """
    0123456789012345678901234567890123456

@@ -94,6 +94,18 @@ class IntCode(object):
       else:
         ret.append(out)
 
+  def run_until_newline(self):
+    line = []
+    while True:
+      word = self.run_until_output()
+      if not word or word == 10:
+        break
+      if word > ord('z'):
+        print('Unexpected word', word)
+        break
+      line.append(chr(word))
+    return ''.join(line) 
+
   def run_until_output(self):
     if self.halted:
       return None
