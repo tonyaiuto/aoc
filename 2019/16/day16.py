@@ -26,23 +26,30 @@ def do_mul(input, digit):
   #  But note the diagonal of the 0
   if digit > len(input) // 2:
     return sum(input[digit-1:]) % 10
+
+  msg = '   ' * (digit-1)
   for i in range(digit-1, len(input)):
     b = BASE_PATTERN[((i+1) // digit) % 4]
     if b == 1:
+       msg += ' +%d' % input[i]
        tot += input[i]
     elif b == -1:
+       msg += ' -%d' % input[i]
        tot -= input[i]
+    else:
+       msg += '   '
+  msg += ' = %d' % (abs(tot) % 10)
+  # print(msg)
   return abs(tot) % 10
-
-def do_mul(input, digit):
 
 
 def do_fft(input, passes=1):
   # not property of mask, that after computing digit i, it is not needed
   # any more
-  for _ in range(passes):
+  for _pass in range(passes):
     for i in range(len(input)):
       input[i] = do_mul(input, i+1)
+    print('first8', input[0:8], 'pass', _pass)
   return input
 
 
@@ -101,17 +108,19 @@ def part1():
   assert len(input) % 2 == 0
   got = do_fft(input, passes=100)
   first8 = ''.join([str(d) for d in got[0:8]])
-  print('pass1', first8)
+  print('part1', first8)
   assert '19239468' == first8
 
 
 def part2():
-  message_offset = int(INP[0:7])
-  print('message offset', message_offset)
   inp1 = str_to_list(INP)
-  input = inp1 * 10000
+  input = inp1 * 2
   # got = do_fft(input, passes=100)
   got = do_fft(input, passes=1)
+  first8 = ''.join([str(d) for d in got[0:8]])
+  print('part2', first8)
+  message_offset = int(INP[0:7])
+  print('message offset', message_offset)
   message = got[message_offset:message_offset+8]
   print('part2:', message)
 
@@ -120,5 +129,5 @@ def part2():
 if __name__ == '__main__':
   test_fft()
   part1()
-  # part2()
-
+  part2()
+  print('inp len', len(INP))
