@@ -85,7 +85,6 @@ class IntCode(object):
     return store
 
   def run(self):
-    self.pc = 0
     ret = []
     while True:
       out = self.run_until_output()

@@ -319,12 +319,13 @@ def code_to_ascii(code):
       ret.append(ord(str(word % 10)))
   assert len(ret) <= 20
   ret.append(10)
-  print(ret)
+  print('%s => %s' % (code, ret))
   return ret
 
 
 def part2():
   mem = intcode.load_intcode('input_17.txt')
+
   robot = VacuumRobot(list(mem))
   robot.get_map()
   alignment = robot.compute_alignment()
@@ -334,6 +335,7 @@ def part2():
   print(move_program)
 
   X = ['L', 4, 'L', 10, 'L', 6, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'L', 4, 'R', 8, 'R', 8, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 6, 'L', 4, 'R', 8, 'R', 8, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'L', 4, 'R', 8, 'R']
+
 
   A = ['L', 4, 'L', 10, 'L', 6]
   B = ['L', 6, 'L', 4, 'R', 8, 'R', 8]
@@ -346,32 +348,42 @@ def part2():
   b_code = code_to_ascii(B)
   c_code = code_to_ascii(C)
 
-
   assert mem[0] == 1
   robot = VacuumRobot(list(mem))
-  robot.computer.run()
   robot.computer.poke(0, 2)
 
   robot.computer.push_input(main_code)
   robot.computer.push_input(a_code)
   robot.computer.push_input(b_code)
   robot.computer.push_input(c_code)
-  robot.computer.push_input([ord('n'), 10])
+  robot.computer.push_input([ord('N'), 10])
 
-  print(robot.computer.run_until_newline())
-  print(robot.computer.run_until_newline())
-  print(robot.computer.run_until_newline())
-  print(robot.computer.run_until_newline())
-  print(robot.computer.run_until_newline())
-
+  print("Mode 2 run")
   out = robot.computer.run()
   print(out)
   print(''.join([chr(c) for c in out]))
+  for c in out:
+    if c > 255:
+      print('Answer:', c)
+
+  """
+  print("Get prompts")
+  print(robot.computer.run_until_newline())
+  print(robot.computer.run_until_newline())
+  print(robot.computer.run_until_newline())
+  print(robot.computer.run_until_newline())
+  print(robot.computer.run_until_newline())
+
+  print("Free run")
+  out = robot.computer.run()
+  print(out)
+  print(''.join([chr(c) for c in out]))
+  """
 
 
 if __name__ == '__main__':
-  part1()
-  test_part2()
+  # part1()
+  # test_part2()
   part2()
 
 """
