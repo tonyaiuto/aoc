@@ -7,18 +7,37 @@ from elf_image import ElfImage
 import intcode
 
 
-def move_pos(pos, dir):
-  if dir == 1:
-    return (pos[0], pos[1]-1)
-  elif dir == 2:
-    return (pos[0], pos[1]+1)
-  elif dir == 3:
-    return (pos[0]-1, pos[1])
-  elif dir == 4:
-    return (pos[0]+1, pos[1])
-  else:
-    raise Exception('invalid direction: %d' % dir)
 
+def need_turn(from_pos, dir, to):
+  dx = to[0] - from_pos[0]
+  dy = to[1] - from_pos[1]
+  if dx == 0 and dir in [1, 3]:
+    # changing y but facing left or right
+    if dy > 0:  # moving down
+      if dir == 1:  # but facing right
+        return 'R', 2
+      else:
+        return 'L', 2
+    else:  # moving up
+      if dir == 1:  # but facing right
+        return 'L', 0
+      else:
+        return 'R', 0
+  elif dy == 0 and dir in [0, 2]:
+    if dx > 0:  # moving right
+      if dir == 0:  # facing up
+        return 'R', 1
+      else:
+        return 'L', 1
+    else:  # moving left
+      if dir == 0:  # facing up
+        return 'L', 3
+      else:
+        return 'R', 3
+  return None, None
+
+assert ('R', 1) == need_turn((0,6), 0, (1,6))
+assert (None, None) == need_turn((1,6), 1, (2,6))
 
 def X(pos):
   return pos[0]
@@ -113,7 +132,7 @@ class VacuumRobot(object):
       for neighbor in neighbors(pos):
         if not neighbor in self.scaffold:
           is_intersection = False
-      if is_intersection:      
+      if is_intersection:
         self.intersections[pos] = 'O'
         a = X(pos) * Y(pos)
         print('%s => %d' % (pos, a))
@@ -121,17 +140,34 @@ class VacuumRobot(object):
     return alignment
 
   def find_paths(self, pos):
-    for pos in self.intersections:
-      self.points[pos] = 'O'
+    for i_pos in self.intersections:
+      self.points[i_pos] = 'O'
     for path in self.find_path(pos):
-      if len(path) < len(self.scaffold):
+      if len(path) < len(self.scaffold) + len(self.intersections):
         continue
       print('Complete path: ', len(path), path)
+      print(self.path_to_code(path))
     print('# scaffold', len(self.scaffold))
 
   def path_to_code(self, path):
-    pass
-    
+    #  80 [(1, 6), (2, 6), (3, 6), (4, 6), (5, 6), (6, 6), (7, 6), (8, 6), (8, 7), (8, 8), (9, 8), (10, 8), (11, 8), (12, 8), (13, 8), (14, 8), (14, 7), (14, 6), (14, 5), (14, 4), (14, 3), (14, 2), (14, 1), (14, 0), (13, 0), (12, 0), (11, 0), (10, 0), (10, 1), (10, 2), (10, 3), (10, 4), (11, 4), (12, 4), (12, 5), (12, 6), (12, 7), (12, 8), (12, 9), (12, 10), (11, 10), (10, 10), (9, 10), (8, 10), (7, 10), (6, 10), (5, 10), (4, 10), (4, 11), (4, 12), (4, 13), (4, 14), (5, 14), (6, 14), (7, 14), (8, 14), (8, 13), (8, 12), (8, 11), (8, 10), (8, 9), (8, 8), (7, 8), (6, 8), (6, 7), (6, 6), (6, 5), (6, 4), (6, 3), (6, 2), (6, 1), (6, 0), (5, 0), (4, 0), (3, 0), (2, 0), (1, 0), (0, 0), (0, 1), (0, 2)]
+    from_pos = self.start
+    dir = 0
+    ret = []
+    dist = 0
+    for pos in path:
+      turn, new_dir = need_turn(from_pos, dir, pos)
+      from_pos = pos
+      if turn:
+        if dist:
+          ret.append(dist+1)
+        ret.append(turn)
+        dir = new_dir
+        dist = 0
+      else:
+        dist += 1
+    return ret
+
 
   def find_path(self, pos, visited=None, level=1):
     if not visited:
@@ -154,12 +190,12 @@ class VacuumRobot(object):
       else:
         break
     # At an intersection
-    print('level', level, 'path so far', path, 'moves:', moves)
+    # print('level', level, 'path so far', path, 'moves:', moves)
     for move in moves:
       for rest in self.find_path(move, visited=set(visited), level=level+1):
         if rest:
-          print('follow', move, 'rest:', rest)
-          yield path + [move] + rest 
+          # print('follow', move, 'rest:', rest)
+          yield path + [move] + rest
 
 
   def get_moves(self, pos, visited):
@@ -211,10 +247,13 @@ def test_part2():
   img = ElfImage.fromPoints(robot.points)
   img.print(ruler=True)
   print('')
+  print('robot start=', robot.start)
   alignment = robot.compute_alignment()
   img.update(robot.intersections)
   img.print(ruler=True)
   robot.end = (0, 2)
+  print('robot start=', robot.start)
+
   robot.find_paths(robot.start)
 
 
