@@ -65,22 +65,9 @@ class VacuumRobot(object):
     self.dir = 0
 
     """
-    self.droid_pos = (0,0)
-    self.no_go = set()
-    self.oxygen = None
-    self.last_dir = 0
-    self.span = 0
-    self.dist_to_here = {}
-    self.min_x = 0
-    self.max_x = 0
-    self.min_y = 0
-    self.max_y = 0
-
     self.display = None
     self.frame = 0
     self.capture_frames = True
-    self.visited.add((0,0))
-    self.dist_to_here[(0,0)] = 0
     """
 
   def get_map(self):
@@ -140,17 +127,19 @@ class VacuumRobot(object):
     return alignment
 
   def find_paths(self, pos):
+    paths = []
     for i_pos in self.intersections:
       self.points[i_pos] = 'O'
     for path in self.find_path(pos):
       if len(path) < len(self.scaffold) + len(self.intersections):
         continue
-      print('Complete path: ', len(path), path)
-      print(self.path_to_code(path))
-    print('# scaffold', len(self.scaffold))
+      # print('Complete path: ', len(path), path)
+      code = self.path_to_code(path)
+      print(len(code), code)
+      paths.append(code)
+    return paths
 
   def path_to_code(self, path):
-    #  80 [(1, 6), (2, 6), (3, 6), (4, 6), (5, 6), (6, 6), (7, 6), (8, 6), (8, 7), (8, 8), (9, 8), (10, 8), (11, 8), (12, 8), (13, 8), (14, 8), (14, 7), (14, 6), (14, 5), (14, 4), (14, 3), (14, 2), (14, 1), (14, 0), (13, 0), (12, 0), (11, 0), (10, 0), (10, 1), (10, 2), (10, 3), (10, 4), (11, 4), (12, 4), (12, 5), (12, 6), (12, 7), (12, 8), (12, 9), (12, 10), (11, 10), (10, 10), (9, 10), (8, 10), (7, 10), (6, 10), (5, 10), (4, 10), (4, 11), (4, 12), (4, 13), (4, 14), (5, 14), (6, 14), (7, 14), (8, 14), (8, 13), (8, 12), (8, 11), (8, 10), (8, 9), (8, 8), (7, 8), (6, 8), (6, 7), (6, 6), (6, 5), (6, 4), (6, 3), (6, 2), (6, 1), (6, 0), (5, 0), (4, 0), (3, 0), (2, 0), (1, 0), (0, 0), (0, 1), (0, 2)]
     from_pos = self.start
     dir = 0
     ret = []
@@ -166,6 +155,7 @@ class VacuumRobot(object):
         dist = 0
       else:
         dist += 1
+    ret.append(dist+1)
     return ret
 
 
@@ -190,7 +180,7 @@ class VacuumRobot(object):
       else:
         break
     # At an intersection
-    # print('level', level, 'path so far', path, 'moves:', moves)
+    print('level', level, 'path so far', path, 'moves:', moves)
     for move in moves:
       for rest in self.find_path(move, visited=set(visited), level=level+1):
         if rest:
@@ -207,6 +197,18 @@ class VacuumRobot(object):
           continue
         ret.append(neighbor)
     return ret
+
+
+  def try_paths(self, paths):
+    paths = sorted(paths, key=lambda x: len(x))
+    lpath = len(path)
+    a_len = 2
+    for a_len in range(4, lpath/2, 2):
+      a = path[0:alen]
+      for more_a in range(alen, lpath, 2):
+        if a == path[more_a:more_a+a_len]:
+          print('found %s again at %d' % (a, more_a))
+
 
 
 def part1():
@@ -253,67 +255,81 @@ def test_part2():
   img.print(ruler=True)
   robot.end = (0, 2)
   print('robot start=', robot.start)
+  paths = robot.find_paths(robot.start)
+  # robot.try_paths(paths)
 
-  robot.find_paths(robot.start)
 
 
+def func_to_cmd(f):
+  ret = []
+  for c in f:
+    if isinstance(c, str):
+      ret.append(ord(c))
+    else:
+      if c > 10:
+        ret.append(ord('1'))
+      c = c % 10
+      ret.append(ord(str(c)))
+    ret.append(ord(','))
+  return ret + [10]
 
 
 def part2():
   mem = intcode.load_intcode('input_17.txt')
   robot = VacuumRobot(list(mem))
-  robot.computer.poke(0, 2)
   robot.get_map()
+  alignment = robot.compute_alignment()
   robot.end = (22, 14)
+  paths = robot.find_paths(robot.start)
+  print(paths)
+
+
+def p2x():
+  A = ['L', 4, 'L', 10, 'L',  6]
+  B = ['L', 6, 'L',  4, 'R',  8, 'R', 8]
+  C = ['L', 6, 'R',  8, 'L', 10, 'L', 8, 'L', 8]
+
+  robot.computer.poke(0, 2)
+  main = 'A,A,B,C,A,C,B,C,A,B,B'
+  cmd = [ord(c) for c in main] + [10]
+  print(cmd)
+  robot.computer.push_input(cmd)
+  cmd = func_to_cmd(A)
+  print('A:', A)
+  print(cmd)
+  robot.computer.push_input(cmd)
+  cmd = func_to_cmd(B)
+  print('B:', B)
+  print(cmd)
+  robot.computer.push_input(cmd)
+  cmd = func_to_cmd(C)
+  print('C:', C)
+  print(cmd)
+  robot.computer.push_input(cmd)
+
+
+"""
+A   L, 4, L, 10, L, 6,
+    L, 4, L, 10, L, 6,  
+
+B   L, 6, L 4, R, 8, R, 8,
+C   L, 6, R, 8, L, 10, L, 8, L 8, 
+
+    L, 4, L, 10, L, 6, 
+
+    L, 6, R, 8, L, 10, L, 8, L, 8,
+
+    L, 6, L, 4, R, 8, R, 8,
+    L, 6, R, 8, L, 10, L, 8, L, 8,
+
+    l, 4, l, 10, l, 6,
+
+    l 6, l4, r 6, r8
+    l 6, l4, r 8, r8
+"""
+
 
 if __name__ == '__main__':
   part1()
   test_part2()
-  # part2()
-
-"""
-   0123456789012345678901234567890123456
- 0 ..........................#######....
- 1 ..........................#.....#....
- 2 ..........................#.####O####
- 3 ..........................#.#...#...#
- 4 ..........................#.#...#...#
- 5 ..........................#.#...#...#
- 6 ..........................##O##.#...#
- 7 ............................#.#.#...#
- 8 ............................#.#.#...#
- 9 ............................#.#.#...#
-10 ............................##O##...#
-11 ..............................#.....#
-12 ............................##O######
-13 ............................#.#......
-14 ......................######O##......
-15 ............................#........
-16 ............................#........
-17 ............................#........
-18 ....####^...........#########........
-19 ....#...............#................
-20 ....#...............#................
-21 ....#...............#................
-22 ....#...............#................
-23 ....#...............#................
-24 ####O######.....####O######..........
-25 #...#.....#.....#...#.....#..........
-26 #...#.####O####.#...#####.#..........
-27 #...#.#...#...#.#.......#.#..........
-28 #...##O####...#.#.......#.#..........
-29 #.....#.......#.#.......#.#..........
-30 #######.......#.#.......#.#..........
-31 ..............#.#.......#.#..........
-32 ..............#.#########.#######....
-33 ..............#.................#....
-34 ..............#######.#########.#....
-35 ....................#.#.......#.#....
-36 ....................#.#.......#.#....
-37 ....................#.#.......#.#....
-38 ....................#.########O##....
-39 ....................#.........#......
-40 ....................#.........#......
-41 ....................#.........#......
-42 ....................###########......
-"""
+  part2()
