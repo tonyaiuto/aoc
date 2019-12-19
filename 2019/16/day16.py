@@ -16,6 +16,7 @@ def base(digit_pos, pos):
   # assert [0, 0, 0, 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0]
   return BASE_PATTERN[pos // digit_pos % 4]
 
+TRACE = False
 
 def do_mul(input, digit):
   # digit is 1 based
@@ -24,17 +25,24 @@ def do_mul(input, digit):
   #for i, d in enumerate(input):
   #  tot += d * BASE_PATTERN[((i+1) // digit) % 4]
   #  But note the diagonal of the 0
-  if digit > len(input) // 2:
-    return sum(input[digit-1:]) % 10
+  #if digit > len(input) // 2:
+  #  return sum(input[digit-1:]) % 10
+  msg = '   ' * (digit-1)
   for i in range(digit-1, len(input)):
     b = BASE_PATTERN[((i+1) // digit) % 4]
     if b == 1:
+       msg += ' +%d' % input[i]
        tot += input[i]
     elif b == -1:
+       msg += ' -%d' % input[i]
        tot -= input[i]
-  return abs(tot) % 10
-
-def do_mul(input, digit):
+    else:
+       msg += '   '
+  d = abs(tot) % 10
+  if TRACE:
+    msg += ' = %d' % d
+    print(msg)
+  return d
 
 
 def do_fft(input, passes=1):
@@ -48,22 +56,12 @@ def do_fft(input, passes=1):
 
 def do_fft_2(input, passes=1):
   end = len(input)
-  out = list(input)
-  rsum = input[end-1]
-  for pos in range(end - 2, -1, -1):
-    out[pos] = (input[pos] + rsum * passes) % 10
-    rsum += input[pos]
-  return out
-
-"""
-12345678
-01029498
-
-7 + 8 * 4 = 39
-6 + 7 * 4 = 34
-5 + 6 * 4 = 29
-
-"""
+  for _ in range(passes):
+    rsum = 0
+    for pos in range(end - 1, - 1, -1):
+      rsum += input[pos]
+      input[pos] = rsum % 10
+  return input
 
 
 def check_100(input_s, first8):
@@ -71,10 +69,20 @@ def check_100(input_s, first8):
   expect = str_to_list(first8)
   got = do_fft(input, passes=100)
   print('expect', expect, ', got', got)
-  # assert expect == got[0:8]
+  assert expect == got[0:8]
+
+  split_point = len(input) // 2
+  for i in range(10):
+    got = do_fft(list(input), passes=i)
+    got2 = do_fft_2(list(input), passes=i)
+    # print('fft ', got)
+    # print('fft2', got2)
+    assert got[split_point:] == got2[split_point:]
 
 
 def test_fft():
+  global TRACE
+
   assert  0 ==  base(1, 0)
   assert  1 ==  base(1, 1)
   assert  0 ==  base(1, 2)
@@ -86,10 +94,16 @@ def test_fft():
   assert  1 ==  base(3, 3)
   assert  0 ==  base(3, 12)
 
+  TRACE = True
   input = [int(c) for c in '12345678']
   p1 = do_fft(input)
   print('expect [4, 8, 2, 2, 6, 1, 5, 8], got', p1)
   # assert [4, 8, 2, 2, 6, 1, 5, 8] == p1
+
+  input = [int(c) for c in '12345678']
+  do_fft(input, passes=4)
+
+  TRACE = False
 
   check_100('80871224585914546619083218645595', '24176176')
   check_100('19617804207202209144916044189917', '73745418')
@@ -101,24 +115,44 @@ def part1():
   assert len(input) % 2 == 0
   got = do_fft(input, passes=100)
   first8 = ''.join([str(d) for d in got[0:8]])
-  print('pass1', first8)
+  print('part1', first8)
   assert '19239468' == first8
 
 
 def part2():
+  input = str_to_list(INP)
   message_offset = int(INP[0:7])
-  print('message offset', message_offset)
-  inp1 = str_to_list(INP)
-  input = inp1 * 10000
-  # got = do_fft(input, passes=100)
-  got = do_fft(input, passes=1)
-  message = got[message_offset:message_offset+8]
-  print('part2:', message)
+  need = len(input) * 10000 - message_offset
+  print('message offset:', message_offset, 'of', len(input) * 10000,
+        ', need:', need)
+  assert message_offset == 5979067
+  len(input) * 100
+  i_offset = message_offset % len(input)
+  more_times = need // len(input)
+  # print('len(input) * 10000', len(input) * 10000)
+  # print('len(input) - i_offset + more_times * len(input)', len(input), i_offset, more_times, len(input))
+  # print(len(input) - i_offset + more_times * len(input))
+  assert need == len(input) - i_offset + more_times * len(input)
+  new_input = input[i_offset:] + input * more_times
+  assert need == len(new_input)
 
+  got = do_fft_2(new_input, passes=1)
+  first8 = ''.join([str(d) for d in got[0:8]])
+  print('part2 1p', first8)
+
+  new_input = input[i_offset:] + input * more_times
+  got = do_fft_2(new_input, passes=10)
+  first8 = ''.join([str(d) for d in got[0:8]])
+  print('part2 10p', first8)
+
+  new_input = input[i_offset:] + input * more_times
+  got = do_fft_2(new_input, passes=100)
+  first8 = ''.join([str(d) for d in got[0:8]])
+  print('part2', first8)
 
 
 if __name__ == '__main__':
   test_fft()
   part1()
-  # part2()
+  part2()
 
