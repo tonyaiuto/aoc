@@ -32,6 +32,10 @@ class IntCode(object):
     self.rel_base = 0
     self.trace = _DEFAULT_TRACE
 
+  def reset(self):
+    self.halted = False
+    self.pc = 0
+
   def set_trace(self, trace):
     ret = self.trace
     self.trace = trace
