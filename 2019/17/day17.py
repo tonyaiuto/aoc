@@ -227,7 +227,7 @@ class VacuumRobot(object):
       else:
         break
     # At an intersection
-    print('level', level, 'path so far', path, 'moves:', moves)
+    # print('level', level, 'path so far', path, 'moves:', moves)
     for move in moves:
       for rest in self.find_path(move, visited=set(visited), level=level+1):
         if rest:
@@ -316,7 +316,7 @@ def code_to_ascii(code):
     if isinstance(word, str):
       ret.append(ord(word))
     else:
-      if word > 10:
+      if word >= 10:
         ret.append(ord('1'))
       ret.append(ord(str(word % 10)))
   assert len(ret) <= 20
@@ -339,9 +339,9 @@ def part2():
   move_program = robot.path_to_code(path)
   print(move_program)
 
-  X = ['L', 4, 'L', 10, 'L', 6, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'L', 4, 'R', 8, 'R', 8, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 6, 'L', 4, 'R', 8, 'R', 8, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'L', 4, 'R', 8, 'R']
+  SHOULD_BE = ['L', 4, 'L', 10, 'L', 6, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'L', 4, 'R', 8, 'R', 8, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 6, 'L', 4, 'R', 8, 'R', 8, 'L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8, 'L', 4, 'L', 10, 'L', 6, 'L', 6, 'L', 4, 'R', 8, 'R']
 
-
+  # Found by hand
   A = ['L', 4, 'L', 10, 'L', 6]
   B = ['L', 6, 'L', 4, 'R', 8, 'R', 8]
   C = ['L', 6, 'R', 8, 'L', 10, 'L', 8, 'L', 8]
@@ -361,17 +361,19 @@ def part2():
   robot.computer.push_input(a_code)
   robot.computer.push_input(b_code)
   robot.computer.push_input(c_code)
-  robot.computer.push_input([ord('N'), 10])
+  robot.computer.push_input([ord('n'), 10])
 
   print("Mode 2 run")
   out = robot.computer.run()
   print(out)
-  print(''.join([chr(c) for c in out]))
+  print(''.join([chr(c) for c in out if c <= 255]))
   for c in out:
     if c > 255:
       print('Answer:', c)
+      assert 779133 == c
 
   """
+  # trying to get it to print
   print("Get prompts")
   print(robot.computer.run_until_newline())
   print(robot.computer.run_until_newline())
@@ -384,27 +386,6 @@ def part2():
   print(out)
   print(''.join([chr(c) for c in out]))
   """
-
-"""
-A   L, 4, L, 10, L, 6,
-    L, 4, L, 10, L, 6,  
-
-B   L, 6, L 4, R, 8, R, 8,
-C   L, 6, R, 8, L, 10, L, 8, L 8, 
-
-    L, 4, L, 10, L, 6, 
-
-    L, 6, R, 8, L, 10, L, 8, L, 8,
-
-    L, 6, L, 4, R, 8, R, 8,
-    L, 6, R, 8, L, 10, L, 8, L, 8,
-
-    l, 4, l, 10, l, 6,
-
-    l 6, l4, r 6, r8
-    l 6, l4, r 8, r8
-"""
-
 
 if __name__ == '__main__':
   part1()
