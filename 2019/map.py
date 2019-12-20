@@ -55,16 +55,22 @@ def neighbors(pos):
 class Map(object):
 
   def __init__(self):
-    self.points = {}
     self.width = 0
     self.height = 0
     self.trace = False
     self.wall = '#'
     self.walls = set()
+    self.points = {}
 
   def load(self, path):
     with open(path, 'r') as inp:
       self.load_from_string(inp.read())
+
+  def is_wall(self, pos):
+    return pos in self.walls
+
+  def cell(self, pos):
+    return self.points.get(pos)
 
   def load_from_string(self, s):
     self.positions = []
@@ -119,3 +125,14 @@ class Map(object):
         del self.points[pos]
       if not new_walls:
         break
+
+  def get_moves(self, pos, visited):
+    ret = []
+    # print('getmoves, visited', visited.keys())
+    for neighbor in neighbors(pos):
+      n = self.points.get(neighbor)
+      if (n
+          and (neighbor not in self.walls)
+          and (neighbor not in visited.keys())):
+        ret.append(neighbor)
+    return ret
