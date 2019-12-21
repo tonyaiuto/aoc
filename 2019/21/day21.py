@@ -75,6 +75,7 @@ def part2():
         ['NOT', 'A', 'T'],
         ['OR',  'T', 'J'],
         ['AND', 'D', 'J'],
+        ['AND', 'E', 'J'],
         ])
     robot.send_program([['RUN']])
     while True:
