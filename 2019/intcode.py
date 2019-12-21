@@ -30,6 +30,7 @@ class IntCode(object):
     self.get_input = get_input
     self.halted = False
     self.rel_base = 0
+    self.extra_output = None
     self.trace = _DEFAULT_TRACE
 
   def reset(self):
@@ -105,9 +106,10 @@ class IntCode(object):
         break
       if word > ord('z'):
         print('Unexpected word', word)
+        self.extra_output = word
         break
       line.append(chr(word))
-    return ''.join(line) 
+    return ''.join(line)
 
   def run_until_output(self):
     if self.halted:
@@ -181,13 +183,14 @@ def load_intcode(inp_path):
   return None
 
 
-def code_to_ascii(code):
+def code_to_ascii(code, sep=','):
   ret = []
   for word in code:
     if ret:
-      ret.append(ord(','))
+      ret.append(ord(sep))
     if isinstance(word, str):
-      ret.append(ord(word))
+      for c in word:
+        ret.append(ord(c))
     else:
       for c in str(word):
         ret.append(ord(c))
@@ -195,6 +198,21 @@ def code_to_ascii(code):
   ret.append(10)
   print('%s => %s' % (code, ret))
   return ret
+
+def print_final_output(self):
+  line = ''
+  while True:
+    out = self.run_until_output()
+    if self.is_halted:
+      break
+    c = chr(out)
+    if c == '\n':
+      print(line)
+      line = ''
+    else:
+      line += c
+  if line:
+    print(line)
 
 
 def check(mem, expect_mem=None, input=None, expect_out=None):
