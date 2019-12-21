@@ -308,23 +308,6 @@ def test_part2():
   print(robot.path_to_code(path))
 
 
-def code_to_ascii(code):
-  ret = []
-  for word in code:
-    if ret:
-      ret.append(ord(','))
-    if isinstance(word, str):
-      ret.append(ord(word))
-    else:
-      if word >= 10:
-        ret.append(ord('1'))
-      ret.append(ord(str(word % 10)))
-  assert len(ret) <= 20
-  ret.append(10)
-  print('%s => %s' % (code, ret))
-  return ret
-
-
 def part2():
   mem = intcode.load_intcode('input_17.txt')
 
@@ -348,10 +331,11 @@ def part2():
   main_program = A + A + B + C + A + C + B + C + A + B
   assert move_program == main_program
 
-  main_code = code_to_ascii(['A', 'A', 'B', 'C', 'A', 'C', 'B', 'C', 'A', 'B'])
-  a_code = code_to_ascii(A)
-  b_code = code_to_ascii(B)
-  c_code = code_to_ascii(C)
+  main_code = intcode.code_to_ascii(
+      ['A', 'A', 'B', 'C', 'A', 'C', 'B', 'C', 'A', 'B'])
+  a_code = intcode.code_to_ascii(A)
+  b_code = intcode.code_to_ascii(B)
+  c_code = intcode.code_to_ascii(C)
 
   assert mem[0] == 1
   robot = VacuumRobot(list(mem))

@@ -181,6 +181,22 @@ def load_intcode(inp_path):
   return None
 
 
+def code_to_ascii(code):
+  ret = []
+  for word in code:
+    if ret:
+      ret.append(ord(','))
+    if isinstance(word, str):
+      ret.append(ord(word))
+    else:
+      for c in str(word):
+        ret.append(ord(c))
+  assert len(ret) <= 20
+  ret.append(10)
+  print('%s => %s' % (code, ret))
+  return ret
+
+
 def check(mem, expect_mem=None, input=None, expect_out=None):
   ic = IntCode(mem, input=input)
   out = ic.run()
