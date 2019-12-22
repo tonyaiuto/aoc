@@ -114,7 +114,23 @@ class Vault(object):
   def do_it(self, start_path):
     reachable = start_path.reachable_targets(0, set())
     print(reachable)
-      
+    keys = {}
+    for thing in reachable:
+      content = thing[0]
+      dist = thing[1]
+      if content.islower():
+        keys[content] = thing
+    # print(keys)
+    best_door = None
+    for thing in reachable:
+      content = thing[0]
+      dist = thing[1]
+      if content.isupper():
+        key = keys.get(content.lower())
+        if key:
+          if best_door == None or dist < best_door[1]:
+            best_door = (content, dist, key)
+    print('best_door', best_door)
 
     """
   keys:  
@@ -147,6 +163,7 @@ def test_part1():
   print('========================================')
   path.print_tree()
   vault.do_it(path)
+
 
 def test_part1_b():
   maze = map.Map()
@@ -205,5 +222,5 @@ def part1():
 
 if __name__ == '__main__':
   test_part1()
-  test_part1_b()
+  # test_part1_b()
   # part1()
