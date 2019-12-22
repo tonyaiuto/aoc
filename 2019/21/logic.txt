@@ -20,6 +20,11 @@ b....	dead
 ####.	hold
 #####	hold
 
+##..#.## 
+##..##.#
+
+
+
  .@abcd........
 #####.#..########
 
@@ -41,14 +46,18 @@ AND D J
 
 
 not b j
-and a j  a & ^b
-not c t
-and a t
-and b t
+and a j  a & ^b | 
+not c t     ^c
+and a t     &
+and b t     a & b & ^c 
 or  t j
 NOT A T
 OR  T J
 AND D J
+
+    (a & ^b | a & b & ^c | ^a ) & D & E
+
+    .... or ^a
 
 -----------
 part2
@@ -74,6 +83,8 @@ part2
 ####..	hold
 #####.	hold
 
+#...#
+
 b.....	dead
 #...##	jump
 #...#.	dead
@@ -91,6 +102,54 @@ b.....	dead
 ###.#	jump
 ####.	hold
 #####	hold
+
+
+	['NOT', 'B', 'J'],
+	['AND', 'A', 'J'],
+	['NOT', 'C', 'T'],
+	['AND', 'A', 'T'],
+	['AND', 'B', 'T'],
+	['OR',  'T', 'J'],
+	['NOT', 'A', 'T'],
+	['OR',  'T', 'J'],
+	['AND', 'D', 'J'],
+
+@abcdefghi
+##.##...#
+#.  ###....
+#.  #....        ^f & ^i => no jump
+#.  #.
+#.  #.
+
+
+# detect ...# 
+NOT A J
+NOT B T
+AND T J
+NOT C T
+AND T J
+AND D J
+
+
+NOT E J
+NOT F T
+AND T J
+NOT G T
+AND T J
+AND H J   ????...#
+
+AND D J   ???D...#
+
+NOT A T
+OR  T J   .???????
+
+ abcdefghi
+##..#.#  .
+
+NOT B T 
+OR  B T
+NOT C T 
+AND 
 
 
 abcdefjhi

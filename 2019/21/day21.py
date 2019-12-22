@@ -7,7 +7,10 @@ import textwrap
 import intcode
 
 def asc_to_str(s):
-  return ''.join(chr(c) for c in s)
+  try:
+    return ''.join(chr(c) for c in s)
+  except ValueError as e:
+    return s
 
 
 class SpringDroid(object):
@@ -66,17 +69,23 @@ def part2():
   while not robot.computer.is_halted:
     print(robot.computer.run_until_newline())
     robot.send_program([
-        ['NOT', 'B', 'J'],
-        ['AND', 'A', 'J'],
-        ['NOT', 'C', 'T'],
-        ['AND', 'A', 'T'],
-        ['AND', 'B', 'T'],
-        ['OR',  'T', 'J'],
-        ['NOT', 'A', 'T'],
-        ['OR',  'T', 'J'],
-        ['AND', 'D', 'J'],
-        ['AND', 'E', 'J'],
+	['NOT', 'E', 'J'],
+	['NOT', 'F', 'T'],
+	['AND', 'T', 'J'],
+	['NOT', 'G', 'T'],
+	['AND', 'T', 'J'],
+	['AND', 'H', 'J'],   # ????...#
+	['NOT', 'B', 'T'],
+	['OR',  'T', 'J'],
+	['NOT', 'C', 'T'],
+	['OR',  'T', 'J'],
+	['AND', 'D', 'J'],   # ???D...#
+	['AND', 'H', 'J'],   # ???D...#
+	['NOT', 'A', 'T'],
+	['OR',  'T', 'J'],   # .???????
         ])
+
+
     robot.send_program([['RUN']])
     while True:
       disp = robot.computer.run_until_newline()
@@ -87,14 +96,17 @@ def part2():
       disp = robot.computer.run_until_newline()
     else:
       out = robot.computer.run()
+      for word in out:
+        if word > 255:
+          damage = word
+          break
       print(asc_to_str(out))
       break
     if robot.computer.extra_output:
-      break
+      damage = robot.computer.extra_output
 
-  damage = robot.computer.extra_output
   print('part2: damage', damage)
-  assert 19352638 == damage
+  assert 1141251258 == damage
 
 
 if __name__ == '__main__':
