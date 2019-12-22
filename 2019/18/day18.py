@@ -44,21 +44,21 @@ class Path(object):
       fork.print_tree(level=level+1)
 
   def reachable_targets(self, dist_down_path, holding):
-    reachable = []
+    reachable = {}
     for content, dist in self.stuff:
-      if content.islower():
-        reachable.append((content, dist_down_path + dist))
-        print('key', content, 'at', dist)
-        holding.add(content)
-      elif content.isupper():
-        reachable.append((content, dist_down_path + dist))
-        print('lock', content, 'at', dist)
-        if content.lower() not in holding:
-          return reachable
+      if content.isalpha():
+        reachable[content] = (content, dist_down_path + dist)
+        if content.islower():
+          print('key', content, 'at', dist)
+          holding.add(content)
+        else:
+          print('lock', content, 'at', dist)
+          if content.lower() not in holding:
+            return reachable
       else:
         print('stuff', content, 'at', dist)
     for fork in self.forks:
-      reachable.extend(fork.reachable_targets(
+      reachable.update(fork.reachable_targets(
           fork.base_dist+dist_down_path, set(holding)))
     return reachable
 
@@ -114,16 +114,18 @@ class Vault(object):
   def do_it(self, start_path):
     reachable = start_path.reachable_targets(0, set())
     print(reachable)
+    """
     keys = {}
-    for thing in reachable:
+    for content, _ in reachable.items():
       content = thing[0]
       dist = thing[1]
       if content.islower():
         keys[content] = thing
     # print(keys)
+    """
     best_door = None
-    for thing in reachable:
-      content = thing[0]
+
+    for content, thing in reachable.items():
       dist = thing[1]
       if content.isupper():
         key = keys.get(content.lower())
