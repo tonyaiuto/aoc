@@ -44,7 +44,7 @@ class NIC(object):
 
   def proc_output(self, word):
     self.idle_count = 0
-    print('nic', self.id, 'output', word)
+    # print('nic', self.id, 'output', word)
     if not self.packet:
       self.packet = [word]
     else:
@@ -63,19 +63,23 @@ class Network(object):
       self.nics.append(NIC(mem=mem, id=i, network=self))
     self.start_idle_check = False
     self.nat_last_y = -1
+    self.shutdown = False
 
   def run(self):
-    while True:
+    while not self.shutdown:
       for nic in self.nics:
         nic.step()
       self.nat_check()
 
   def send(self, from_nic, packet):
     nic_id = packet[0]
+    if nic_id == 255:
+      print('nic', from_nic, 'send to NAT', packet)
+      self.nat(packet)
     if nic_id >= 50:
       print('nic', from_nic, 'send packet out of range', packet)
-      self.nat(packet)
       return
+    print('nic', from_nic, 'send', packet)
     self.nics[nic_id].send_to(packet[1])
     self.nics[nic_id].send_to(packet[2])
 
@@ -95,14 +99,14 @@ class Network(object):
         break
     if is_idle:
       self.start_idle_check = False
-      print('========= network seems idle')
+      print('network seems idle')
       packet = [0, self.nat_x, self.nat_y]
       if self.nat_y == self.nat_last_y:
         print('NAT send Y twice', self.nat_y)
-        sys.exit(0)
+        assert 11319 == self.nat_y
+        self.shutdown = True
       self.nat_last_y = self.nat_y
       self.send(255, packet)
-      # too high 17283
 
 
 def part1():
