@@ -6,6 +6,7 @@ import textwrap
 
 from elf_image import ElfImage
 import map
+from memoized import memoized
 
 
 KeyLock = namedtuple('KeyLock', 'name dist path')
@@ -28,10 +29,10 @@ class Path(object):
   def __init__(self, from_where, start, parent=None, base_dist=0):
     self.from_where = from_where
     self.base_dist = base_dist
-    self.dist = 0
     self.start = start
     self.parent = parent
 
+    self.dist = 0
     self.visited = {}
     self.visited[from_where] = 1
     self.visited[start] = 0
@@ -44,6 +45,9 @@ class Path(object):
     # print('Create path: start', self.start, 'visited', self.visited)
 
   def __str__(self):
+    return '<Path from %s>' % str(self.start)
+
+  def __repr__(self):
     return '<Path from %s>' % str(self.start)
 
   def print(self, indent=0, forks=True):
@@ -81,6 +85,20 @@ class Path(object):
       reachable.update(fork.reachable_targets(
           fork.base_dist+dist_down_path, set(holding)))
     return reachable
+
+  @memoized
+  def route_to(self, path):
+    # find paths I can reach going out
+    return self.outward_route_to(path)
+
+  def outward_route_to(self, path):
+    if self == path:
+      return [self]
+    for fork in self.forks:
+      r = fork.outward_route_to(path)
+      if r:
+        return [self] + r
+    return None
 
 
 class Vault(object):
@@ -151,19 +169,67 @@ class Vault(object):
     return best_door
 
   def move_to(self, keyloc):
+    self.ploc()
     key_name = keyloc[0]
-    dist = keyloc[1]
-    path = keyloc[2]
+    to_path = keyloc[2]
+    route = self.cur_path.route_to(to_path)
+    if to_path in route:
+      print('can move out to', to_path, route)
+      self.traverse_to(to_path, key_name, route)
+    self.ploc()
+
+  def ploc(self):
+    print('now at path', self.cur_path, 'dist', self.cur_dist,
+          'holding', self.holding)
+
+    
+  def traverse_to(self, to_path, key_name, route):
+    # move from current pos to the new place
+    dist = 0
+    while True:
+      print('loop to, route', to_path, route)
+      nxt = route[0]
+      route = route[1:]
+      if nxt == self.cur_path:
+        continue
+      if self.cur_path.parent == nxt:
+        print("Up not implemented")
+        break
+      else:
+        dist_to_path = nxt.base_dist - self.cur_dist
+        dist += dist_to_path
+        self.cur_path = nxt
+        self.cur_dist = 0
+      if to_path == self.cur_path:
+        break
+    # now we are at the right path, move to the key
+    key_dist = to_path.keys[key_name]
+    dist += key_dist
+    self.cur_dist = key_dist
+    self.pick_up(key_name)
+    print('travese_to: moved', dist)
+    return dist
+
+  def pick_up(self, key_name):
+    self.holding.add(key_name)
+    print('todo; delete key', key_name, 'from', self.cur_path)
 
 
   def do_it(self, start_path):
-    best_action = self.find_best_action(start_path)
+    self.cur_loc = start_path
+    self.holding = set()
+    self.do_round()
+
+
+  def do_round(self):
+    best_action = self.find_best_action(self.cur_loc)
     print('best_action', best_action)
     self.move_to(best_action[2])
 
 
 def test_part1():
   maze = map.Map()
+      #0123456789 123456789 12
   maze.load_from_string("""\
       ########################
       #...............b.C.D.f#
