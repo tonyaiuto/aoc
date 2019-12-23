@@ -89,6 +89,10 @@ class Vault(object):
     self.maze = maze
     self.set_start()
     self.path_heads = {}
+    self.top = Path(from_where=(-1, -1), start=self.start)
+    self.cur_path = self.top
+    self.cur_dist = 0
+
 
   def set_start(self):
     self.start = None
@@ -133,7 +137,7 @@ class Vault(object):
       break
     # path.print()
 
-  def do_it(self, start_path):
+  def find_best_action(self, start_path):
     reachable = start_path.reachable_targets(0, set())
     print(reachable)
     best_door = None
@@ -144,18 +148,19 @@ class Vault(object):
         if key:
           if best_door == None or dist < best_door[1]:
             best_door = (content, dist, key)
-    print('best_door', best_door)
+    return best_door
 
-    """
-  keys:
-   forks:  <Path from (5, 3)>, <Path from (7, 3)>
-    Path from (5, 3) @ 1
-      locks:  C @ 23, D @ 25
-      keys:  b @ 21, f @ 27
-    Path from (7, 3) @ 1
-      locks:  B @ 3, A @ 9, F @ 13
-      keys:  a @ 1, c @ 5, d @ 7, e @ 11, g @ 15
-    """
+  def move_to(self, keyloc):
+    key_name = keyloc[0]
+    dist = keyloc[1]
+    path = keyloc[2]
+
+
+  def do_it(self, start_path):
+    best_action = self.find_best_action(start_path)
+    print('best_action', best_action)
+    self.move_to(best_action[2])
+
 
 def test_part1():
   maze = map.Map()
@@ -172,11 +177,10 @@ def test_part1():
 
   maze.print()
   vault = Vault(maze)
-  path = Path(from_where=(-1, -1), start=vault.start)
-  vault.walk_path(path)
+  vault.walk_path(vault.top)
   print('========================================')
-  path.print_tree()
-  vault.do_it(path)
+  vault.top.print_tree()
+  vault.do_it(vault.top)
 
 
 def test_part1_b():
