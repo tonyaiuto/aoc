@@ -32,6 +32,7 @@ class IntCode(object):
     self.rel_base = 0
     self.extra_output = None
     self.trace = _DEFAULT_TRACE
+    self.out_buf = []
 
   def reset(self):
     self.halted = False
@@ -40,6 +41,14 @@ class IntCode(object):
   def set_trace(self, trace):
     ret = self.trace
     self.trace = trace
+    return ret
+
+  def save_output(self, word):
+    self.out_buf.append(word)
+
+  def read_output(self):
+    ret = self.out_buf
+    self.out_buf = []
     return ret
 
   def extend_mem(self, max_addr):
@@ -112,69 +121,81 @@ class IntCode(object):
     return ''.join(line)
 
   def run_until_output(self):
+    out = []
+    while not self.halted:
+      out = self.step()
+      if self.out_buf:
+        ret = self.out_buf[0]
+        self.out_buf = self.out_buf[1:]
+        return ret
+    return None
+
+  def step(self, output=None):
+    if not output:
+      output = lambda word: self.save_output(word)
     if self.halted:
       return None
-    while True:
-      op_start = self.pc
-      word = self.mem[self.pc]
-      self.pc += 1
-      op = word % 100
-      mode = word // 100
+    op_start = self.pc
+    word = self.mem[self.pc]
+    self.pc += 1
+    op = word % 100
+    mode = word // 100
 
-      opcode = IntCode.opcodes[op]
-      msg = 'OP: pc=%d, %s %s' % (self.pc-1, opcode.mnemonic, self.mem[self.pc-1])
-      if opcode.n_args >= 1:
-        arg1 = self.fetch_p(mode % 10)
-        msg += ' %s%d (=%d)' % (IntCode.modifiers[mode % 10], self.mem[self.pc-1], arg1)
-        mode = mode // 10
-      if opcode.n_args >= 2:
-        arg2 = self.fetch_p(mode % 10)
-        msg += ' %s%d (=%d)' % (IntCode.modifiers[mode % 10], self.mem[self.pc-1], arg2)
-        mode = mode // 10
-      if opcode.n_store >= 1:
-        store = self.fetch_store(mode % 10)
-        msg += ' %s%d (=%d)' % (IntCode.modifiers[mode % 10], self.mem[self.pc-1], store)
-        mode = mode // 10
+    opcode = IntCode.opcodes[op]
+    msg = 'OP: pc=%d, %s %s' % (self.pc-1, opcode.mnemonic, self.mem[self.pc-1])
+    if opcode.n_args >= 1:
+      arg1 = self.fetch_p(mode % 10)
+      msg += ' %s%d (=%d)' % (IntCode.modifiers[mode % 10], self.mem[self.pc-1], arg1)
+      mode = mode // 10
+    if opcode.n_args >= 2:
+      arg2 = self.fetch_p(mode % 10)
+      msg += ' %s%d (=%d)' % (IntCode.modifiers[mode % 10], self.mem[self.pc-1], arg2)
+      mode = mode // 10
+    if opcode.n_store >= 1:
+      store = self.fetch_store(mode % 10)
+      msg += ' %s%d (=%d)' % (IntCode.modifiers[mode % 10], self.mem[self.pc-1], store)
+      mode = mode // 10
+    if self.trace:
+      print(msg)
+
+    if op == 99:
+      self.halted = True
+      return None
+    elif op == 1:
+      self.mem[store] = arg1 + arg2
+    elif op == 2:
+      self.mem[store] = arg1 * arg2
+    elif op == 3:
+      if not self.input:
+        assert self.get_input
+        self.push_input(self.get_input())
+      self.mem[store] = self.input[0]
+      self.input = self.input[1:]
+    elif op == 4:
       if self.trace:
-        print(msg)
-
-      if op == 99:
-        self.halted = True
-        break
-      elif op == 1:
-        self.mem[store] = arg1 + arg2
-      elif op == 2:
-        self.mem[store] = arg1 * arg2
-      elif op == 3:
-        if not self.input:
-          assert self.get_input
-          self.push_input(self.get_input())
-        self.mem[store] = self.input[0]
-        self.input = self.input[1:]
-      elif op == 4:
-        if self.trace:
-          print('output: ', arg1)
-        return arg1
-      elif op == 5:
-        if arg1 != 0:
-          self.pc = arg2
-      elif op == 6:
-        if arg1 == 0:
-          self.pc = arg2
-      elif op == 7:
-        if arg1 < arg2:
-          self.mem[store] = 1
-        else:
-          self.mem[store] = 0
-      elif op == 8:
-        if arg1 == arg2:
-          self.mem[store] = 1
-        else:
-          self.mem[store] = 0
-      elif op == 9:
-        self.rel_base += arg1
+        print('output: ', arg1)
+      output(arg1)
+    elif op == 5:
+      if arg1 != 0:
+        self.pc = arg2
+    elif op == 6:
+      if arg1 == 0:
+        self.pc = arg2
+    elif op == 7:
+      if arg1 < arg2:
+        self.mem[store] = 1
       else:
-        raise Exception('illegal op:%d at %d' % (op, self.pc-1))
+        self.mem[store] = 0
+    elif op == 8:
+      if arg1 == arg2:
+        self.mem[store] = 1
+      else:
+        self.mem[store] = 0
+    elif op == 9:
+      self.rel_base += arg1
+    else:
+      raise Exception('illegal op:%d at %d' % (op, self.pc-1))
+    return None
 
 
 def load_intcode(inp_path):
