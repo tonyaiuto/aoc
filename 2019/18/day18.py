@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections import namedtuple
 import sys
 import textwrap
 
@@ -7,13 +8,18 @@ from elf_image import ElfImage
 import map
 
 
+KeyLock = namedtuple('KeyLock', 'name dist path')
+
+
 class Path(object):
 
-  def __init__(self, from_where, start, base_dist=0):
+  def __init__(self, from_where, start, parent=None, base_dist=0):
     self.from_where = from_where
     self.base_dist = base_dist
     self.dist = 0
     self.start = start
+    self.parent = parent
+
     self.visited = {}
     self.visited[from_where] = 1
     self.visited[start] = 0
@@ -103,7 +109,8 @@ class Vault(object):
         path.visited[path_start] = path.dist 
 
       for path_start in moves:
-        child_path = Path(from_where=pos, start=path_start, base_dist=path.dist)
+        child_path = Path(parent=path, from_where=pos, start=path_start,
+                          base_dist=path.dist)
         # Do not duplicate paths
         child_path.visited.update(self.path_heads)
         path.forks.append(child_path)
@@ -114,21 +121,11 @@ class Vault(object):
   def do_it(self, start_path):
     reachable = start_path.reachable_targets(0, set())
     print(reachable)
-    """
-    keys = {}
-    for content, _ in reachable.items():
-      content = thing[0]
-      dist = thing[1]
-      if content.islower():
-        keys[content] = thing
-    # print(keys)
-    """
     best_door = None
-
     for content, thing in reachable.items():
       dist = thing[1]
       if content.isupper():
-        key = keys.get(content.lower())
+        key = reachable.get(content.lower())
         if key:
           if best_door == None or dist < best_door[1]:
             best_door = (content, dist, key)
