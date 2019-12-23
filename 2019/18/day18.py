@@ -66,6 +66,12 @@ class Path(object):
     for fork in self.forks:
       fork.print_tree(level=level+1)
 
+  def drop_key(self, key_name):
+    del self.keys[key_name]
+    self.stuff = [keylock for keylock in self.stuff
+                  if keylock.name != key_name]
+
+
   def reachable_targets(self, dist_down_path, holding):
     reachable = {}
     for keylock in self.stuff:
@@ -212,12 +218,13 @@ class Vault(object):
 
   def pick_up(self, key_name):
     self.holding.add(key_name)
-    print('todo; delete key', key_name, 'from', self.cur_path)
+    self.cur_path.drop_key(key_name)
 
 
   def do_it(self, start_path):
     self.cur_loc = start_path
     self.holding = set()
+    self.do_round()
     self.do_round()
 
 
