@@ -10,6 +10,18 @@ import map
 
 KeyLock = namedtuple('KeyLock', 'name dist path')
 
+def _keylock__str__(self):
+  return '(%s, %d)' % (self.name, self.dist)
+  #return '(%s, %d, path@%d,%d)' % (self.name, self.dist,
+  #    self.path.start[0], self.path.start[1])
+
+def _keylock__repr__(self):
+  return '(%s, %d, path@%d,%d)' % (self.name, self.dist,
+      self.path.start[0], self.path.start[1])
+
+KeyLock.__str__ = _keylock__str__
+KeyLock.__repr__ = _keylock__repr__
+
 
 class Path(object):
 
@@ -36,7 +48,8 @@ class Path(object):
 
   def print(self, indent=0, forks=True):
     sp = '   ' * indent
-    print(sp, 'Path from', self.start, '@', self.base_dist, self.stuff)
+    print(sp, 'Path from', self.start, '@', self.base_dist,
+        ', '.join(['(%s,%d)' % (k.name, k.dist) for k in self.stuff]))
     print(sp, '  locks: ',
           ', '.join(['%c @ %d' % (k, v) for k, v in self.locks.items()]))
     print(sp, '  keys: ',
@@ -51,22 +64,24 @@ class Path(object):
 
   def reachable_targets(self, dist_down_path, holding):
     reachable = {}
-    for content, dist in self.stuff:
-      if content.isalpha():
-        reachable[content] = (content, dist_down_path + dist)
-        if content.islower():
-          print('key', content, 'at', dist)
-          holding.add(content)
+    for keylock in self.stuff:
+      if keylock.name.isalpha():
+        reachable[keylock.name] = KeyLock(
+            keylock.name, dist_down_path + keylock.dist, keylock.path)
+        if keylock.name.islower():
+          print('key', keylock.name, 'at', keylock.dist)
+          holding.add(keylock.name)
         else:
-          print('lock', content, 'at', dist)
-          if content.lower() not in holding:
+          print('lock', keylock.name, 'at', keylock.dist)
+          if keylock.name.lower() not in holding:
             return reachable
       else:
-        print('stuff', content, 'at', dist)
+        print('stuff', keylock.name, 'at', keylock.dist)
     for fork in self.forks:
       reachable.update(fork.reachable_targets(
           fork.base_dist+dist_down_path, set(holding)))
     return reachable
+
 
 class Vault(object):
 
@@ -89,11 +104,12 @@ class Vault(object):
       path.visited[pos] = path.dist
       content = self.maze.cell(pos)
       if content.isalpha():
-        path.stuff.append((content, path.dist))
+        path.stuff.append(KeyLock(content, path.dist, path))
         if content.islower():
           path.keys[content] = path.dist
         else:
           path.locks[content] = path.dist
+        print(path.stuff)
 
       # now move on
       moves = self.maze.get_moves(pos, path.visited)
@@ -105,9 +121,8 @@ class Vault(object):
         pos = moves[0]
         continue
       # a fork!!
-      for path_start in moves:
-        path.visited[path_start] = path.dist 
-
+      for path_start in moves:  # prevent other forks from backtracking
+        path.visited[path_start] = path.dist
       for path_start in moves:
         child_path = Path(parent=path, from_where=pos, start=path_start,
                           base_dist=path.dist)
@@ -132,7 +147,7 @@ class Vault(object):
     print('best_door', best_door)
 
     """
-  keys:  
+  keys:
    forks:  <Path from (5, 3)>, <Path from (7, 3)>
     Path from (5, 3) @ 1
       locks:  C @ 23, D @ 25
