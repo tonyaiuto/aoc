@@ -74,6 +74,13 @@ class Path(object):
 
   def reachable_targets(self, dist_down_path, holding):
     reachable = {}
+    self._reachable_downstream(dist_down_path, reachable, holding)
+
+    # Now that we have downstream, move back up and look.
+    self.parent
+    return reachable
+
+  def _reachable_downstream(self, dist_down_path, reachable, holding):
     for keylock in self.stuff:
       if keylock.name.isalpha():
         reachable[keylock.name] = KeyLock(
@@ -88,14 +95,22 @@ class Path(object):
       else:
         print('stuff', keylock.name, 'at', keylock.dist)
     for fork in self.forks:
-      reachable.update(fork.reachable_targets(
-          fork.base_dist+dist_down_path, set(holding)))
-    return reachable
+      fork._reachable_downstream(fork.base_dist+dist_down_path, reachable,
+          set(holding))
+
 
   @memoized
   def route_to(self, path):
     # find paths I can reach going out
-    return self.outward_route_to(path)
+    out = self.outward_route_to(path)
+    if out:
+      return out
+    up = [self.parent]
+    while True:
+      up.append(self.parent)
+      out = up[-1].route_to(path)
+      if out:
+        return up + out
 
   def outward_route_to(self, path):
     if self == path:
@@ -161,8 +176,9 @@ class Vault(object):
       break
     # path.print()
 
-  def find_best_action(self, start_path):
-    reachable = start_path.reachable_targets(0, set())
+  def find_best_action(self):
+    # start from cur_path, cur_dist
+    reachable = self.cur_path.reachable_targets(self.cur_dist, set())
     print(reachable)
     best_door = None
     for content, thing in reachable.items():
@@ -229,7 +245,7 @@ class Vault(object):
 
 
   def do_round(self):
-    best_action = self.find_best_action(self.cur_loc)
+    best_action = self.find_best_action()
     print('best_action', best_action)
     self.move_to(best_action[2])
 
