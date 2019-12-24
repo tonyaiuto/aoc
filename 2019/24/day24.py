@@ -83,7 +83,6 @@ class Eris(object):
 
 
 def do_part1(cells):
-  cells.print()
   while cells.cycle():
     pass
 
@@ -96,7 +95,7 @@ def bio_test(expect, pattern, label=''):
   assert expect == cells.bio
 
 
-def test_part1():
+def test_part1(quiet=True):
   bio_test(1, """\
       #....
       .....
@@ -175,7 +174,6 @@ def test_part1():
       ....#
       """, label='2**24+2')
 
-
   cells = Eris()
   cells.load_from_string("""\
       ....#
@@ -184,10 +182,13 @@ def test_part1():
       ..#..
       #....
       """)
-  for _ in range(4):
-    cells.cycle()
+  if not quiet:
     cells.print()
+    for _ in range(4):
+      cells.cycle()
+      cells.print()
   do_part1(cells)
+  assert 2129920 == cells.bio
 
 
 def part1():
@@ -199,5 +200,5 @@ def part1():
 
 
 if __name__ == '__main__':
-  # test_part1()
+  test_part1(quiet=True)
   part1()
