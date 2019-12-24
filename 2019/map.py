@@ -59,6 +59,7 @@ class Map(object):
     self.height = 0
     self.trace = False
     self.wall = '#'
+    self.open = ['.', ' ']
     self.walls = set()
     self.points = {}
 
@@ -83,8 +84,6 @@ class Map(object):
          if c == self.wall:
            self.walls.add((x, self.height))
          else:
-           if c == '.':
-             c = ' '
            self.points[(x, self.height)] = c
          x += 1
        if self.width == 0:
@@ -108,13 +107,13 @@ class Map(object):
     while True:
       new_walls = set()
       for pos, content in self.points.items():
-        if content != ' ':
+        if content in self.open:
           continue
         n_walls = 0
         for neighbor in neighbors(pos):
           if neighbor in self.walls:
             n_walls += 1
-            if neighbor in self.points and self.points[neighbor] != ' ':
+            if neighbor in self.points and self.points[neighbor] in self.open:
               print("WTF", pos, neighbor, self.points[neighbor])
         if n_walls == 3:
           self.walls.add(pos)
