@@ -2,7 +2,48 @@
 
 import textwrap
 
-class Eris(object):
+class Grid(object):
+
+  def __init__(self):
+    self.width = 5
+    self.height = 5
+    self.cells = []
+    self.cycles = 0
+    self.bio = 0
+    self.margin = 0
+
+  def load(self, path):
+    with open(path, 'r') as inp:
+      self.load_from_string(inp.read())
+
+  def load_from_string(self, s):
+    self.cells = [0] * (self.margin * (self.width + 3))
+    for c in textwrap.dedent(s).strip():
+      if c == '\n':
+        for _ in range(self.margin * 2):
+          self.cells.append(0)
+      elif c == '#':
+        self.cells.append(1)
+      else:
+        self.cells.append(0)
+    self.cells.extend([0] * (self.margin * (self.width + 3)))
+    self.calc_bio()
+
+  def print(self):
+    print('cycle', self.cycles, 'bio', self.bio)
+    for y in range(self.margin, self.height+self.margin):
+      x = y * (self.width + self.margin * 2) + self.margin
+      print(''.join('#' if c == 1 else '.'
+          for c in self.cells[x:(x + self.width - self.margin)]))
+
+  def run(self):
+    while self.cycle():
+      pass
+
+
+
+class Eris(Grid):
+  # part 1
 
   bit_order = [
        8, 9, 10, 11, 12,
@@ -13,37 +54,9 @@ class Eris(object):
   bit_order.reverse()
 
   def __init__(self):
-    self.width = 5
-    self.height = 5
-    self.cycles = 0
+    super(Eris, self).__init__()
+    self.margin = 1
     self.ratings = set()
-    self.bio = 0
-    # print(Eris.bit_order)
-
-  def load(self, path):
-    with open(path, 'r') as inp:
-      self.load_from_string(inp.read())
-
-  def load_from_string(self, s):
-    self.cells = [0] * 8
-    for c in textwrap.dedent(s).strip():
-      if c == '\n':
-        self.cells.append(0)
-        self.cells.append(0)
-      elif c == '#':
-        self.cells.append(1)
-      else:
-        self.cells.append(0)
-    self.cells.append(0)
-    for _ in range(7):
-      self.cells.append(0)
-    self.calc_bio()
-
-  def print(self):
-    print('cycle', self.cycles, 'bio', self.bio)
-    for y in range(1, self.height+1):
-      print(''.join('#' if c == 1 else '.'
-          for c in self.cells[y*(self.width+2)+1:((y+1)*(self.width+2)-1)]))
 
   def cycle(self):
     # A bug dies (becoming an empty space) unless there is exactly one
@@ -52,8 +65,6 @@ class Eris(object):
     # exactly one or two bugs are adjacent to it.
     # 01234
     # 56789
-    pow = 1
-
     self.cycles += 1
     nxt = [0] * 49
     for y in range(1, self.height+1):
@@ -68,7 +79,6 @@ class Eris(object):
     self.cells = nxt
     return self.calc_bio()
 
-
   def calc_bio(self):
     bio = 0
     for i, bit in enumerate(Eris.bit_order):
@@ -82,17 +92,21 @@ class Eris(object):
     return True
 
 
-def do_part1(cells):
-  while cells.cycle():
-    pass
-
-
 def bio_test(expect, pattern, label=''):
   cells = Eris()
   cells.load_from_string(pattern)
+  cells.print
   if expect != cells.bio:
     print('expect', expect, 'got', cells.bio, label)
   assert expect == cells.bio
+
+  cells = Eris2()
+  cells.load_from_string(pattern)
+  cells.print
+  if expect != cells.bio:
+    print('expect', expect, 'got', cells.bio, label)
+  assert expect == cells.bio
+
 
 
 def test_part1(quiet=True):
@@ -187,14 +201,79 @@ def test_part1(quiet=True):
     for _ in range(4):
       cells.cycle()
       cells.print()
-  do_part1(cells)
+  cells.run()
+  assert 2129920 == cells.bio
+
+
+class Eris2(Grid):
+
+  def __init__(self):
+    super(Eris2, self).__init__()
+    self.cells = []
+    self.ratings = set()
+    self.inner = None
+    self.outer = None
+
+  def get_cell(self, cell_no):
+    return -1
+
+  def cycle2(self):
+    self.cycles += 1
+    nxt = [0] * 49
+    # row 1
+    y = 1
+    up = self.outer_count(8)
+    for y in range(1, self.height+1):
+      base = y * 7 + 1
+      for c in range(5):
+        nxt[base+c] = (self.cells[base+c-1] + self.cells[base+c+1] +
+                       self.cells[base+c-7] + self.cells[base+c+7])
+        if self.cells[base+c] == 1:
+          nxt[base+c] = 1 if nxt[base+c] == 1 else 0
+        else:
+          nxt[base+c] = 1 if nxt[base+c] in [1, 2]  else 0
+    self.cells = nxt
+    return self.calc_bio()
+
+  def out_count(self, cell):
+    if not self.outer:
+      self.outer = Eris()
+    return self.outer_cells[11]
+
+  def calc_bio(self):
+    bio = 0
+    for pos in range(self.height * self.width - 1, -1, -1):
+      bio = bio * 2 + self.cells[pos]
+    self.bio = bio
+    if bio in self.ratings:
+      print('======== bio appears twice', bio)
+      return False
+    self.ratings.add(bio)
+    return True
+
+
+def test_part2(quiet=True):
+  cells = Eris()
+  cells.load_from_string("""\
+      ....#
+      #..#.
+      #..##
+      ..#..
+      #....
+      """)
+  if not quiet:
+    cells.print()
+    for _ in range(4):
+      cells.cycle2()
+      cells.print()
+  do_part2(cells)
   assert 2129920 == cells.bio
 
 
 def part1():
   cells = Eris()
   cells.load('input_24.txt')
-  do_part1(cells)
+  cells.run()
   print('part1:', cells.bio)
   assert 30446641 == cells.bio
 
@@ -202,3 +281,5 @@ def part1():
 if __name__ == '__main__':
   test_part1(quiet=True)
   part1()
+  # test_part2(quiet=False)
+
