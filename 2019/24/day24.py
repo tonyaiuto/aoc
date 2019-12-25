@@ -209,7 +209,7 @@ class Eris2(Grid):
 
   def __init__(self):
     super(Eris2, self).__init__()
-    self.cells = []
+    self.cells = [0] * (self.height * self.width)
     self.ratings = set()
     self.inner = None
     self.outer = None
@@ -217,28 +217,67 @@ class Eris2(Grid):
   def get_cell(self, cell_no):
     return -1
 
-  def cycle2(self):
+  def cycle(self):
     self.cycles += 1
-    nxt = [0] * 49
-    # row 1
-    y = 1
+    nxt = [0] * (self.height * self.width)
     up = self.outer_count(8)
-    for y in range(1, self.height+1):
-      base = y * 7 + 1
-      for c in range(5):
-        nxt[base+c] = (self.cells[base+c-1] + self.cells[base+c+1] +
-                       self.cells[base+c-7] + self.cells[base+c+7])
-        if self.cells[base+c] == 1:
-          nxt[base+c] = 1 if nxt[base+c] == 1 else 0
-        else:
-          nxt[base+c] = 1 if nxt[base+c] in [1, 2]  else 0
+    down = self.outer_count(18)
+    left = self.outer_count(12)
+    right = self.outer_count(14)
+
+    # row 1
+    for ci in range(25):
+      # add left
+      if ci % self.width == 0:
+        nxt[x] += left
+      elif ci != 14:
+        nxt[x] += self.cells[ci - 1]
+      else:
+        print('tbd: do inner')
+
+      # add right
+      if ci % self.width == 4:
+        nxt[x] += right
+      elif ci != 12:
+        nxt[x] += self.cells[ci + 1]
+      else:
+        print('tbd: do inner')
+
+      # Add row above
+      if ci < 5:
+        nxt[x] += up
+      elif ci != 18:
+        nxt[x] += self.cells[x-self.width]
+      else:
+        print('tbd: do inner')
+
+      # Add row below
+      if ci >= 20:
+        nxt[x] += up
+      elif ci != 8:
+        nxt[x] += self.cells[x+self.width]
+      else:
+        print('tbd: do inner')
+
+      if self.cells[ci] == 1:
+        nxt[ci] = 1 if nxt[base+c] == 1 else 0
+      else:
+        nxt[ci] = 1 if nxt[base+c] in [1, 2]  else 0
+
+    self.outer.cycle()
+    # self.inner.cycle()
     self.cells = nxt
     return self.calc_bio()
 
-  def out_count(self, cell):
+  def outer_count(self, cell):
     if not self.outer:
-      self.outer = Eris()
-    return self.outer_cells[11]
+      return 0
+    return self.outer.cells[cell]
+
+  def inner_count(self, cell):
+    if not self.inner:
+      return 0
+    return self.inner.cells[cell]
 
   def calc_bio(self):
     bio = 0
