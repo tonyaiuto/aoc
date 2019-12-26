@@ -70,7 +70,8 @@ class Path(object):
       fork.print_tree(level=level+1)
 
   def drop_key(self, key_name):
-    del self.keys[key_name]
+    if key_name.islower():
+      del self.keys[key_name]
     self.stuff = [keylock for keylock in self.stuff
                   if keylock.name != key_name]
 
@@ -234,6 +235,7 @@ class Vault(object):
         cur_at=self.cur_dist, total_dist=0, holding=set(self.holding))
     if self.trace:
       print('reachable:', reachable)
+    # {'A': (A, 2, path@7,3), 'e': (e, 4, path@7,3), 'F': (F, 6, path@7,3), 'g': (g, 8, path@7,3), 'D': (D, 34, path@5,3)}
     best_door = None
     for content, thing in reachable.items():
       dist = thing[1]
@@ -242,6 +244,10 @@ class Vault(object):
         if key:
           if best_door == None or dist < best_door[1]:
             best_door = (content, dist, key)
+    if best_door is None and reachable:
+      door_name = self.last_pick.upper()
+      door = reachable[door_name]
+      return (door_name, door[1], door)
     return best_door
 
   def move_to(self, keyloc):
@@ -289,16 +295,27 @@ class Vault(object):
         break
 
     # now we are at the right path, move to the key
-    key_dist = to_path.keys[key_name]
-    for keylock in to_path.stuff:
-      if (keylock.name.isalpha() and keylock.name.islower()
-          and keylock.dist < key_dist):
-        print('Drive by pickup key', keylock.name)
+    key_dist = self.cur_path.keys[key_name]
+    pick_or_open = set()
+    for keylock in self.cur_path.stuff:
+      if keylock.name.isalpha() and keylock.dist <= key_dist:
+        if keylock.name.islower():
+          print('Drive by pickup key', keylock.name)
+          pick_or_open.add(keylock.name)
+          self.last_pick = keylock.name
+        elif (keylock.name.lower() in self.holding
+              or keylock.name.lower() in pick_or_open):
+          print('Drive by unlock', keylock.name)
+          pick_or_open.add(keylock.name)
+
+    for key_name in pick_or_open:
+      if key_name.islower():
         self.pick_up(key_name)
+      else:
+        self.unlock(key_name)
 
     dist += key_dist
     self.cur_dist = key_dist
-    self.pick_up(key_name)
     print('travese_to: moved', dist)
     return dist
 
@@ -306,20 +323,27 @@ class Vault(object):
     self.holding.add(key_name)
     self.cur_path.drop_key(key_name)
 
+  def unlock(self, key_name):
+    self.cur_path.drop_key(key_name)
+
 
   def do_it(self, start_path):
     self.cur_loc = start_path
     self.holding = set()
-    self.do_round()
-    self.do_round()
-    self.do_round()
-    self.do_round()
-
+    while True:
+      print('\n=== New round')
+      if not self.do_round():
+        break
+    print('total moved', self.total_moved)
 
   def do_round(self):
     best_action = self.find_best_action()
     print('best_action', best_action)
+    if not best_action:
+      print('no more actions. total moved', self.total_moved)
+      return False
     self.move_to(best_action[2])
+    return True
 
 
 def test_part1():
