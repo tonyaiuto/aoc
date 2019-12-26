@@ -26,6 +26,8 @@ KeyLock.__repr__ = _keylock__repr__
 
 class Path(object):
 
+  trace_level = 1
+
   def __init__(self, from_where, start, parent=None, base_dist=0):
     self.from_where = from_where
     self.base_dist = base_dist
@@ -36,6 +38,7 @@ class Path(object):
     self.visited = {}
     self.visited[from_where] = 1
     self.visited[start] = 0
+    self.trace = True
 
     # distances to things
     self.locks = {}
@@ -72,31 +75,79 @@ class Path(object):
                   if keylock.name != key_name]
 
 
-  def reachable_targets(self, dist_down_path, holding):
+  def reachable_targets(self, cur_at=0, total_dist=0, holding=None):
     reachable = {}
-    self._reachable_downstream(dist_down_path, reachable, holding)
+    self._reachable_downstream(reachable, holding, cur_at, total_dist)
 
     # Now that we have downstream, move back up and look.
-    self.parent
-    return reachable
+    cur_fork = self.parent
+    if not cur_fork:
+      return reachable
 
-  def _reachable_downstream(self, dist_down_path, reachable, holding):
-    for keylock in self.stuff:
+    # move to fork point (== dist to base of path + up to fork)
+    total_dist = cur_at + 1
+    for fork in cur_fork.forks:
+      if fork == self:
+        continue
+      # Walk back cur_at distance to forking point and deal with siblings
+      fork._reachable_downstream(
+          reachable, holding, cur_at=0, total_dist=total_dist+1)
+
+    # Account for locks & keys on reverse of path to parent
+    for keylock in cur_fork.stuff:
       if keylock.name.isalpha():
         reachable[keylock.name] = KeyLock(
-            keylock.name, dist_down_path + keylock.dist, keylock.path)
+            keylock.name, self.base_dist - keylock.dist, keylock.path)
+      if keylock.name.islower():
+        print('parent key', keylock.name, 'at', self.base_dist - keylock.dist)
+        holding.add(keylock.name)
+
+    # now we can reach from our grandparent in the normal way
+    if cur_fork.parent:
+      total_dist += self.base_dist
+      cur_fork.parent._reachable_downstream(
+          reachable=reachable,
+          holding=holding,
+          cur_at=0,
+          total_dist=total_dist,
+          exclude=cur_fork)
+    return reachable
+
+
+  def _reachable_downstream(
+     self, reachable, holding, cur_at=0, total_dist=0, exclude=None):
+    assert cur_at * total_dist == 0
+    for keylock in self.stuff:
+      if keylock.name.isalpha():
+        if keylock.dist > cur_at:
+          reachable[keylock.name] = KeyLock(
+              keylock.name, total_dist + keylock.dist - cur_at,
+              keylock.path)
+        else:
+          # back the path
+          reachable[keylock.name] = KeyLock(
+              keylock.name, total_dist + cur_at - keylock.dist,
+              keylock.path)
+
         if keylock.name.islower():
-          print('key', keylock.name, 'at', keylock.dist)
+          if Path.trace_level > 1:
+            print('key', keylock.name, 'at', keylock.dist)
           holding.add(keylock.name)
         else:
-          print('lock', keylock.name, 'at', keylock.dist)
+          if Path.trace_level > 1:
+            print('lock', keylock.name, 'at', keylock.dist)
           if keylock.name.lower() not in holding:
             return reachable
       else:
         print('stuff', keylock.name, 'at', keylock.dist)
+
     for fork in self.forks:
-      fork._reachable_downstream(fork.base_dist+dist_down_path, reachable,
-          set(holding))
+      if fork == exclude:
+        continue
+      fork._reachable_downstream(
+          reachable=reachable,
+          holding=holding,
+          total_dist=fork.base_dist + total_dist - cur_at)
 
 
   @memoized
@@ -131,7 +182,8 @@ class Vault(object):
     self.top = Path(from_where=(-1, -1), start=self.start)
     self.cur_path = self.top
     self.cur_dist = 0
-
+    self.trace = True
+    self.total_moved = 0
 
   def set_start(self):
     self.start = None
@@ -178,8 +230,10 @@ class Vault(object):
 
   def find_best_action(self):
     # start from cur_path, cur_dist
-    reachable = self.cur_path.reachable_targets(self.cur_dist, set())
-    print(reachable)
+    reachable = self.cur_path.reachable_targets(
+        cur_at=self.cur_dist, total_dist=0, holding=set(self.holding))
+    if self.trace:
+      print('reachable:', reachable)
     best_door = None
     for content, thing in reachable.items():
       dist = thing[1]
@@ -197,35 +251,51 @@ class Vault(object):
     route = self.cur_path.route_to(to_path)
     if to_path in route:
       print('can move out to', to_path, route)
-      self.traverse_to(to_path, key_name, route)
+      self.total_moved += self.traverse_to(to_path, key_name, route)
+    else:
+      raise Exception('no route to', keyloc)
     self.ploc()
 
   def ploc(self):
     print('now at path', self.cur_path, 'dist', self.cur_dist,
           'holding', self.holding)
 
-    
+
   def traverse_to(self, to_path, key_name, route):
     # move from current pos to the new place
     dist = 0
     while True:
-      print('loop to, route', to_path, route)
+      print('traversing to, route', to_path, route)
+      self.ploc()
       nxt = route[0]
       route = route[1:]
       if nxt == self.cur_path:
         continue
       if self.cur_path.parent == nxt:
-        print("Up not implemented")
-        break
+        print('moving on up')
+        self.cur_path = nxt
+        if self.cur_dist > 0:
+          dist += self.cur_dist
+        self.cur_dist = 0
+        dist += nxt.base_dist + 1
       else:
+        # traverse down
         dist_to_path = nxt.base_dist - self.cur_dist
         dist += dist_to_path
         self.cur_path = nxt
         self.cur_dist = 0
+
       if to_path == self.cur_path:
         break
+
     # now we are at the right path, move to the key
     key_dist = to_path.keys[key_name]
+    for keylock in to_path.stuff:
+      if (keylock.name.isalpha() and keylock.name.islower()
+          and keylock.dist < key_dist):
+        print('Drive by pickup key', keylock.name)
+        self.pick_up(key_name)
+
     dist += key_dist
     self.cur_dist = key_dist
     self.pick_up(key_name)
@@ -240,6 +310,8 @@ class Vault(object):
   def do_it(self, start_path):
     self.cur_loc = start_path
     self.holding = set()
+    self.do_round()
+    self.do_round()
     self.do_round()
     self.do_round()
 
