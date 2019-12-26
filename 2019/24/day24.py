@@ -11,6 +11,8 @@ class Grid(object):
     self.cycles = 0
     self.bio = 0
     self.margin = 0
+    self.depth = 0
+    self.in_cycle = False
 
   def load(self, path):
     with open(path, 'r') as inp:
@@ -29,11 +31,12 @@ class Grid(object):
     self.cells.extend([0] * (self.margin * (self.width + 3)))
     self.calc_bio()
 
-  def print(self):
-    print('cycle', self.cycles, 'bio', self.bio)
+  def print(self, indent=0):
+    sp = ' ' * indent
+    print(sp + 'cycle', self.cycles, 'bio', self.bio, 'depth', self.depth)
     for y in range(self.margin, self.height+self.margin):
       x = y * (self.width + self.margin * 2) + self.margin
-      print(''.join('#' if c == 1 else '.'
+      print(sp + ''.join('#' if c == 1 else '.'
           for c in self.cells[x:(x + self.width - self.margin)]))
 
   def run(self):
@@ -207,67 +210,68 @@ def test_part1(quiet=True):
 
 class Eris2(Grid):
 
-  def __init__(self):
+  def __init__(self, depth=0, inner=None, outer=None):
     super(Eris2, self).__init__()
     self.cells = [0] * (self.height * self.width)
-    self.ratings = set()
-    self.inner = None
-    self.outer = None
+    self.depth = depth
+    self.inner = inner
+    self.outer = outer
 
   def get_cell(self, cell_no):
     return -1
 
   def cycle(self):
+    if self.in_cycle:
+      return
+    self.in_cycle = True
     self.cycles += 1
     nxt = [0] * (self.height * self.width)
-    up = self.outer_count(8)
-    down = self.outer_count(18)
-    left = self.outer_count(12)
-    right = self.outer_count(14)
 
     # row 1
     for ci in range(25):
       # add left
       if ci % self.width == 0:
-        nxt[x] += left
-      elif ci != 14:
-        nxt[x] += self.cells[ci - 1]
+        nxt[ci] += self.outer_count(11)
+      elif ci == 13:
+        nxt[ci] += self.inner_count(13)
       else:
-        print('tbd: do inner')
+        nxt[ci] += self.cells[ci - 1]
 
       # add right
       if ci % self.width == 4:
-        nxt[x] += right
-      elif ci != 12:
-        nxt[x] += self.cells[ci + 1]
+        nxt[ci] += self.outer_count(13)
+      elif ci == 11:
+        nxt[ci] += self.inner_count(11)
       else:
-        print('tbd: do inner')
+        nxt[ci] += self.cells[ci + 1]
 
       # Add row above
       if ci < 5:
-        nxt[x] += up
-      elif ci != 18:
-        nxt[x] += self.cells[x-self.width]
+        nxt[ci] += self.outer_count(7)
+      elif ci == 17:
+        nxt[ci] += self.inner_count(17)
       else:
-        print('tbd: do inner')
+        nxt[ci] += self.cells[ci-self.width]
 
       # Add row below
       if ci >= 20:
-        nxt[x] += up
-      elif ci != 8:
-        nxt[x] += self.cells[x+self.width]
+        nxt[ci] += self.outer_count(17)
+      elif ci == 7:
+        nxt[ci] += self.inner_count(7)
       else:
-        print('tbd: do inner')
+        nxt[ci] += self.cells[ci+self.width]
 
       if self.cells[ci] == 1:
-        nxt[ci] = 1 if nxt[base+c] == 1 else 0
+        nxt[ci] = 1 if nxt[ci] == 1 else 0
       else:
-        nxt[ci] = 1 if nxt[base+c] in [1, 2]  else 0
+        nxt[ci] = 1 if nxt[ci] in [1, 2]  else 0
+    nxt[12] = 0
 
-    self.outer.cycle()
-    # self.inner.cycle()
+    self.provisonal_innner()
+    self.provisonal_outer()
     self.cells = nxt
-    return self.calc_bio()
+    # self.calc_bio()
+    self.in_cycle = False
 
   def outer_count(self, cell):
     if not self.outer:
@@ -277,22 +281,74 @@ class Eris2(Grid):
   def inner_count(self, cell):
     if not self.inner:
       return 0
-    return self.inner.cells[cell]
+    return self.inner.count_inner_edge(cell)
+
+  def count_inner_edge(self, cell):
+    if cell == 7:
+      # top row
+      return sum(self.cells[0:5])
+    elif cell == 11:
+      # left col
+      return sum(self.cells[ci] for ci in [0, 5, 10, 15, 20])
+    elif cell == 13:
+      # right col
+      return sum(self.cells[ci] for ci in [4, 9, 14, 19, 24])
+    elif cell == 17:
+      # bottom row
+      return sum(self.cells[20:25])
+    else:
+      raise Exception('asked for wrong innter count %d' % cell)
+
+  def provisonal_innner(self):
+    if not self.inner:
+      for cell in (7, 11, 13, 17):
+        if self.cells[cell]:
+           self.inner = Eris2(depth=self.depth+1, outer=self)
+           # print('\nMaking inner from this:')
+           # self.print(indent=4)
+           break
+    if self.inner and not self.inner.in_cycle:
+      self.inner.cycle()
+      # self.inner.print(indent=7)
+
+  def provisonal_outer(self):
+    if not self.outer:
+      for cell in (7, 11, 13, 17):
+        n_live = self.count_inner_edge(cell)
+        if n_live in (1, 2):
+           self.outer = Eris2(depth=self.depth-1, inner=self)
+           # print('\nMaking outer for form')
+           # self.print(indent=4)
+           break
+    if self.outer and not self.outer.in_cycle:
+      self.outer.cycle()
+      # self.outer.print(indent=8)
+
+  def count_bugs(self):
+    bugs = 0
+    if self.depth >= 0 and self.inner:
+      bugs += self.inner.count_bugs()
+    if self.depth <= 0 and self.outer:
+      bugs += self.outer.count_bugs()
+    bugs += sum([c for c in self.cells])
+    return bugs
 
   def calc_bio(self):
     bio = 0
     for pos in range(self.height * self.width - 1, -1, -1):
       bio = bio * 2 + self.cells[pos]
     self.bio = bio
+    """
     if bio in self.ratings:
       print('======== bio appears twice', bio)
       return False
     self.ratings.add(bio)
+    """
     return True
 
 
 def test_part2(quiet=True):
-  cells = Eris()
+  cells = Eris2()
   cells.load_from_string("""\
       ....#
       #..#.
@@ -302,11 +358,12 @@ def test_part2(quiet=True):
       """)
   if not quiet:
     cells.print()
-    for _ in range(4):
-      cells.cycle2()
+    for _ in range(10):
+      cells.cycle()
       cells.print()
-  do_part2(cells)
-  assert 2129920 == cells.bio
+  bugs = cells.count_bugs()
+  print('bugs', bugs)
+  assert 99 == bugs
 
 
 def part1():
@@ -316,9 +373,18 @@ def part1():
   print('part1:', cells.bio)
   assert 30446641 == cells.bio
 
+def part2():
+  cells = Eris2()
+  cells.load('input_24.txt')
+  for _ in range(200):
+    cells.cycle()
+  bugs = cells.count_bugs()
+  print('part2, bugs', bugs)
+  # 2057 is too high
 
 if __name__ == '__main__':
   test_part1(quiet=True)
   part1()
-  # test_part2(quiet=False)
+  test_part2(quiet=False)
+  part2()
 
