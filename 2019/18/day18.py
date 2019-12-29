@@ -24,6 +24,21 @@ KeyLock.__str__ = _keylock__str__
 KeyLock.__repr__ = _keylock__repr__
 
 
+class Key(object):
+
+  def __init__(self, name, path, dist_from_root, blocked_by=None):
+    self.name = name
+    self.path = path
+    self.dist_from_root = dist_from_root
+    self.blocked_by = blocked_by
+
+  def __str__(self):
+    return 'Key<%s, %d>' % (self.name, self.dist_from_root)
+
+  def __repr__(self):
+    return 'Key<%s, %d>' % (self.name, self.dist_from_root)
+
+
 class Path(object):
 
   trace_level = 1
@@ -185,6 +200,8 @@ class Vault(object):
     self.cur_dist = 0
     self.trace = True
     self.total_moved = 0
+    self.all_keys = {}
+    self.blocked_by = {}
 
   def set_start(self):
     self.start = None
@@ -193,13 +210,25 @@ class Vault(object):
         self.start = pos
         return
 
-  def walk_path(self, path):
+  def add_key(self, keylock):
+    self.all_keys[keylock.name] = keylock
+
+
+  def walk_path(self, path, dist_from_root=0, last_key=None):
+    # trace out the tree
     self.path_heads[path.start] = -1
     pos = path.start
     while True:
       path.visited[pos] = path.dist
       content = self.maze.cell(pos)
       if content.isalpha():
+        key = Key(content, path, dist_from_root + path.dist,
+                  blocked_by=last_key)
+        self.add_key(key)
+        if last_key:
+          self.blocked_by[key] = last_key.name.lower()
+        last_key = key
+
         path.stuff.append(KeyLock(content, path.dist, path))
         if content.islower():
           path.keys[content] = path.dist
@@ -225,7 +254,8 @@ class Vault(object):
         # Do not duplicate paths
         child_path.visited.update(self.path_heads)
         path.forks.append(child_path)
-        self.walk_path(child_path)
+        self.walk_path(child_path, dist_from_root=dist_from_root + path.dist,
+                       last_key=last_key)
       break
     # path.print()
 
@@ -358,11 +388,14 @@ def test_part1():
       """)
   # Shortest path is 132 steps: b, a, c, d, f, e, g
   #print('After dead end removal')
-  #maze.close_dead_ends()
+  maze.close_dead_ends()
 
   maze.print()
   vault = Vault(maze)
   vault.walk_path(vault.top)
+  print('========================================')
+  print(vault.all_keys)
+  print(vault.blocked_by)
   print('========================================')
   vault.top.print_tree()
   vault.do_it(vault.top)

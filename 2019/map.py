@@ -107,7 +107,7 @@ class Map(object):
     while True:
       new_walls = set()
       for pos, content in self.points.items():
-        if content in self.open:
+        if content not in self.open:
           continue
         n_walls = 0
         for neighbor in neighbors(pos):
