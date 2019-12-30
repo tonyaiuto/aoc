@@ -13,21 +13,6 @@ def P(key_set):
   return ','.join(sorted(key.name for key in key_set))
 
 
-KeyLock = namedtuple('KeyLock', 'name dist path')
-
-def _keylock__str__(self):
-  return '(%s, %d)' % (self.name, self.dist)
-  #return '(%s, %d, path@%d,%d)' % (self.name, self.dist,
-  #    self.path.start[0], self.path.start[1])
-
-def _keylock__repr__(self):
-  return '(%s, %d, path@%d,%d)' % (self.name, self.dist,
-      self.path.start[0], self.path.start[1])
-
-KeyLock.__str__ = _keylock__str__
-KeyLock.__repr__ = _keylock__repr__
-
-
 class Key(object):
 
   def __init__(self, name, path, dist_from_root, blocked_by=None,
@@ -87,7 +72,6 @@ class Path(object):
 
     # distances to things
     self.keys = {}
-    self.stuff = []
     self.forks = []
     # print('Create path: start', self.start, 'visited', self.visited)
 
@@ -100,7 +84,7 @@ class Path(object):
   def print(self, indent=0, forks=True):
     sp = '   ' * indent
     print(sp, 'Path from', self.start, '@', self.base_dist,
-        ', '.join(['(%s,%d)' % (k.name, k.dist) for k in self.stuff]))
+        ', '.join(['(%s,%d)' % (k.name, k.dist) for _,k in self.keys.items()]))
     print(sp, '  keys: ',
           ', '.join(['%c @ %d' % (k, v) for k, v in self.keys.items()]))
     if self.forks:
@@ -110,42 +94,6 @@ class Path(object):
     self.print(indent=level, forks=False)
     for fork in self.forks:
       fork.print_tree(level=level+1)
-
-  def _reachable_downstream(
-     self, reachable, holding, cur_at=0, total_dist=0, exclude=None):
-    assert cur_at * total_dist == 0
-    for keylock in self.stuff:
-      if keylock.name.isalpha():
-        if keylock.dist > cur_at:
-          reachable[keylock.name] = KeyLock(
-              keylock.name, total_dist + keylock.dist - cur_at,
-              keylock.path)
-        else:
-          # back the path
-          reachable[keylock.name] = KeyLock(
-              keylock.name, total_dist + cur_at - keylock.dist,
-              keylock.path)
-
-        if keylock.name.islower():
-          if Path.trace_level > 1:
-            print('key', keylock.name, 'at', keylock.dist)
-          holding.add(keylock.name)
-        else:
-          if Path.trace_level > 1:
-            print('lock', keylock.name, 'at', keylock.dist)
-          if keylock.name.lower() not in holding:
-            return reachable
-      else:
-        print('stuff', keylock.name, 'at', keylock.dist)
-
-    for fork in self.forks:
-      if fork == exclude:
-        continue
-      fork._reachable_downstream(
-          reachable=reachable,
-          holding=holding,
-          total_dist=fork.base_dist + total_dist - cur_at)
-
 
   @memoized
   def route_to(self, path):
@@ -252,11 +200,6 @@ class Vault(object):
         if last_key:
           self.blocked_by[key] = last_key.name
         last_key = key
-
-        path.stuff.append(KeyLock(content, path.dist, path))
-        if content.islower():
-          path.keys[content] = path.dist
-        print(path.stuff)
 
       # now move on
       moves = self.maze.get_moves(pos, path.visited)
