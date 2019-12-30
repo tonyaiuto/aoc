@@ -308,11 +308,12 @@ class Vault(object):
     print(sp, 'adding downstream reachabilty for', key, 'blocks', key.blocks)
     for downstream in key.blocks:
       reachable.add(downstream)
-      # YYY if downstream.name.islower():
       if downstream.name.islower() or downstream.name.lower() in holding:
-        self.unblock_reachable_downstream(downstream, holding, reachable)
+        self.unblock_reachable_downstream(
+            downstream, holding, reachable, indent)
 
   def use_key(self, at_key, holding, reachable, indent=0):
+    # make the keys downstream of the door for this key reachable
     sp = ' ' * indent
     door = self.all_keys.get(at_key.name.upper())
     if not door:
@@ -420,17 +421,30 @@ def test_part1_b():
   vault.top.print_tree()
   # vault.do_it(vault.top)
   vault.all_solutions()
+  assert 136 == vault.best_dist
 
 
-"""
-########################
-#@..............ac.GI.b#
-###d#e#f################
-###A#B#C################
-###g#h#i################
-########################
-Shortest paths are 81 steps; one is: a, c, f, i, d, g, b, e, h
-"""
+def test_part1_c():
+  maze = map.Map()
+  maze.load_from_string("""\
+      ########################
+      #@..............ac.GI.b#
+      ###d#e#f################
+      ###A#B#C################
+      ###g#h#i################
+      ########################
+      """)
+  # Shortest paths are 81 steps; one is: a, c, f, i, d, g, b, e, h
+  maze.print()
+  vault = Vault(maze)
+  print('========================================')
+  print(vault.blocked_by)
+  print('========================================')
+  vault.top.print_tree()
+  # vault.do_it(vault.top)
+  vault.all_solutions()
+  assert 81 == vault.best_dist
+
 
 
 def part1():
@@ -452,5 +466,6 @@ def part1():
 
 if __name__ == '__main__':
   test_part1()
-  test_part1_b()
+  # test_part1_b()
+  test_part1_c()
   # part1()
