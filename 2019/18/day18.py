@@ -9,6 +9,10 @@ import map
 from memoized import memoized
 
 
+def P(key_set):
+  return ','.join(key.name for key in key_set)
+
+
 KeyLock = namedtuple('KeyLock', 'name dist path')
 
 def _keylock__str__(self):
@@ -31,6 +35,7 @@ class Key(object):
     self.path = path
     self.dist_from_root = dist_from_root
     self.blocked_by = blocked_by
+    self.blocks = []
     self.dists = {}
 
   def __str__(self):
@@ -217,6 +222,7 @@ class Vault(object):
     self.cur_path = self.top
     self.maze.close_dead_ends()
     self.walk_path(self.top)
+    self.resolve_edges()
     self.compute_distances()
 
   def set_start(self):
@@ -229,8 +235,13 @@ class Vault(object):
   def add_key(self, keylock):
     self.all_keys[keylock.name] = keylock
 
+  def resolve_edges(self):
+    for key, blocker_name in self.blocked_by.items():
+      blocker = self.all_keys[blocker_name]
+      blocker.blocks.append(key)
 
   def compute_distances(self):
+    self.worst_path = 0
     for name, key in self.all_keys.items():
       if name.isupper():
         continue
@@ -255,7 +266,7 @@ class Vault(object):
         print('dist %s %s = %d' % (name, other_name, dist))
         key.dists[other_name] = dist
         other_key.dists[name] = dist
-
+        self.worst_path += dist
 
   def walk_path(self, path, dist_from_root=0, last_key=None):
     # trace out the tree
@@ -269,7 +280,7 @@ class Vault(object):
                   blocked_by=last_key)
         self.add_key(key)
         if last_key:
-          self.blocked_by[key] = last_key.name.lower()
+          self.blocked_by[key] = last_key.name
         last_key = key
 
         path.stuff.append(KeyLock(content, path.dist, path))
@@ -399,7 +410,6 @@ class Vault(object):
   def unlock(self, key_name):
     self.cur_path.drop_key(key_name)
 
-
   def do_it(self, start_path):
     self.cur_loc = start_path
     self.holding = set()
@@ -417,6 +427,74 @@ class Vault(object):
       return False
     self.move_to(best_action[2])
     return True
+
+  def all_solutions(self):
+    blocked = set(self.blocked_by.keys())
+    # find unblocked
+    keys = set(k for k in self.all_keys.values())
+    unblocked = keys - blocked
+    print('=keys', keys)
+    print('=blocked', blocked)
+    print('=unblocked', unblocked)
+
+    self.best_dist = self.worst_path
+    print('upper bound for distance', self.best_dist)
+    for start in unblocked:
+      total_dist = start.dist_from_root
+      self.try_paths(start, set(unblocked), set(), total_dist, indent=0)
+    print('best traversal distance', self.best_dist)
+
+
+  def unlock(self, door, reachable):
+    if door.blocked_by in reachable:
+      for downstream in door.blocks:
+        reachable.add(downstream)
+        if downstream.name.islower():
+          self.unlock(downstream, reachable)
+
+  def try_paths(self, at_key, reachable, holding, total_dist, indent):
+    if at_key in holding:
+      return
+    sp = '  ' * indent
+    print(sp, 'now at', at_key, 'dist', total_dist)
+    if total_dist > self.best_dist:
+      print(sp, 'gone too far')
+      return
+    holding.add(at_key)
+    if len(holding) == len(self.all_keys):
+      print(sp, 'complete set: dist', total_dist)
+      self.best_dist = min(self.best_dist, total_dist)
+      return
+
+    door = self.all_keys.get(at_key.name.upper())
+    if door:
+      self.unlock(door, reachable)
+      holding.add(door)
+      if door.blocked_by in holding:
+        print('new reachable stuff behind door', door)
+        print(sp, 'was holding', P(holding), 'now reachable', P(reachable))
+        for to_unblock in door.blocks:
+          if to_unblock.name.islower() or to_unblock.name.lower in holding:
+            reachable.add(to_unblock)
+        print(sp, 'new holding', P(holding), 'now reachable', P(reachable))
+
+    for to_unblock in at_key.blocks:
+      if to_unblock.name.islower() or to_unblock.name.lower in holding:
+        reachable.add(to_unblock)
+
+    print(sp, 'holding', P(holding), 'now reachable', P(reachable))
+
+    # visit each that are now reachable
+    for to_unblock in reachable:
+      if at_key == to_unblock:
+        continue
+      if to_unblock.name.islower():
+        print(sp, '  visiting', to_unblock.name)
+        self.try_paths(
+            to_unblock, set(reachable), set(holding),
+            total_dist = total_dist + at_key.dists[to_unblock.name],
+            indent = indent + 1)
+
 
 
 def test_part1():
@@ -439,6 +517,7 @@ def test_part1():
   print('========================================')
   vault.top.print_tree()
   # vault.do_it(vault.top)
+  vault.all_solutions()
 
 
 def test_part1_b():
@@ -462,7 +541,8 @@ def test_part1_b():
   print(vault.blocked_by)
   print('========================================')
   vault.top.print_tree()
-  vault.do_it(vault.top)
+  # vault.do_it(vault.top)
+  vault.all_solutions()
 
 
 """
