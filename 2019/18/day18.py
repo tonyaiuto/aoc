@@ -59,15 +59,6 @@ class Key(object):
     ret.reverse()
     return ret
 
-  """XXX
-  def is_upstream_in_set(self, things):
-    # is everything in upsteam in the set of things?
-    for key in self.upstream_keys:
-      if key not in things:
-        return False
-    return True
-  """
-
   def is_reachable(self, holding, reachable):
     for key in self.upstream_keys:
       if key in holding:
@@ -119,52 +110,6 @@ class Path(object):
     self.print(indent=level, forks=False)
     for fork in self.forks:
       fork.print_tree(level=level+1)
-
-  def drop_key(self, key_name):
-    if key_name.islower():
-      del self.keys[key_name]
-    self.stuff = [keylock for keylock in self.stuff
-                  if keylock.name != key_name]
-
-
-  def reachable_targets(self, cur_at=0, total_dist=0, holding=None):
-    reachable = {}
-    self._reachable_downstream(reachable, holding, cur_at, total_dist)
-
-    # Now that we have downstream, move back up and look.
-    cur_fork = self.parent
-    if not cur_fork:
-      return reachable
-
-    # move to fork point (== dist to base of path + up to fork)
-    total_dist = cur_at + 1
-    for fork in cur_fork.forks:
-      if fork == self:
-        continue
-      # Walk back cur_at distance to forking point and deal with siblings
-      fork._reachable_downstream(
-          reachable, holding, cur_at=0, total_dist=total_dist+1)
-
-    # Account for locks & keys on reverse of path to parent
-    for keylock in cur_fork.stuff:
-      if keylock.name.isalpha():
-        reachable[keylock.name] = KeyLock(
-            keylock.name, self.base_dist - keylock.dist, keylock.path)
-      if keylock.name.islower():
-        print('parent key', keylock.name, 'at', self.base_dist - keylock.dist)
-        holding.add(keylock.name)
-
-    # now we can reach from our grandparent in the normal way
-    if cur_fork.parent:
-      total_dist += self.base_dist
-      cur_fork.parent._reachable_downstream(
-          reachable=reachable,
-          holding=holding,
-          cur_at=0,
-          total_dist=total_dist,
-          exclude=cur_fork)
-    return reachable
-
 
   def _reachable_downstream(
      self, reachable, holding, cur_at=0, total_dist=0, exclude=None):
@@ -245,6 +190,8 @@ class Vault(object):
     self.walk_path(self.top)
     self.resolve_edges()
     self.compute_distances()
+    self.best_dist = self.worst_path
+    print('upper bound for distance', self.best_dist)
 
   def set_start(self):
     self.start = None
@@ -335,121 +282,6 @@ class Vault(object):
       break
     # path.print()
 
-  def find_best_action(self):
-    # start from cur_path, cur_dist
-    reachable = self.cur_path.reachable_targets(
-        cur_at=self.cur_dist, total_dist=0, holding=set(self.holding))
-    if self.trace:
-      print('reachable:', reachable)
-    # {'A': (A, 2, path@7,3), 'e': (e, 4, path@7,3), 'F': (F, 6, path@7,3), 'g': (g, 8, path@7,3), 'D': (D, 34, path@5,3)}
-    best_door = None
-    for content, thing in reachable.items():
-      dist = thing[1]
-      if content.isupper():
-        key = reachable.get(content.lower())
-        if key:
-          if best_door == None or dist < best_door[1]:
-            best_door = (content, dist, key)
-    if best_door is None and reachable:
-      door_name = self.last_pick.upper()
-      door = reachable[door_name]
-      return (door_name, door[1], door)
-    return best_door
-
-  def move_to(self, keyloc):
-    self.ploc()
-    key_name = keyloc[0]
-    to_path = keyloc[2]
-    route = self.cur_path.route_to(to_path)
-    if to_path in route:
-      print('can move out to', to_path, route)
-      self.total_moved += self.traverse_to(to_path, key_name, route)
-    else:
-      raise Exception('no route to', keyloc)
-    self.ploc()
-
-  def ploc(self):
-    print('now at path', self.cur_path, 'dist', self.cur_dist,
-          'holding', self.holding)
-
-
-  def traverse_to(self, to_path, key_name, route):
-    # move from current pos to the new place
-    dist = 0
-    while True:
-      print('traversing to, route', to_path, route)
-      self.ploc()
-      nxt = route[0]
-      route = route[1:]
-      if nxt == self.cur_path:
-        continue
-      if self.cur_path.parent == nxt:
-        print('moving on up')
-        self.cur_path = nxt
-        if self.cur_dist > 0:
-          dist += self.cur_dist
-        self.cur_dist = 0
-        dist += nxt.base_dist + 1
-      else:
-        # traverse down
-        dist_to_path = nxt.base_dist - self.cur_dist
-        dist += dist_to_path
-        self.cur_path = nxt
-        self.cur_dist = 0
-
-      if to_path == self.cur_path:
-        break
-
-    # now we are at the right path, move to the key
-    key_dist = self.cur_path.keys[key_name]
-    pick_or_open = set()
-    for keylock in self.cur_path.stuff:
-      if keylock.name.isalpha() and keylock.dist <= key_dist:
-        if keylock.name.islower():
-          print('Drive by pickup key', keylock.name)
-          pick_or_open.add(keylock.name)
-          self.last_pick = keylock.name
-        elif (keylock.name.lower() in self.holding
-              or keylock.name.lower() in pick_or_open):
-          print('Drive by unlock', keylock.name)
-          pick_or_open.add(keylock.name)
-
-    for key_name in pick_or_open:
-      if key_name.islower():
-        self.pick_up(key_name)
-      else:
-        self.unlock(key_name)
-
-    dist += key_dist
-    self.cur_dist = key_dist
-    print('travese_to: moved', dist)
-    return dist
-
-  def pick_up(self, key_name):
-    self.holding.add(key_name)
-    self.cur_path.drop_key(key_name)
-
-  def unlock(self, key_name):
-    self.cur_path.drop_key(key_name)
-
-  def do_it(self, start_path):
-    self.cur_loc = start_path
-    self.holding = set()
-    while True:
-      print('\n=== New round')
-      if not self.do_round():
-        break
-    print('total moved', self.total_moved)
-
-  def do_round(self):
-    best_action = self.find_best_action()
-    print('best_action', best_action)
-    if not best_action:
-      print('no more actions. total moved', self.total_moved)
-      return False
-    self.move_to(best_action[2])
-    return True
-
   def all_solutions(self):
     blocked = set(self.blocked_by.keys())
     # find unblocked
@@ -459,11 +291,15 @@ class Vault(object):
     print('=blocked', blocked)
     print('=unblocked', unblocked)
 
-    self.best_dist = self.worst_path
-    print('upper bound for distance', self.best_dist)
+    # make sure the things behind the reachable keys are also reachable
+    holding = set()
+    reachable = set(unblocked)
+    for key in unblocked:
+      self.unblock_reachable_downstream(key, holding, reachable)
+    # now try them all
     for start in unblocked:
       total_dist = start.dist_from_root
-      self.try_paths(start, set(unblocked), set(), total_dist, indent=0)
+      self.try_paths(start, set(), set(reachable), total_dist, indent=0)
     print('best traversal distance', self.best_dist)
 
 
@@ -483,38 +319,21 @@ class Vault(object):
     holding.add(door)
     print(sp, 'use_key', at_key, 'holding', P(holding),
           'reachable', P(reachable))
-
     if door.is_reachable(holding, reachable):
       reachable.add(door)
       self.unblock_reachable_downstream(door, holding, reachable)
     else:
       print(sp, 'can not ulock', door)
-
-    """YYY
-    for to_unblock in at_key.blocks:
-      if to_unblock.name.islower() or to_unblock.name.lower() in holding:
-        reachable.add(to_unblock)
-    """
-
-    """XXX
-    if door.blocked_by in holding:
-        print('new reachable stuff behind door', door)
-        for to_unblock in door.blocks:
-          if to_unblock.name.islower() or to_unblock.name.lower in holding:
-            reachable.add(to_unblock)
-        print(sp, 'new holding', P(holding), 'now reachable', P(reachable))
-
-    """
     print(sp, 'done: holding', P(holding), 'now reachable', P(reachable))
 
 
-  def try_paths(self, at_key, reachable, holding, total_dist, indent):
+  def try_paths(self, at_key, holding, reachable, total_dist, indent):
     # holding is the keys we have picked up
     # reachable is what we can reach (which may include what we picked up
     if at_key in holding:
       return
     sp = '  ' * indent
-    print(sp, 'now at', at_key, 'dist', total_dist)
+    print(sp, 'visiting ', at_key, 'dist', total_dist)
     if total_dist > self.best_dist:
       print(sp, 'gone too far')
       return
@@ -538,13 +357,12 @@ class Vault(object):
     print(sp, 'holding', P(holding), 'now reachable', P(reachable))
 
     # visit each that are now reachable
-    for to_unblock in reachable:
+    for to_unblock in (reachable-holding):
       if at_key == to_unblock:
         continue
       if to_unblock.name.islower() and to_unblock not in holding:
-        print(sp, '  visiting', to_unblock.name)
         self.try_paths(
-            to_unblock, set(reachable), set(holding),
+            to_unblock, set(holding), set(reachable),
             total_dist = total_dist + at_key.dists[to_unblock.name],
             indent = indent + 1)
     return
