@@ -30,11 +30,13 @@ KeyLock.__repr__ = _keylock__repr__
 
 class Key(object):
 
-  def __init__(self, name, path, dist_from_root, blocked_by=None):
+  def __init__(self, name, path, dist_from_root, blocked_by=None,
+               upstream_keys=None):
     self.name = name
     self.path = path
     self.dist_from_root = dist_from_root
     self.blocked_by = blocked_by
+    self.upstream_keys = upstream_keys
     self.blocks = []
     self.dists = {}
 
@@ -43,6 +45,10 @@ class Key(object):
 
   def __repr__(self):
     return 'Key<%s, %d>' % (self.name, self.dist_from_root)
+
+  def print(self):
+    print('Key:%s, dist:%d, upstream:%s' % (
+        self.name, self.dist_from_root, P(self.upstream_keys)))
 
   def path_from_root(self):
     ret = []
@@ -71,7 +77,6 @@ class Path(object):
     self.trace = True
 
     # distances to things
-    self.locks = {}
     self.keys = {}
     self.stuff = []
     self.forks = []
@@ -87,8 +92,6 @@ class Path(object):
     sp = '   ' * indent
     print(sp, 'Path from', self.start, '@', self.base_dist,
         ', '.join(['(%s,%d)' % (k.name, k.dist) for k in self.stuff]))
-    print(sp, '  locks: ',
-          ', '.join(['%c @ %d' % (k, v) for k, v in self.locks.items()]))
     print(sp, '  keys: ',
           ', '.join(['%c @ %d' % (k, v) for k, v in self.keys.items()]))
     if self.forks:
@@ -272,13 +275,15 @@ class Vault(object):
     # trace out the tree
     self.path_heads[path.start] = -1
     pos = path.start
+    up_keys = []
     while True:
       path.visited[pos] = path.dist
       content = self.maze.cell(pos)
       if content.isalpha():
         key = Key(content, path, dist_from_root + path.dist,
-                  blocked_by=last_key)
+                  blocked_by=last_key, upstream_keys=set(up_keys))
         self.add_key(key)
+        up_keys.append(key)
         if last_key:
           self.blocked_by[key] = last_key.name
         last_key = key
@@ -286,8 +291,6 @@ class Vault(object):
         path.stuff.append(KeyLock(content, path.dist, path))
         if content.islower():
           path.keys[content] = path.dist
-        else:
-          path.locks[content] = path.dist
         print(path.stuff)
 
       # now move on
@@ -299,6 +302,7 @@ class Vault(object):
       if len(moves) == 1:
         pos = moves[0]
         continue
+
       # a fork!!
       for path_start in moves:  # prevent other forks from backtracking
         path.visited[path_start] = path.dist
@@ -445,12 +449,13 @@ class Vault(object):
     print('best traversal distance', self.best_dist)
 
 
-  def unlock(self, door, reachable):
-    if door.blocked_by in reachable:
+  def unlock(self, door, reachable, holding):
+    print('unlocking', door, 'blocks', door.blocks)
+    if door.blocked_by in reachable or door.blocked_by in holding:
       for downstream in door.blocks:
         reachable.add(downstream)
         if downstream.name.islower():
-          self.unlock(downstream, reachable)
+          self.unlock(downstream, reachable, holding)
 
   def try_paths(self, at_key, reachable, holding, total_dist, indent):
     if at_key in holding:
@@ -461,6 +466,10 @@ class Vault(object):
       print(sp, 'gone too far')
       return
     holding.add(at_key)
+    holding.update(at_key.upstream_keys)
+    if at_key.name == 'f':
+      print(sp, 'holding', P(holding), 'now reachable', P(reachable))
+
     if len(holding) == len(self.all_keys):
       print(sp, 'complete set: dist', total_dist)
       self.best_dist = min(self.best_dist, total_dist)
@@ -468,7 +477,7 @@ class Vault(object):
 
     door = self.all_keys.get(at_key.name.upper())
     if door:
-      self.unlock(door, reachable)
+      self.unlock(door, reachable, holding)
       holding.add(door)
       if door.blocked_by in holding:
         print('new reachable stuff behind door', door)
@@ -575,5 +584,5 @@ def part1():
 
 if __name__ == '__main__':
   test_part1()
-  test_part1_b()
+  # test_part1_b()
   # part1()
