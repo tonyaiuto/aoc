@@ -31,12 +31,22 @@ class Key(object):
     self.path = path
     self.dist_from_root = dist_from_root
     self.blocked_by = blocked_by
+    self.dists = {}
 
   def __str__(self):
     return 'Key<%s, %d>' % (self.name, self.dist_from_root)
 
   def __repr__(self):
     return 'Key<%s, %d>' % (self.name, self.dist_from_root)
+
+  def path_from_root(self):
+    ret = []
+    path = self.path
+    while path:
+      ret.append(path)
+      path = path.parent
+    ret.reverse()
+    return ret
 
 
 class Path(object):
@@ -193,15 +203,21 @@ class Vault(object):
 
   def __init__(self, maze):
     self.maze = maze
-    self.set_start()
     self.path_heads = {}
-    self.top = Path(from_where=(-1, -1), start=self.start)
-    self.cur_path = self.top
     self.cur_dist = 0
     self.trace = True
     self.total_moved = 0
     self.all_keys = {}
     self.blocked_by = {}
+    self.init()
+
+  def init(self):
+    self.set_start()
+    self.top = Path(from_where=(-1, -1), start=self.start)
+    self.cur_path = self.top
+    self.maze.close_dead_ends()
+    self.walk_path(self.top)
+    self.compute_distances()
 
   def set_start(self):
     self.start = None
@@ -212,6 +228,33 @@ class Vault(object):
 
   def add_key(self, keylock):
     self.all_keys[keylock.name] = keylock
+
+
+  def compute_distances(self):
+    for name, key in self.all_keys.items():
+      if name.isupper():
+        continue
+      rp = key.path_from_root()
+      for other_name, other_key in self.all_keys.items():
+        if other_name == name or other_name.isupper():
+          continue
+        if key.dists.get(other_name):
+          continue
+        if key.path == other_key.path:
+          dist = abs(key.dist_from_root - other_key.dist_from_root)
+        else:
+          rp2 = other_key.path_from_root()
+          for i in range(len(rp)):
+            if rp[i] != rp2[i]:
+              # path i-1 is common ancestor
+              common_ancestor = rp[i-1]
+              dist = ((key.dist_from_root - common_ancestor.base_dist)
+                      + (other_key.dist_from_root - common_ancestor.base_dist))
+              break
+
+        print('dist %s %s = %d' % (name, other_name, dist))
+        key.dists[other_name] = dist
+        other_key.dists[name] = dist
 
 
   def walk_path(self, path, dist_from_root=0, last_key=None):
@@ -387,18 +430,15 @@ def test_part1():
       ########################
       """)
   # Shortest path is 132 steps: b, a, c, d, f, e, g
-  #print('After dead end removal')
-  maze.close_dead_ends()
 
   maze.print()
   vault = Vault(maze)
-  vault.walk_path(vault.top)
   print('========================================')
   print(vault.all_keys)
   print(vault.blocked_by)
   print('========================================')
   vault.top.print_tree()
-  vault.do_it(vault.top)
+  # vault.do_it(vault.top)
 
 
 def test_part1_b():
@@ -418,11 +458,11 @@ def test_part1_b():
   # one is: a, f, b, j, g, n, h, d, l, o, e, p, c, i, k, m
   maze.print()
   vault = Vault(maze)
-  path = Path(from_where=(-1, -1), start=vault.start)
-  vault.walk_path(path)
   print('========================================')
-  path.print_tree()
-  vault.do_it(path)
+  print(vault.blocked_by)
+  print('========================================')
+  vault.top.print_tree()
+  vault.do_it(vault.top)
 
 
 """
@@ -440,14 +480,11 @@ def part1():
   maze = map.Map()
   maze.load('input_18.txt')
   maze.print()
-  print()
-  print('After dead end removal')
-  maze.close_dead_ends()
-  maze.print()
+  print('========================================')
 
   vault = Vault(maze)
-  path = Path(from_where=(-1, -1), start=vault.start)
-  vault.walk_path(path)
+  vault.top.print_tree()
+  vault.do_it(vault.top)
 
   print('========================================')
   path.print_tree()
@@ -458,5 +495,5 @@ def part1():
 
 if __name__ == '__main__':
   test_part1()
-  # test_part1_b()
+  test_part1_b()
   # part1()
