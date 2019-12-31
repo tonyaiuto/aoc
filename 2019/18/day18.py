@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
-from collections import namedtuple
 import sys
-import textwrap
+import time
 
-from elf_image import ElfImage
 import map
 from memoized import memoized
 
@@ -57,7 +55,7 @@ class Key(object):
     for key in self.upstream_keys:
       if key in holding:
         continue
-      if key.name.islower() and key in reachable:
+      if key.is_key and key in reachable:
         continue
       return False
     return True
@@ -148,9 +146,11 @@ class Vault(object):
     self.resolve_edges()
     self.top.print_tree()  # TEMP
     self.compute_distances()
-    self.tsort()
     self.best_dist = self.worst_path
-    print('upper bound for distance', self.best_dist)
+    print('=upper bound for distance', self.best_dist)
+    self.tsort()
+    self.best_dist = self.route_distance(self.top_sorted)
+    print('=better upper bound for distance', self.best_dist)
     self.n_keys = len([k for k in self.all_keys if k.islower()])
 
   def print_block_list(self):
@@ -224,6 +224,20 @@ class Vault(object):
         other_key.dists[name] = dist
         self.worst_path += dist
 
+  def route_distance(self, route):
+    # What is distance along a specific route
+    dist = 0
+    last_key = None
+    for key in route:
+      if key.is_key:
+        if not last_key:
+          dist = key.dist_from_root
+        else:
+          dist += last_key.dists[key.name]
+        last_key = key
+    return dist
+
+
   def walk_path(self, path, dist_from_root=0, last_key=None):
     # trace out the tree
     self.path_heads[path.start] = -1
@@ -280,6 +294,8 @@ class Vault(object):
     for key in unblocked:
       self.unblock_reachable_downstream(key, holding, reachable)
     # now try them all
+    self.try_count = 0
+    self.start_time = time.time()
     for start in unblocked:
       print('=Starting from', start)
       total_dist = start.dist_from_root
@@ -294,7 +310,7 @@ class Vault(object):
       print(sp, 'adding downstream reachabilty for', key, 'blocks', key.blocks)
     for downstream in key.blocks:
       reachable.add(downstream)
-      if downstream.name.islower() or downstream.name.lower() in holding:
+      if downstream.is_key or downstream.name.lower() in holding:
         self.unblock_reachable_downstream(
             downstream, holding, reachable, indent)
 
@@ -322,6 +338,10 @@ class Vault(object):
     # reachable is what we can reach (which may include what we picked up
     if at_key in holding:
       return 0
+    self.try_count += 1
+    if self.try_count % 1000 == 0:
+      t = int(time.time() - self.start_time)
+      print('=tried paths', self.try_count, ', t:', t)
     sp = ' ' * indent
     print(sp, 'visiting ', at_key, 'dist', total_dist)
     if total_dist >= self.best_dist:
@@ -355,7 +375,7 @@ class Vault(object):
 
     # visit each that are now reachable
     to_visit = reachable - holding
-    to_visit = set(key for key in to_visit if key.name.islower())
+    to_visit = set(key for key in to_visit if key.is_key)
     # to_visit = sorted(to_visit, key=lambda k: k.dists[at_key.name])
     #to_visit = sorted(
     #  to_visit,
@@ -368,7 +388,7 @@ class Vault(object):
     for to_unblock in to_visit:
       if at_key == to_unblock:
         continue
-      if to_unblock.name.islower() and to_unblock not in holding:
+      if to_unblock.is_key and to_unblock not in holding:
         status = self.try_paths(
             to_unblock, set(holding), set(reachable),
             total_dist = total_dist + at_key.dists[to_unblock.name],
@@ -381,7 +401,7 @@ class Vault(object):
   def minimal_distance_possible_left(self, at_key, holding):
     # this is a theoretcial minimal distance
     keys = set([k for k in self.all_keys.values()
-               if k != at_key and k.name.islower()])
+               if k != at_key and k.is_key])
     left = keys - holding
     to_visit = sorted(left, key=lambda k: k.dists[at_key.name])
     last_dist = 0
@@ -391,7 +411,6 @@ class Vault(object):
       min_dist += (d - last_dist)
       last_dist = d
     return min_dist
-
 
   def tsort(self):
     self.top_sorted = []
@@ -433,7 +452,7 @@ class Vault(object):
 
     # https://en.wikipedia.org/wiki/Topological_sorting
     for start in unblocked:
-      d = {k: self.worst_path for k in an_ordering}
+      d = {k: self.best_dist for k in an_ordering}
       d[start] = 0
       p = [None] * len(an_ordering)
       # find start pos
