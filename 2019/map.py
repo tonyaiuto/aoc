@@ -93,6 +93,8 @@ class Map(object):
        self.height += 1
 
   def print(self):
+    print('   ',
+          ''.join(['        %2d' % d for d in range(1, self.width // 10 + 1)]))
     print('  ', ('0123456789' * (self.width // 10 + 1))[0:self.width])
     for y in range(self.height):
       line = [' '] * self.width
@@ -114,7 +116,8 @@ class Map(object):
           if neighbor in self.walls:
             n_walls += 1
             if neighbor in self.points and self.points[neighbor] in self.open:
-              print("WTF", pos, neighbor, self.points[neighbor])
+              if neighbor not in new_walls:
+                print("WTF", pos, neighbor, self.points[neighbor])
         if n_walls == 3:
           self.walls.add(pos)
           new_walls.add(pos)
