@@ -7,6 +7,15 @@ from elf_image import ElfImage
 import intcode
 
 
+class Room(object):
+
+  def __init__(self, name):
+    self.name = name
+    # map of direction to room
+    self.doors = {}
+    self.contains = set()
+
+
 class Droid(object):
 
   def __init__(self, mem):
@@ -18,6 +27,8 @@ class Droid(object):
     self.items = {}
     self.next_item = 'A'
     self.visited[(0,0)] = '@'
+    self.rooms = {}
+    self.cur_room = None
 
   def send_program(self, prog):
     assert len(prog) <= 15
@@ -35,15 +46,18 @@ class Droid(object):
     print(state)
     self.analyze(state)
 
-    inp = input()
-    if inp.startswith('qu'):
-      self.quit = True
-      return
-    elif inp == 'map':
-      self.printmap()
-      inp = 'inv'
-    command = inp.strip().split(' ')
-    self.do_command(command)
+    while True:
+      inp = input()
+      if inp.startswith('qu'):
+        self.quit = True
+        return
+      elif inp == 'map':
+        self.printmap()
+      else:
+        command = inp.strip().split(' ')
+        if command:
+          self.do_command(command)
+          return
 
 
   def do_command(self, command):
@@ -57,6 +71,8 @@ class Droid(object):
       self.x += 1
     elif command[0] == 'west':
       self.x -= 1
+    if command[0] in ('north', 'south', 'east', 'west'):
+      self.last_move = command[0]
     ascii_code = intcode.code_to_ascii(command, sep=' ')
     self.computer.push_input(ascii_code)
 
@@ -65,21 +81,30 @@ class Droid(object):
       self.loop()
 
   def analyze(self, state):
-    getting_desc = False
+    getting_room = None
+    desc = ''
     getting_doors = False
     getting_items = False
     got_item = False
     for line in state.split('\n'):
       if not line:
-        getting_desc = False
+        if getting_room and desc:
+          getting_room.desc = desc
+        getting_room = None
 
       if not line or not line.startswith('- '):
         getting_doors = False
         getting_items = False
 
       if line.startswith('== '):
-        getting_desc = True
-      elif getting_desc:
+        getting_room = self.get_room(line)
+        if self.cur_room and self.cur_room != getting_room:
+          self.cur_room.doors[self.last_move] = getting_room
+        self.cur_room = getting_room
+        desc = ''
+
+      elif getting_room:
+        desc += line
         pass  # we printed it
 
       elif line == 'Doors here lead:':
@@ -109,14 +134,31 @@ class Droid(object):
     if not got_item:
       self.visited[(self.x, self.y)] = '.'
 
+  def get_room(self, name):
+    print('lookup room', name)
+    if name.startswith('== '):
+      name = name[3:]
+    if name.endswith(' =='):
+      name = name[:-3]
+    room = self.rooms.get(name)
+    if not room:
+      room = Room(name)
+      self.rooms[name] = room
+    return room
 
   def printmap(self):
-    for k in sorted(self.items):
-      print(k, self.items[k])
-    print(self.visited)
-    img = ElfImage.fromPoints(self.visited)
-    img.print()
+    print('================')
+    if False:
+      for k in sorted(self.items):
+        print(k, self.items[k])
+      print(self.visited)
+      img = ElfImage.fromPoints(self.visited)
+      img.print()
 
+    for name, room in sorted(self.rooms.items()):
+      print(name)
+      for door, to_room in sorted(room.doors.items()):
+        print('  %s -> %s' % (door, to_room.name))
 
 
 def part1():
