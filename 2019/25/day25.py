@@ -156,9 +156,10 @@ class Droid(object):
       img.print()
 
     for name, room in sorted(self.rooms.items()):
-      print(name)
+      print('===', name)
+      print(textwrap.indent(textwrap.fill(room.desc), prefix='    '))
       for door, to_room in sorted(room.doors.items()):
-        print('  %s -> %s' % (door, to_room.name))
+        print('    %s -> %s' % (door, to_room.name))
 
 
 def part1():
