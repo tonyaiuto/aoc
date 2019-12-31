@@ -11,6 +11,7 @@ from memoized import memoized
 
 TRACE_DIST = 0
 TRACE_USE_KEY = 1
+TRACE_TSORT = 1
 
 
 def P(key_set):
@@ -29,6 +30,9 @@ class Key(object):
     self.upstream_keys = upstream_keys
     self.blocks = []
     self.dists = {}
+    self.ordered = False
+    self.loop_detect = False
+    self.is_key = name.islower()
 
   def __str__(self):
     return 'Key<%s, %d>' % (self.name, self.dist_from_root)
@@ -144,9 +148,14 @@ class Vault(object):
     self.resolve_edges()
     self.top.print_tree()  # TEMP
     self.compute_distances()
+    self.tsort()
     self.best_dist = self.worst_path
     print('upper bound for distance', self.best_dist)
     self.n_keys = len([k for k in self.all_keys if k.islower()])
+
+  def print_block_list(self):
+    for name, key in self.all_keys.items():
+      print('= key', name, 'blocks', key.blocks)
 
   def set_start(self):
     self.start = None
@@ -162,9 +171,19 @@ class Vault(object):
     return self.all_keys.get(keyname)
 
   def resolve_edges(self):
+    for name, key in self.all_keys.items():
+      if name.isupper():
+        # I am a door, make sure my key blocks me
+        k = self.all_keys[name.lower()]
+        if key.blocked_by != k:
+          k.blocks.append(key)
     for key, blocker_name in self.blocked_by.items():
       blocker = self.all_keys[blocker_name]
       blocker.blocks.append(key)
+      # Why does this not work. If I am blocked by a door, then
+      # also make the door key block me.
+      # if blocker_name.isupper():
+      #   self.all_keys[blocker_name.lower()].blocks.append(key)
 
   def compute_distances(self):
     self.worst_path = 0
@@ -209,16 +228,14 @@ class Vault(object):
     # trace out the tree
     self.path_heads[path.start] = -1
     pos = path.start
-    up_keys = []
     while True:
       path.visited[pos] = path.dist
       content = self.maze.cell(pos)
       if content.isalpha():
         key = Key(content, path, dist_from_root + path.dist,
                   blocked_by=last_key, dist_down_path=path.dist,
-                  upstream_keys=set(up_keys))
+                  upstream_keys=list(path.keys))
         self.add_key(key)
-        up_keys.append(key)
         path.keys.append(key)
         if last_key:
           self.blocked_by[key] = last_key.name
@@ -250,7 +267,7 @@ class Vault(object):
     # path.print()
 
   def all_solutions(self):
-    keys = set([k for k in self.all_keys.values() if k.name.islower()])
+    keys = set([k for k in self.all_keys.values() if k.is_key])
     blocked = set(self.blocked_by.keys())
     unblocked = keys - blocked
     print('=keys', keys)
@@ -312,7 +329,7 @@ class Vault(object):
       return -1
 
     """ Not ready yet
-    if ((total_dist + self.minimal_distance_possible_left(at_key, holding)) 
+    if ((total_dist + self.minimal_distance_possible_left(at_key, holding))
        > self.best_dist):
       print(sp, '=point of no return')
       return -2
@@ -322,7 +339,7 @@ class Vault(object):
     visit_list.append(at_key.name)
     # If we are at a key, then we must have picked up all the upstream things
     for key in at_key.upstream_keys:
-      if key.name.islower() and key not in holding:
+      if key.is_key and key not in holding:
         visit_list.append(key.name)
       holding.add(key)
       self.use_key(key, holding, reachable, indent=indent)
@@ -376,6 +393,63 @@ class Vault(object):
     return min_dist
 
 
+  def tsort(self):
+    self.top_sorted = []
+    while True:
+      #keys = [k for k in self.all_keys.values() if k.is_key and not k.ordered]
+      keys = [k for k in self.all_keys.values() if not k.ordered]
+      if not keys:
+        break
+      self.tsort_visit(keys[0], depth=0)
+    print('=tsort:', self.top_sorted)
+
+  def tsort_visit(self, key, depth):
+    if key.ordered:
+      return
+    if key.loop_detect:
+      raise Exception('not a DAG')
+    key.loop_detect = True
+    if TRACE_TSORT > 1:
+      print(' '*depth, '=tsort_visit', key)
+    for blocked in key.blocks:
+      #if blocked.is_key:
+      self.tsort_visit(blocked, depth=depth+1)
+    key.loop_detect = False
+    key.ordered = True
+    self.top_sorted = [key] + self.top_sorted
+    if TRACE_TSORT > 1:
+      print(' '*depth, '=tsort order', self.top_sorted)
+
+
+  def tsort_solutions(self):
+    keys = set([k for k in self.all_keys.values() if k.is_key])
+    blocked = set(self.blocked_by.keys())
+    unblocked = keys - blocked
+    print('=keys', keys)
+    print('=blocked', blocked)
+    print('=unblocked', unblocked)
+
+    an_ordering = [k for k in self.top_sorted if k.is_key]
+
+    # https://en.wikipedia.org/wiki/Topological_sorting
+    for start in unblocked:
+      d = {k: self.worst_path for k in an_ordering}
+      d[start] = 0
+      p = [None] * len(an_ordering)
+      # find start pos
+      for u, k in enumerate(an_ordering):
+        if k == start:
+          start_pos = u
+      for u_i in range(start_pos, len(an_ordering)-1):
+        u = an_ordering[u]
+        v = an_ordering[u+1]
+        dist = an_ordering[u].dists[v.name]
+        if d[v] > d[u] + dist:
+          d[v] = d[u] + dist
+          # p[v] = u
+
+
+
 def dist_check(vault, k1, k2, expect):
   key1 = vault.get_key(k1)
   dist = key1.dists[k2]
@@ -399,13 +473,16 @@ def test_part1():
   maze.print()
   vault = Vault(maze)
   dist_check(vault, 'a', 'f', 30)
-  print('========================================')
+  print('==all_keys')
   print(vault.all_keys)
+  print('==blocked by')
   print(vault.blocked_by)
+  vault.print_block_list()
   print('========================================')
   vault.top.print_tree()
   # vault.do_it(vault.top)
   vault.all_solutions()
+  # vault.tsort_solutions()
 
 
 def test_part1_b():
@@ -476,6 +553,6 @@ def part1():
 
 if __name__ == '__main__':
   test_part1()
-  # test_part1_b()
   test_part1_c()
-  part1()
+  # test_part1_b()
+  # part1()
