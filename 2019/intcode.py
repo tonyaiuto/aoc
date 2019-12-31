@@ -108,10 +108,18 @@ class IntCode(object):
         ret.append(out)
 
   def run_until_newline(self):
+    return self.run_until_terminator(self, ['\n'])
+
+  def run_until_terminator(self, terminators):
     line = []
+    terminators = [ord(c) for c in terminators]
     while True:
       word = self.run_until_output()
-      if not word or word == 10:
+      if not word:
+        break
+      if word in terminators:
+        if word >= ord(' '):
+          line.append(chr(word))
         break
       if word > ord('z'):
         print('Unexpected word', word)
@@ -204,7 +212,7 @@ def load_intcode(inp_path):
   return None
 
 
-def code_to_ascii(code, sep=','):
+def code_to_ascii(code, sep=',', verbose=False):
   ret = []
   for word in code:
     if ret:
@@ -217,7 +225,8 @@ def code_to_ascii(code, sep=','):
         ret.append(ord(c))
   assert len(ret) <= 20
   ret.append(10)
-  print('%s => %s' % (code, ret))
+  if verbose:
+    print('%s => %s' % (code, ret))
   return ret
 
 def print_final_output(self):
@@ -234,6 +243,13 @@ def print_final_output(self):
       line += c
   if line:
     print(line)
+
+
+def asc_to_str(s):
+  try:
+    return ''.join(chr(c) for c in s)
+  except ValueError as e:
+    return s
 
 
 def check(mem, expect_mem=None, input=None, expect_out=None):
