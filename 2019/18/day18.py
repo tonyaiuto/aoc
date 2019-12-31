@@ -278,10 +278,10 @@ class Vault(object):
           'reachable', P(reachable))
     if door.is_reachable(holding, reachable):
       reachable.add(door)
-      self.unblock_reachable_downstream(door, holding, reachable, indent)
+      self.unblock_reachable_downstream(door, holding, reachable, indent+1)
     else:
-      print(sp, 'can not ulock', door)
-    print(sp, 'done: holding', P(holding), 'now reachable', P(reachable))
+      print(sp+' ', 'can not ulock', door)
+    print(sp+' ', 'done: holding', P(holding), 'now reachable', P(reachable))
 
 
   def try_paths(self, at_key, holding, reachable, total_dist, indent):
@@ -289,7 +289,7 @@ class Vault(object):
     # reachable is what we can reach (which may include what we picked up
     if at_key in holding:
       return 0
-    sp = '  ' * indent
+    sp = ' ' * indent
     print(sp, 'visiting ', at_key, 'dist', total_dist)
     if total_dist > self.best_dist:
       print(sp, 'gone too far')
@@ -298,14 +298,11 @@ class Vault(object):
     # If we are at a key, then we must have picked up all the upstream things
     for key in at_key.upstream_keys:
       holding.add(key)
-      self.use_key(key, holding, reachable, indent=indent+1)
+      self.use_key(key, holding, reachable, indent=indent)
       #XX d = self.all_keys.get(key.name.upper())
       #XX if d:
       #XX   holding.add(d)
-
-    if at_key.name == 'f':
-      print(sp, '=F holding', P(holding), 'now reachable', P(reachable))
-    self.use_key(at_key, holding, reachable, indent=indent+1)
+    self.use_key(at_key, holding, reachable, indent=indent)
 
     if len(holding) == len(self.all_keys):
       print(sp, 'complete set: dist', total_dist)
@@ -432,7 +429,7 @@ def part1():
 
 
 if __name__ == '__main__':
-  test_part1()
+  #test_part1()
   test_part1_b()
-  test_part1_c()
+  #test_part1_c()
   # part1()
