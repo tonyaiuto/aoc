@@ -142,9 +142,11 @@ class Vault(object):
     self.maze.close_dead_ends()
     self.walk_path(self.top)
     self.resolve_edges()
+    self.top.print_tree()  # TEMP
     self.compute_distances()
     self.best_dist = self.worst_path
     print('upper bound for distance', self.best_dist)
+    self.n_keys = len([k for k in self.all_keys if k.islower()])
 
   def set_start(self):
     self.start = None
@@ -178,16 +180,25 @@ class Vault(object):
         if key.path == other_key.path:
           dist = abs(key.dist_from_root - other_key.dist_from_root)
         else:
-          rp2 = other_key.path_from_root()
-          dist_to_forks = 0
-          for i in range(len(rp)):
-            if rp[i] != rp2[i]:
-              # path i-1 is common ancestor
-              fork_dist = rp[i].dist_from_root - 1
-              break
-          # compute distance from juncture
-          dist = ((key.dist_from_root - fork_dist)
-                  + (other_key.dist_from_root - fork_dist))
+          try:
+            rp2 = other_key.path_from_root()
+            fork_dist = None
+            for i in range(min(len(rp), len(rp2))):
+              if rp[i] != rp2[i]:
+                # path i-1 is common ancestor
+                fork_dist = rp[i].dist_from_root - 1
+                break
+            if fork_dist is None:
+              # one must be a downstream path of the other
+              dist = abs(key.dist_from_root - other_key.dist_from_root)
+            else:
+              # compute distance from juncture
+              dist = ((key.dist_from_root - fork_dist)
+                      + (other_key.dist_from_root - fork_dist))
+          except Exception as e:
+            print('was computing dist from %s to %s' % (key, other_key))
+            raise e
+
         if TRACE_DIST:
           print('dist %s %s = %d' % (name, other_name, dist))
         key.dists[other_name] = dist
@@ -239,9 +250,8 @@ class Vault(object):
     # path.print()
 
   def all_solutions(self):
+    keys = set([k for k in self.all_keys.values() if k.name.islower()])
     blocked = set(self.blocked_by.keys())
-    # find unblocked
-    keys = set(k for k in self.all_keys.values())
     unblocked = keys - blocked
     print('=keys', keys)
     print('=blocked', blocked)
@@ -256,7 +266,8 @@ class Vault(object):
     for start in unblocked:
       print('=Starting from', start)
       total_dist = start.dist_from_root
-      self.try_paths(start, set(), set(reachable), total_dist, indent=0)
+      self.try_paths(start, set(), set(reachable), total_dist, visit_list=[],
+                     indent=0)
     print('best traversal distance', self.best_dist)
 
 
@@ -288,7 +299,8 @@ class Vault(object):
     if TRACE_USE_KEY > 1:
       print(sp+' ', 'done: holding', P(holding), 'now reachable', P(reachable))
 
-  def try_paths(self, at_key, holding, reachable, total_dist, indent):
+  def try_paths(self, at_key, holding, reachable, total_dist, visit_list,
+                indent):
     # holding is the keys we have picked up
     # reachable is what we can reach (which may include what we picked up
     if at_key in holding:
@@ -298,15 +310,27 @@ class Vault(object):
     if total_dist >= self.best_dist:
       print(sp, 'gone too far')
       return -1
+
+    """ Not ready yet
+    if ((total_dist + self.minimal_distance_possible_left(at_key, holding)) 
+       > self.best_dist):
+      print(sp, '=point of no return')
+      return -2
+    """
+
     holding.add(at_key)
+    visit_list.append(at_key.name)
     # If we are at a key, then we must have picked up all the upstream things
     for key in at_key.upstream_keys:
+      if key.name.islower() and key not in holding:
+        visit_list.append(key.name)
       holding.add(key)
       self.use_key(key, holding, reachable, indent=indent)
     self.use_key(at_key, holding, reachable, indent=indent)
 
     if len(holding) == len(self.all_keys):
-      print('=complete set: dist', total_dist)
+      print('=complete set: dist', total_dist,
+            ', '.join(visit_list[0:self.n_keys]))
       self.best_dist = min(self.best_dist, total_dist)
       return 1
 
@@ -314,10 +338,16 @@ class Vault(object):
 
     # visit each that are now reachable
     to_visit = reachable - holding
+    to_visit = set(key for key in to_visit if key.name.islower())
+    # to_visit = sorted(to_visit, key=lambda k: k.dists[at_key.name])
+    #to_visit = sorted(
+    #  to_visit,
+    #  key=lambda k: -k.dist_from_root - 1000 * int(k.path == at_key.path))
     to_visit = sorted(
-      to_visit,
-      key=lambda k: -k.dist_from_root - 1000 * int(k.path == at_key.path))
+        to_visit,
+        key=lambda k: k.dists[at_key.name] - 1000 * int(k.path == at_key.path))
     print(sp, 'at %s want to visit' % at_key.name, P(to_visit))
+
     for to_unblock in to_visit:
       if at_key == to_unblock:
         continue
@@ -325,11 +355,25 @@ class Vault(object):
         status = self.try_paths(
             to_unblock, set(holding), set(reachable),
             total_dist = total_dist + at_key.dists[to_unblock.name],
+            visit_list = list(visit_list),
             indent = indent + 1)
         if status < 0:
           return 0
     return 0
 
+  def minimal_distance_possible_left(self, at_key, holding):
+    # this is a theoretcial minimal distance
+    keys = set([k for k in self.all_keys.values()
+               if k != at_key and k.name.islower()])
+    left = keys - holding
+    to_visit = sorted(left, key=lambda k: k.dists[at_key.name])
+    last_dist = 0
+    min_dist = 0
+    for key in to_visit:
+      d = at_key.dists[key.name]
+      min_dist += (d - last_dist)
+      last_dist = d
+    return min_dist
 
 
 def dist_check(vault, k1, k2, expect):
@@ -421,20 +465,17 @@ def part1():
   maze.load('input_18.txt')
   maze.print()
   print('========================================')
-
   vault = Vault(maze)
   vault.top.print_tree()
-  vault.do_it(vault.top)
-
+  vault.best_dist = 5218
   print('========================================')
-  path.print_tree()
+  vault.all_solutions()
+  assert 5218 > vault.best_dist
 
-  # print('part1:', alignment)
-  # assert 3428 == alignment
 
 
 if __name__ == '__main__':
-  #test_part1()
-  test_part1_b()
-  #test_part1_c()
-  # part1()
+  test_part1()
+  # test_part1_b()
+  test_part1_c()
+  part1()
