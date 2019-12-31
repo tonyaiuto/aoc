@@ -9,17 +9,21 @@ import map
 from memoized import memoized
 
 
+TRACE_DIST = False
+
+
 def P(key_set):
   return ','.join(sorted(key.name for key in key_set))
 
 
 class Key(object):
 
-  def __init__(self, name, path, dist_from_root, blocked_by=None,
-               upstream_keys=None):
+  def __init__(self, name, path, dist_from_root, dist_down_path=None,
+               blocked_by=None, upstream_keys=None):
     self.name = name
     self.path = path
     self.dist_from_root = dist_from_root
+    self.dist_down_path = dist_down_path
     self.blocked_by = blocked_by
     self.upstream_keys = upstream_keys
     self.blocks = []
@@ -58,9 +62,11 @@ class Path(object):
 
   trace_level = 1
 
-  def __init__(self, from_where, start, parent=None, base_dist=0):
+  def __init__(self, from_where, start, parent=None, base_dist=0,
+               dist_from_root=0):
     self.from_where = from_where
     self.base_dist = base_dist
+    self.dist_from_root = dist_from_root
     self.start = start
     self.parent = parent
 
@@ -71,7 +77,7 @@ class Path(object):
     self.trace = True
 
     # distances to things
-    self.keys = {}
+    self.keys = []
     self.forks = []
     # print('Create path: start', self.start, 'visited', self.visited)
 
@@ -83,10 +89,8 @@ class Path(object):
 
   def print(self, indent=0, forks=True):
     sp = '   ' * indent
-    print(sp, 'Path from', self.start, '@', self.base_dist,
-        ', '.join(['(%s,%d)' % (k.name, k.dist) for _,k in self.keys.items()]))
-    print(sp, '  keys: ',
-          ', '.join(['%c @ %d' % (k, v) for k, v in self.keys.items()]))
+    print(sp, 'Path from', self.start, '@', self.dist_from_root,
+        ', '.join(['(%s,%d)' % (k.name, k.dist_from_root) for k in self.keys]))
     if self.forks:
       print(sp, '  forks: ', ', '.join([str(f) for f in self.forks]))
 
@@ -151,6 +155,9 @@ class Vault(object):
   def add_key(self, keylock):
     self.all_keys[keylock.name] = keylock
 
+  def get_key(self, keyname):
+    return self.all_keys.get(keyname)
+
   def resolve_edges(self):
     for key, blocker_name in self.blocked_by.items():
       blocker = self.all_keys[blocker_name]
@@ -171,15 +178,17 @@ class Vault(object):
           dist = abs(key.dist_from_root - other_key.dist_from_root)
         else:
           rp2 = other_key.path_from_root()
+          dist_to_forks = 0
           for i in range(len(rp)):
             if rp[i] != rp2[i]:
               # path i-1 is common ancestor
-              common_ancestor = rp[i-1]
-              dist = ((key.dist_from_root - common_ancestor.base_dist)
-                      + (other_key.dist_from_root - common_ancestor.base_dist))
+              fork_dist = rp[i].dist_from_root - 1
               break
-
-        print('dist %s %s = %d' % (name, other_name, dist))
+          # compute distance from juncture
+          dist = ((key.dist_from_root - fork_dist)
+                  + (other_key.dist_from_root - fork_dist))
+        if TRACE_DIST:
+          print('dist %s %s = %d' % (name, other_name, dist))
         key.dists[other_name] = dist
         other_key.dists[name] = dist
         self.worst_path += dist
@@ -194,9 +203,11 @@ class Vault(object):
       content = self.maze.cell(pos)
       if content.isalpha():
         key = Key(content, path, dist_from_root + path.dist,
-                  blocked_by=last_key, upstream_keys=set(up_keys))
+                  blocked_by=last_key, dist_down_path=path.dist,
+                  upstream_keys=set(up_keys))
         self.add_key(key)
         up_keys.append(key)
+        path.keys.append(key)
         if last_key:
           self.blocked_by[key] = last_key.name
         last_key = key
@@ -216,7 +227,8 @@ class Vault(object):
         path.visited[path_start] = path.dist
       for path_start in moves:
         child_path = Path(parent=path, from_where=pos, start=path_start,
-                          base_dist=path.dist)
+                          base_dist=path.dist,
+                          dist_from_root=dist_from_root + path.dist)
         # Do not duplicate paths
         child_path.visited.update(self.path_heads)
         path.forks.append(child_path)
@@ -318,6 +330,14 @@ class Vault(object):
     return 0
 
 
+def dist_check(vault, k1, k2, expect):
+  key1 = vault.get_key(k1)
+  dist = key1.dists[k2]
+  if expect != dist:
+    print('Distance from %s to %s. Expect %d got %d' % (k1, k2, expect, dist))
+  assert expect == dist
+
+
 def test_part1():
   maze = map.Map()
       #0123456789 123456789 12
@@ -332,6 +352,7 @@ def test_part1():
 
   maze.print()
   vault = Vault(maze)
+  dist_check(vault, 'a', 'f', 30)
   print('========================================')
   print(vault.all_keys)
   print(vault.blocked_by)
@@ -380,11 +401,14 @@ def test_part1_c():
   # Shortest paths are 81 steps; one is: a, c, f, i, d, g, b, e, h
   maze.print()
   vault = Vault(maze)
+  vault.top.print_tree()
+
+  dist_check(vault, 'd', 'g', 2)
+  dist_check(vault, 'd', 'e', 4)
+  dist_check(vault, 'd', 'h', 6)
   print('========================================')
   print(vault.blocked_by)
   print('========================================')
-  vault.top.print_tree()
-  # vault.do_it(vault.top)
   vault.all_solutions()
   assert 81 == vault.best_dist
 
@@ -409,6 +433,6 @@ def part1():
 
 if __name__ == '__main__':
   test_part1()
-  # test_part1_b()
+  test_part1_b()
   test_part1_c()
   # part1()
