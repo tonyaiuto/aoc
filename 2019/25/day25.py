@@ -3,6 +3,8 @@
 import sys
 import textwrap
 
+from graphviz import Digraph
+
 from elf_image import ElfImage
 import intcode
 
@@ -60,6 +62,20 @@ class Item(object):
     for _, item in sorted(Item.all_items.items()):
       print(item.id, item.name)
 
+  @staticmethod
+  def render_index(dot):
+    all = ['<<table>']
+    for i, (_, item) in enumerate(sorted(Item.all_items.items())):
+      if i % 4 == 0:
+        if i > 0:
+          all.append('</tr>')
+        all.append('<tr>')
+      all.append('<td>%s</td><td>%s</td>' % (item.id, item.name))
+      if i % 4 != 3:
+        all.append('<td>&nbsp;</td>')
+    all.append('</tr>')
+    all.append('</table>>')
+    dot.attr(label='\n'.join(all))
 
 class Droid(object):
 
@@ -89,7 +105,24 @@ class Droid(object):
       ascii_code = intcode.code_to_ascii(cmd, sep=' ')
       self.computer.push_input(ascii_code)
 
-  def loop(self):
+  def do_turn(self):
+    if not self.run_until_command():
+      return
+    while True:
+      inp = input().strip()
+      inp = self.shortcuts.get(inp) or inp
+      if inp.startswith('qu'):
+        self.quit = True
+        return
+      elif inp == 'map':
+        self.print_map()
+      else:
+        command = inp.strip().split(' ')
+        if command:
+          self.do_command(command)
+          return
+
+  def run_until_command(self):
     state = ''
     while True:
       state += self.computer.run_until_terminator(['\r', '?'])
@@ -99,23 +132,10 @@ class Droid(object):
         print(state)
         print('Computer halted')
         self.quit = True
-        return
+        return False
     print(state)
     self.analyze(state)
-
-    while True:
-      inp = input().strip()
-      inp = self.shortcuts.get(inp) or inp
-      if inp.startswith('qu'):
-        self.quit = True
-        return
-      elif inp == 'map':
-        self.printmap()
-      else:
-        command = inp.strip().split(' ')
-        if command:
-          self.do_command(command)
-          return
+    return True
 
 
   def do_command(self, command):
@@ -136,7 +156,7 @@ class Droid(object):
 
   def play(self):
     while not self.quit:
-      self.loop()
+      self.do_turn()
 
   def analyze(self, state):
     getting_room = None
@@ -199,7 +219,7 @@ class Droid(object):
       self.rooms[name] = room
     return room
 
-  def printmap(self):
+  def print_map(self):
     print('================')
     Item.print_index()
     if False:
@@ -212,12 +232,41 @@ class Droid(object):
     for _, room in sorted(self.rooms.items()):
       room.print()
 
+    self.render_map()
 
-def part1():
+
+  def render_map(self):
+    dot = Digraph(comment='Star Ship')
+    un_count = 0
+    for _, room in self.rooms.items():
+      dot.node(room.name, label=room.name)
+
+    for _, room in self.rooms.items():
+      for door, to_room in room.doors.items():
+        if not to_room:
+          node_name = 'q%d' % un_count
+          dot.node(node_name, label='?')
+          un_count += 1
+        else:
+          node_name = to_room.name
+        dot.edge(room.name, node_name, label=door)
+
+    Item.render_index(dot)
+    dot.render('ship.gv', format='png', view=True)
+
+
+def part1(args):
   mem = intcode.load_intcode('input_25.txt')
   droid = Droid(list(mem))
+  if args:
+    with open(args[0], 'r') as pre_cmd:
+      for line in pre_cmd:
+        if line.startswith('#'):
+          break
+        droid.run_until_command()
+        droid.do_command(line.strip().split(' '))
   droid.play()
 
 
 if __name__ == '__main__':
-  part1()
+  part1(sys.argv[1:])
