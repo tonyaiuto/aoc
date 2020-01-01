@@ -35,27 +35,44 @@ class Room(object):
     if door not in self.doors:
       self.doors[door] = None
 
+  def has_item(self, item):
+    if item.in_room:
+      item.in_room.contains.remove(item)
+    self.contains.add(item)
+    item.in_room = self
+
 
 class Item(object):
 
-  next_id = 'A'
+  next_id = 0
   all_items = {}
 
-  def __init__(self, id, name):
-    self.id = id
+  def __init__(self, index, name):
+    self.index = index
+    self.id = Item._text_for(index)
     self.name = name
-    Item.all_items[id] = self
-    print('== Added %s = %s' % (id, name))
+    self.in_room = None
+    # Track them all
+    Item.all_items[self.name] = self
+    print('== Added %s = %s' % (self.id, self.name))
+
 
   @staticmethod
-  def getItem(name):
+  def get_item(name):
     # Find or add item
     item = Item.all_items.get(name)
     if not item:
-      item_id = Item.next_id
-      item = Item(name=name, id=item_id)
-      Item.next_id = chr(ord(Item.next_id) + 1)
+      item = Item(index=Item.next_id, name=name)
+      Item.next_id = Item.next_id + 1
     return item
+
+  @staticmethod
+  def _text_for(id_index):
+    prefix = ''
+    while id_index >= 26:
+      id_index -= 26
+      prefix += 'A'
+    return prefix + chr(ord('A') + id_index)
 
   @staticmethod
   def print_index():
@@ -65,7 +82,8 @@ class Item(object):
   @staticmethod
   def render_index(dot):
     all = ['<<table>']
-    for i, (_, item) in enumerate(sorted(Item.all_items.items())):
+    for i, (_, item) in enumerate(
+        sorted(Item.all_items.items(), key=lambda kv: kv[1].index)):
       if i % 4 == 0:
         if i > 0:
           all.append('</tr>')
@@ -195,8 +213,10 @@ class Droid(object):
         getting_items = True
       elif getting_items and line.startswith('-'):
         got_item = True
-        item = Item.getItem(line[2:])
+        item = Item.get_item(line[2:])
+        self.cur_room.has_item(item)
         self.visited[(self.x, self.y)] = item.id
+
       elif line.startswith("""You can't go that way"""):
         self.visited[(self.x, self.y)] = '#'
         self.x = self.last_x
@@ -204,6 +224,7 @@ class Droid(object):
       else:
         if line and not line.startswith('Command'):
           print('TODO: ', line)
+
     if not got_item:
       self.visited[(self.x, self.y)] = '.'
 
@@ -236,20 +257,31 @@ class Droid(object):
 
 
   def render_map(self):
+    # Render to graphviz
     dot = Digraph(comment='Star Ship')
     un_count = 0
     for _, room in self.rooms.items():
-      dot.node(room.name, label=room.name)
+      label = room.name
+      if len(room.contains) > 0:
+        label += '[' + ' '.join(item.id for item in room.contains) + ']'
+      attrs = {}
+      if room == self.cur_room:
+        attrs['font'] = 'bold'
+        attrs['style'] = 'bold'
+      dot.node(room.name, label=label, **attrs)
 
     for _, room in self.rooms.items():
       for door, to_room in room.doors.items():
+        attrs = {}
         if not to_room:
           node_name = 'q%d' % un_count
-          dot.node(node_name, label='?')
+          attrs['style'] = 'bold'
+          attrs['font'] = 'bold'
+          dot.node(node_name, label='?', **attrs)
           un_count += 1
         else:
           node_name = to_room.name
-        dot.edge(room.name, node_name, label=door)
+        dot.edge(room.name, node_name, label=door, **attrs)
 
     Item.render_index(dot)
     dot.render('ship.gv', format='png', view=True)
@@ -262,7 +294,7 @@ def part1(args):
     with open(args[0], 'r') as pre_cmd:
       for line in pre_cmd:
         if line.startswith('#'):
-          break
+          continue
         droid.run_until_command()
         droid.do_command(line.strip().split(' '))
   droid.play()
