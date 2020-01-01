@@ -175,6 +175,8 @@ class Droid(object):
     while True:
       if self.pending_commands:
         inp = self.pending_commands[0]
+        # We have printed "Command?" from run_until_command
+        print(' ' + inp)
         self.pending_commands = self.pending_commands[1:]
       else:
         inp = input().strip()
@@ -204,7 +206,7 @@ class Droid(object):
         print('Computer halted')
         self.quit = True
         return False
-    print(state)
+    sys.stdout.write(state)
     self.analyze(state)
     return True
 
@@ -249,6 +251,7 @@ class Droid(object):
     desc = ''
     getting_doors = False
     getting_items = False
+    getting_inv = False
     got_item = False
     for line in state.split('\n'):
       if not line:
@@ -258,6 +261,7 @@ class Droid(object):
 
       if not line or not line.startswith('- '):
         getting_doors = False
+        getting_inv = False
         getting_items = False
 
       if line.startswith('== '):
@@ -284,6 +288,11 @@ class Droid(object):
         item = Item.get_item(line[2:])
         self.cur_room.has_item(item)
         self.visited[(self.x, self.y)] = item.id
+
+      elif line.startswith('Items in your inventory'):
+        getting_inv = True
+      elif getting_inv and line.startswith('-'):
+        Item.get_item(line[2:]).carry()
 
       elif line.startswith("""You take the"""):
         # 'You take the foo.' => 'foo'

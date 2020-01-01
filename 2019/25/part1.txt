@@ -55,4 +55,4 @@ west
 east
 # land in Warp Drive Maint
 pick
-go hull
+go passages
