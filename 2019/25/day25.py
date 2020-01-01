@@ -81,19 +81,36 @@ class Item(object):
 
   @staticmethod
   def render_index(dot):
+    if not Item.all_items:
+      return
+    holding = []
     all = ['<<table>']
     for i, (_, item) in enumerate(
         sorted(Item.all_items.items(), key=lambda kv: kv[1].index)):
+      if item.in_room == None:
+        holding.append(item.name)
       if i % 4 == 0:
         if i > 0:
           all.append('</tr>')
         all.append('<tr>')
-      all.append('<td>%s</td><td>%s</td>' % (item.id, item.name))
+      all.append('<td><b>%s</b></td><td>%s</td>' % (item.id, item.name))
       if i % 4 != 3:
         all.append('<td>&nbsp;</td>')
     all.append('</tr>')
+    if holding:
+      all.append('<tr><td> </td></tr>')
+      all.append('<tr>')
+      all.append('<td><b>Holding</b></td>')
+      all.append('<td>' + ','.join(holding) + '</td>')
+      all.append('</tr>')
     all.append('</table>>')
     dot.attr(label='\n'.join(all))
+
+  def carry(self):
+    if self.in_room:
+      self.in_room.contains.remove(self)
+    self.in_room = None
+
 
 class Droid(object):
 
@@ -112,7 +129,9 @@ class Droid(object):
         'e': 'east',
         'w': 'west',
         'i': 'inv',
+
         'm': 'map',
+        'p': 'pick',
         'q': 'quit',
     }
 
@@ -134,11 +153,21 @@ class Droid(object):
         return
       elif inp == 'map':
         self.print_map()
-      else:
-        command = inp.strip().split(' ')
-        if command:
-          self.do_command(command)
+        continue
+
+      if inp == 'pick':
+        if len(self.cur_room.contains) == 1:
+          inp = ['take %s' % item.name for item in self.cur_room.contains][0]
+          print(inp)
+        else:
+          print('Can only take with exactly one item in the room')
           return
+
+      command = inp.split(' ')
+      if command:
+        self.do_command(command)
+        return
+
 
   def run_until_command(self):
     state = ''
@@ -216,6 +245,12 @@ class Droid(object):
         item = Item.get_item(line[2:])
         self.cur_room.has_item(item)
         self.visited[(self.x, self.y)] = item.id
+
+      elif line.startswith("""You take the"""):
+        # 'You take the foo.' => 'foo'
+        item_name = line[13:][0:-1]
+        # print('======== take:', item_name)
+        Item.get_item(item_name).carry()
 
       elif line.startswith("""You can't go that way"""):
         self.visited[(self.x, self.y)] = '#'

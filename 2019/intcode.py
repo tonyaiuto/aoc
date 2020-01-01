@@ -223,7 +223,7 @@ def code_to_ascii(code, sep=',', verbose=False):
     else:
       for c in str(word):
         ret.append(ord(c))
-  assert len(ret) <= 20
+  # assert len(ret) <= 20
   ret.append(10)
   if verbose:
     print('%s => %s' % (code, ret))
