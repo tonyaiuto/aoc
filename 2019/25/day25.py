@@ -155,18 +155,9 @@ class Droid(object):
         self.print_map()
         continue
 
-      if inp == 'pick':
-        if len(self.cur_room.contains) == 1:
-          inp = ['take %s' % item.name for item in self.cur_room.contains][0]
-          print(inp)
-        else:
-          print('Can only take with exactly one item in the room')
+      if inp:
+        if self.do_command(inp):
           return
-
-      command = inp.split(' ')
-      if command:
-        self.do_command(command)
-        return
 
 
   def run_until_command(self):
@@ -184,8 +175,16 @@ class Droid(object):
     self.analyze(state)
     return True
 
+  def do_command(self, raw_command):
+    command = raw_command.split(' ')
+    if command == ['pick']:
+      if len(self.cur_room.contains) == 1:
+        command = ['take'] + [
+            item.name for item in self.cur_room.contains][0].split(' ')
+      else:
+        print('Can only take with exactly one item in the room')
+        return False
 
-  def do_command(self, command):
     self.last_x = self.x
     self.last_y = self.y
     if command[0] == 'north':
@@ -200,6 +199,7 @@ class Droid(object):
       self.last_move = command[0]
     ascii_code = intcode.code_to_ascii(command, sep=' ')
     self.computer.push_input(ascii_code)
+    return True
 
   def play(self):
     while not self.quit:
@@ -331,7 +331,7 @@ def part1(args):
         if line.startswith('#'):
           continue
         droid.run_until_command()
-        droid.do_command(line.strip().split(' '))
+        droid.do_command(line.strip())
   droid.play()
 
 

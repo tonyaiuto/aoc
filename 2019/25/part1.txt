@@ -33,22 +33,22 @@ north
 south
 west
 north
-west
-south
-# now in sick bay
-north
-south
-# still in sick bay
-south
+# assert in hallway
+# to navigation and backmap
 west
 east
-north
-# back in sick bay
-east
-# in gift wrap
 west
-# back to sick bay
+south
+#  ### now in sick bay
+# back link navigation
 north
-# back to navigation
+south
+# visit gift wrap
 east
-# finish map back to hallway
+west
+south
+# visit engineering
+west
+east
+# land in Warp Drive Maint
+pick
