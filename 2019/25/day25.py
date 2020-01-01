@@ -11,11 +11,17 @@ import intcode
 
 class Room(object):
 
+  all = []
+
   def __init__(self, name):
     self.name = name
     # map of direction to room
     self.doors = {}
     self.contains = set()
+    Room.all.append(self)
+
+  def __repr__(self):
+    return '<%s>' % self.name
 
   def print(self):
     print('===', self.name)
@@ -25,7 +31,6 @@ class Room(object):
         print('    %s -> %s' % (door, to_room.name))
       else:
         print('    %s -> <unknown>' % door)
-
 
   @property
   def dead_end(self):
@@ -40,6 +45,27 @@ class Room(object):
       item.in_room.contains.remove(item)
     self.contains.add(item)
     item.in_room = self
+
+  def find_path_to(self, room):
+    path, dirs = self._find_path_helper(room, '@', [], [])
+    # print('path:', path)
+    # print('dirs:', dirs)
+    if not path:
+      print('No path to', room.name)
+    return dirs
+
+  def _find_path_helper(self, to_room, via, path, dirs):
+    print('try path from', self.name, 'to', to_room.name)
+    path = path + [self]
+    dirs = dirs + [via]
+    if self == to_room:
+      return path, dirs
+    for dir, next_room in self.doors.items():
+      if next_room and next_room not in path:
+        n_path, n_dirs = next_room._find_path_helper(to_room, dir, path, dirs)
+        if n_path:
+          return n_path, n_dirs
+    return None, []
 
 
 class Item(object):
@@ -123,6 +149,7 @@ class Droid(object):
     self.visited[(0,0)] = '@'
     self.rooms = {}
     self.cur_room = None
+    self.pending_commands = []
     self.shortcuts = {
         'n': 'north',
         's': 'south',
@@ -146,7 +173,11 @@ class Droid(object):
     if not self.run_until_command():
       return
     while True:
-      inp = input().strip()
+      if self.pending_commands:
+        inp = self.pending_commands[0]
+        self.pending_commands = self.pending_commands[1:]
+      else:
+        inp = input().strip()
       inp = self.shortcuts.get(inp) or inp
       if inp.startswith('qu'):
         self.quit = True
@@ -159,6 +190,8 @@ class Droid(object):
         if self.do_command(inp):
           return
 
+  def queue_command(self, raw_command):
+    self.pending_commands.append(raw_command)
 
   def run_until_command(self):
     state = ''
@@ -177,13 +210,19 @@ class Droid(object):
 
   def do_command(self, raw_command):
     command = raw_command.split(' ')
-    if command == ['pick']:
+    if command[0] == 'pick':
       if len(self.cur_room.contains) == 1:
         command = ['take'] + [
             item.name for item in self.cur_room.contains][0].split(' ')
       else:
         print('Can only take with exactly one item in the room')
         return False
+    if command[0] == 'go':
+      target_room = ' '.join(command[1:])
+      route = self.find_path(self.cur_room, target_room)
+      for door in route:
+        self.queue_command(door)
+      return False
 
     self.last_x = self.x
     self.last_y = self.y
@@ -275,6 +314,17 @@ class Droid(object):
       self.rooms[name] = room
     return room
 
+  def match_room(self, target_name):
+    found = None
+    target_name = target_name.lower()
+    for name, room in self.rooms.items():
+      if name.lower().startswith(target_name):
+        if found:
+          print('Not unique name', target_name, 'Matches', found.name, name)
+          return None
+        found = room
+    return found
+
   def print_map(self):
     print('================')
     Item.print_index()
@@ -290,6 +340,12 @@ class Droid(object):
 
     self.render_map()
 
+  def find_path(self, from_room, target_room):
+    to_room = self.match_room(target_room)
+    if not to_room:
+      print('Unknown room:', target_room)
+      return False
+    return from_room.find_path_to(to_room)
 
   def render_map(self):
     # Render to graphviz
@@ -330,8 +386,7 @@ def part1(args):
       for line in pre_cmd:
         if line.startswith('#'):
           continue
-        droid.run_until_command()
-        droid.do_command(line.strip())
+        droid.queue_command(line.strip())
   droid.play()
 
 
