@@ -115,12 +115,12 @@ class Item(object):
         sorted(Item.all_items.items(), key=lambda kv: kv[1].index)):
       if item.in_room == None:
         holding.append(item.name)
-      if i % 4 == 0:
+      if i % 3 == 0:
         if i > 0:
           all.append('</tr>')
         all.append('<tr>')
       all.append('<td><b>%s</b></td><td>%s</td>' % (item.id, item.name))
-      if i % 4 != 3:
+      if i % 3 != 2:
         all.append('<td>&nbsp;</td>')
     all.append('</tr>')
     if holding:
@@ -140,6 +140,25 @@ class Item(object):
 
 class Droid(object):
 
+  SHORTCUTS = {
+     'n': 'north',
+     's': 'south',
+     'e': 'east',
+     'w': 'west',
+     'i': 'inv',
+
+     'm': 'map',
+     'p': 'pick',
+     'q': 'quit',
+  }
+  NO_AUTOPICK = set([
+      'escape pod',
+      'giant electromagnet',
+      'infinite loop',
+      'molten lava',
+      'photons',
+  ])
+
   def __init__(self, mem):
     self.computer = intcode.IntCode(list(mem))
     self.quit = False
@@ -150,17 +169,7 @@ class Droid(object):
     self.rooms = {}
     self.cur_room = None
     self.pending_commands = []
-    self.shortcuts = {
-        'n': 'north',
-        's': 'south',
-        'e': 'east',
-        'w': 'west',
-        'i': 'inv',
-
-        'm': 'map',
-        'p': 'pick',
-        'q': 'quit',
-    }
+    self.auto_pick = True
 
   def send_program(self, prog):
     assert len(prog) <= 15
@@ -172,6 +181,11 @@ class Droid(object):
   def do_turn(self):
     if not self.run_until_command():
       return
+    if self.auto_pick and len(self.cur_room.contains) == 1:
+      item_name = [item.name for item in self.cur_room.contains][0]
+      if item_name not in Droid.NO_AUTOPICK:
+        # print('============= autopick', item_name)
+        self.queue_command('take %s' % item_name, first=True)
     while True:
       if self.pending_commands:
         inp = self.pending_commands[0]
@@ -180,20 +194,29 @@ class Droid(object):
         self.pending_commands = self.pending_commands[1:]
       else:
         inp = input().strip()
-      inp = self.shortcuts.get(inp) or inp
+      inp = Droid.SHORTCUTS.get(inp) or inp
       if inp.startswith('qu'):
         self.quit = True
         return
       elif inp == 'map':
         self.print_map()
         continue
+      elif inp == 'autopick on':
+        self.auto_pick = True
+        continue
+      elif inp == 'autopick off':
+        self.auto_pick = False
+        continue
 
       if inp:
         if self.do_command(inp):
           return
 
-  def queue_command(self, raw_command):
-    self.pending_commands.append(raw_command)
+  def queue_command(self, raw_command, first=False):
+    if first:
+      self.pending_commands = [raw_command] + self.pending_commands
+    else:
+      self.pending_commands.append(raw_command)
 
   def run_until_command(self):
     state = ''

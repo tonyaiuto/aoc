@@ -1,3 +1,4 @@
+autopick on
 west
 east
 south
@@ -56,3 +57,4 @@ east
 # land in Warp Drive Maint
 pick
 go passages
+autopick on
