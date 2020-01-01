@@ -1,6 +1,7 @@
 sample.cur
 *.o
 *.pyc
+*.gv
 out_*.png
 /2019/*/elf_image.py
 /2019/*/intcode.py
