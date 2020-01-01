@@ -35,6 +35,7 @@ class Droid(object):
         'e': 'east',
         'w': 'west',
         'i': 'inv',
+        'm': 'map',
         'q': 'quit',
     }
 
@@ -93,6 +94,7 @@ class Droid(object):
     getting_room = None
     desc = ''
     getting_doors = False
+    doors = []
     getting_items = False
     got_item = False
     for line in state.split('\n'):
@@ -103,6 +105,7 @@ class Droid(object):
 
       if not line or not line.startswith('- '):
         getting_doors = False
+        doors = []
         getting_items = False
 
       if line.startswith('== '):
@@ -119,7 +122,9 @@ class Droid(object):
       elif line == 'Doors here lead:':
         getting_doors = True
       elif getting_doors and line.startswith('-'):
-        pass  # we printed it
+        door = line[2:]
+        if door not in self.cur_room.doors:
+          self.cur_room.doors[door] = None
 
       elif line == 'Items here:':
         getting_items = True
@@ -144,7 +149,7 @@ class Droid(object):
       self.visited[(self.x, self.y)] = '.'
 
   def get_room(self, name):
-    print('lookup room', name)
+    # print('lookup room', name)
     if name.startswith('== '):
       name = name[3:]
     if name.endswith(' =='):
@@ -168,7 +173,10 @@ class Droid(object):
       print('===', name)
       print(textwrap.indent(textwrap.fill(room.desc), prefix='    '))
       for door, to_room in sorted(room.doors.items()):
-        print('    %s -> %s' % (door, to_room.name))
+        if to_room:
+          print('    %s -> %s' % (door, to_room.name))
+        else:
+          print('    %s -> <unknown>' % door)
 
 
 def part1():
