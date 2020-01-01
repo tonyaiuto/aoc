@@ -15,6 +15,51 @@ class Room(object):
     self.doors = {}
     self.contains = set()
 
+  def print(self):
+    print('===', self.name)
+    print(textwrap.indent(textwrap.fill(self.desc), prefix='    '))
+    for door, to_room in sorted(self.doors.items()):
+      if to_room:
+        print('    %s -> %s' % (door, to_room.name))
+      else:
+        print('    %s -> <unknown>' % door)
+
+
+  @property
+  def dead_end(self):
+    return len(self.doors) == 1
+
+  def has_door(self, door):
+    if door not in self.doors:
+      self.doors[door] = None
+
+
+class Item(object):
+
+  next_id = 'A'
+  all_items = {}
+
+  def __init__(self, id, name):
+    self.id = id
+    self.name = name
+    Item.all_items[id] = self
+    print('== Added %s = %s' % (id, name))
+
+  @staticmethod
+  def getItem(name):
+    # Find or add item
+    item = Item.all_items.get(name)
+    if not item:
+      item_id = Item.next_id
+      item = Item(name=name, id=item_id)
+      Item.next_id = chr(ord(Item.next_id) + 1)
+    return item
+
+  @staticmethod
+  def print_index():
+    for _, item in sorted(Item.all_items.items()):
+      print(item.id, item.name)
+
 
 class Droid(object):
 
@@ -24,8 +69,6 @@ class Droid(object):
     self.visited = {}
     self.x = 0
     self.y = 0
-    self.items = {}
-    self.next_item = 'A'
     self.visited[(0,0)] = '@'
     self.rooms = {}
     self.cur_room = None
@@ -126,21 +169,14 @@ class Droid(object):
         getting_doors = True
       elif getting_doors and line.startswith('-'):
         door = line[2:]
-        if door not in self.cur_room.doors:
-          self.cur_room.doors[door] = None
+        self.cur_room.has_door(door)
 
       elif line == 'Items here:':
         getting_items = True
       elif getting_items and line.startswith('-'):
         got_item = True
-        item = line[2:]
-        item_id = self.items.get(item)
-        if not item_id:
-          item_id = self.next_item
-          self.items[item_id] = item
-          print('== Added %s = %s' % (item_id, item))
-          self.next_item = chr(ord(self.next_item) + 1)
-        self.visited[(self.x, self.y)] = item_id
+        item = Item.getItem(line[2:])
+        self.visited[(self.x, self.y)] = item.id
       elif line.startswith("""You can't go that way"""):
         self.visited[(self.x, self.y)] = '#'
         self.x = self.last_x
@@ -165,6 +201,7 @@ class Droid(object):
 
   def printmap(self):
     print('================')
+    Item.print_index()
     if False:
       for k in sorted(self.items):
         print(k, self.items[k])
@@ -172,20 +209,13 @@ class Droid(object):
       img = ElfImage.fromPoints(self.visited)
       img.print()
 
-    for name, room in sorted(self.rooms.items()):
-      print('===', name)
-      print(textwrap.indent(textwrap.fill(room.desc), prefix='    '))
-      for door, to_room in sorted(room.doors.items()):
-        if to_room:
-          print('    %s -> %s' % (door, to_room.name))
-        else:
-          print('    %s -> <unknown>' % door)
+    for _, room in sorted(self.rooms.items()):
+      room.print()
 
 
 def part1():
   mem = intcode.load_intcode('input_25.txt')
   droid = Droid(list(mem))
-
   droid.play()
 
 
