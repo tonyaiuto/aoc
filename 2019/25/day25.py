@@ -52,6 +52,11 @@ class Droid(object):
       state += self.computer.run_until_terminator(['\r', '?'])
       if state.endswith('Command?'):
         break
+      if self.computer.is_halted:
+        print(state)
+        print('Computer halted')
+        self.quit = True
+        return
     print(state)
     self.analyze(state)
 
@@ -94,7 +99,6 @@ class Droid(object):
     getting_room = None
     desc = ''
     getting_doors = False
-    doors = []
     getting_items = False
     got_item = False
     for line in state.split('\n'):
@@ -105,7 +109,6 @@ class Droid(object):
 
       if not line or not line.startswith('- '):
         getting_doors = False
-        doors = []
         getting_items = False
 
       if line.startswith('== '):
