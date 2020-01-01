@@ -29,6 +29,14 @@ class Droid(object):
     self.visited[(0,0)] = '@'
     self.rooms = {}
     self.cur_room = None
+    self.shortcuts = {
+        'n': 'north',
+        's': 'south',
+        'e': 'east',
+        'w': 'west',
+        'i': 'inv',
+        'q': 'quit',
+    }
 
   def send_program(self, prog):
     assert len(prog) <= 15
@@ -47,7 +55,8 @@ class Droid(object):
     self.analyze(state)
 
     while True:
-      inp = input()
+      inp = input().strip()
+      inp = self.shortcuts.get(inp) or inp
       if inp.startswith('qu'):
         self.quit = True
         return
