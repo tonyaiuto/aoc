@@ -28,7 +28,6 @@ class Key(object):
     self.upstream_keys = upstream_keys
     self.blocks = []
     self.dists = {}
-    self.ordered = False
     self.loop_detect = False
     self.is_key = name.islower()
 
@@ -413,31 +412,42 @@ class Vault(object):
     return min_dist
 
   def tsort(self):
-    self.top_sorted = []
-    while True:
-      #keys = [k for k in self.all_keys.values() if k.is_key and not k.ordered]
-      keys = [k for k in self.all_keys.values() if not k.ordered]
-      if not keys:
-        break
-      self.tsort_visit(keys[0], depth=0)
+    self.top_sorted = self.tsort_keys(self.all_keys.values())
     print('=tsort:', self.top_sorted)
 
-  def tsort_visit(self, key, depth):
-    if key.ordered:
-      return
-    if key.loop_detect:
-      raise Exception('not a DAG')
-    key.loop_detect = True
-    if TRACE_TSORT > 1:
-      print(' '*depth, '=tsort_visit', key)
-    for blocked in key.blocks:
-      #if blocked.is_key:
-      self.tsort_visit(blocked, depth=depth+1)
-    key.loop_detect = False
-    key.ordered = True
-    self.top_sorted = [key] + self.top_sorted
-    if TRACE_TSORT > 1:
-      print(' '*depth, '=tsort order', self.top_sorted)
+  @staticmethod
+  def tsort_keys(list_of_keys):
+
+    ordered = set()
+    result = []
+
+    def tsort_visit(key, depth):
+      nonlocal result
+      nonlocal ordered
+
+      if key in ordered:
+        return
+      if key.loop_detect:
+        raise Exception('not a DAG')
+      key.loop_detect = True
+      if TRACE_TSORT > 1:
+        print(' '*depth, '=tsort_visit', key)
+      for blocked in key.blocks:
+        #if blocked.is_key:
+        tsort_visit(blocked, depth=depth+1)
+      key.loop_detect = False
+      ordered.add(key)
+      result = [key] + result
+      if TRACE_TSORT > 1:
+        print(' '*depth, '=tsort order', result)
+      # END
+
+    while True:
+      keys = [k for k in list_of_keys if k not in ordered]
+      if not keys:
+        break
+      tsort_visit(keys[0], depth=0)
+    return result
 
 
   def tsort_solutions(self):
@@ -563,7 +573,7 @@ def part1():
   print('========================================')
   vault = Vault(maze)
   vault.top.print_tree()
-  vault.best_dist = 5218
+  assert vault.best_dist <= 5218
   print('========================================')
   vault.all_solutions()
   assert 5218 > vault.best_dist
