@@ -82,6 +82,8 @@ class Item(object):
     Item.all_items[self.name] = self
     print('== Added %s = %s' % (self.id, self.name))
 
+  def __repr__(self):
+    return '(%s)' % self.name
 
   @staticmethod
   def get_item(name):
@@ -179,9 +181,24 @@ class Droid(object):
     for item in self.holding:
       print('  holding', item.name)
 
-  def do_turn(self):
+  def carry(self, item):
+    item.carry()
+    self.holding.add(item)
+
+  def drop(self, item):
+    self.holding.remove(item)
+    self.cur_room.has_item(item)
+
+  def play(self, queued_only=False):
+    while not self.quit:
+      if not self.do_turn(queued_only):
+        break
+
+  def do_turn(self, queued_only=False):
+    if queued_only and not self.pending_commands:
+      return False
     if not self.run_until_command():
-      return
+      return False
     if self.auto_pick and len(self.cur_room.contains) == 1:
       item_name = [item.name for item in self.cur_room.contains][0]
       if item_name not in Droid.NO_AUTOPICK:
@@ -202,7 +219,7 @@ class Droid(object):
       inp = Droid.SHORTCUTS.get(inp) or inp
       if inp.startswith('qu'):
         self.quit = True
-        return
+        return False
       elif inp == 'map':
         self.print_map()
       elif inp == 'autopick on':
@@ -214,7 +231,7 @@ class Droid(object):
       else:
         if inp:
           if self.do_command(inp):
-            return
+            return True
 
   def queue_command(self, raw_command, first=False):
     if first:
@@ -235,6 +252,7 @@ class Droid(object):
         return False
     sys.stdout.write(state)
     self.analyze(state)
+    self.last_state = state
     return True
 
   def do_command(self, raw_command):
@@ -268,18 +286,6 @@ class Droid(object):
     ascii_code = intcode.code_to_ascii(command, sep=' ')
     self.computer.push_input(ascii_code)
     return True
-
-  def play(self):
-    while not self.quit:
-      self.do_turn()
-
-  def carry(self, item):
-    item.carry()
-    self.holding.add(item)
-
-  def drop(self, item):
-    self.holding.remove(item)
-    self.cur_room.has_item(item)
 
   def analyze(self, state):
     getting_room = None
@@ -428,6 +434,49 @@ class Droid(object):
     Item.render_index(dot)
     dot.render('ship.gv', format='png', view=True)
 
+  def try_items(self):
+    # print("==== trying items", self.holding)
+    ante_room = self.cur_room
+    items = list(self.holding)
+    holding = [True] * len(items)
+    nbits = len(holding)
+    if nbits <= 0:
+      print('too soon')
+      return
+    top = 2 ** nbits
+    print(top, holding)
+    for i in range(top):
+      mask = top - 1 - i
+      # print('==== bit mask', mask)
+      for bit in range(nbits):
+        item = items[bit]
+        if (mask & (1 << bit)) == 0:
+          # want item dropped
+          if holding[bit]:
+            # print('drop', item.name)
+            self.queue_command('drop %s' % item.name)
+            holding[bit] = False
+        else:
+          # want item dropped
+          if not holding[bit]:
+            # print('take', item.name)
+            self.queue_command('take %s' % item.name)
+            holding[bit] = True
+      self.queue_command('east')
+      self.do_turn(queued_only=True)
+
+      if False:
+        if self.last_state.find('heavier') > 0:
+          print('Must lose weight')
+        elif self.last_state.find('lighter') > 0:
+          print('Must gain weight')
+
+      if self.last_state.find(
+          'A loud, robotic voice says "Analysis complete! You may proceed."') >= 0:
+        print('got it')
+        break
+    return
+ 
 
 def part1(args):
   mem = intcode.load_intcode('input_25.txt')
@@ -438,6 +487,8 @@ def part1(args):
         if line.startswith('#'):
           continue
         droid.queue_command(line.strip())
+      droid.play(queued_only=True)
+  droid.try_items()
   droid.play()
 
 
