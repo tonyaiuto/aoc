@@ -168,15 +168,16 @@ class Droid(object):
     self.visited[(0,0)] = '@'
     self.rooms = {}
     self.cur_room = None
+    self.holding = set()
+
     self.pending_commands = []
     self.auto_pick = True
 
-  def send_program(self, prog):
-    assert len(prog) <= 15
-    for cmd in prog:
-      print(cmd)
-      ascii_code = intcode.code_to_ascii(cmd, sep=' ')
-      self.computer.push_input(ascii_code)
+  def status(self):
+    print('======')
+    self.cur_room.print()
+    for item in self.holding:
+      print('  holding', item.name)
 
   def do_turn(self):
     if not self.run_until_command():
@@ -186,7 +187,11 @@ class Droid(object):
       if item_name not in Droid.NO_AUTOPICK:
         # print('============= autopick', item_name)
         self.queue_command('take %s' % item_name, first=True)
+    got_prompt = True
     while True:
+      if not got_prompt:
+        sys.stdout.write('Command?')
+      got_prompt = False
       if self.pending_commands:
         inp = self.pending_commands[0]
         # We have printed "Command?" from run_until_command
@@ -200,17 +205,16 @@ class Droid(object):
         return
       elif inp == 'map':
         self.print_map()
-        continue
       elif inp == 'autopick on':
         self.auto_pick = True
-        continue
       elif inp == 'autopick off':
         self.auto_pick = False
-        continue
-
-      if inp:
-        if self.do_command(inp):
-          return
+      elif inp == 'status':
+        self.status()
+      else:
+        if inp:
+          if self.do_command(inp):
+            return
 
   def queue_command(self, raw_command, first=False):
     if first:
@@ -269,6 +273,14 @@ class Droid(object):
     while not self.quit:
       self.do_turn()
 
+  def carry(self, item):
+    item.carry()
+    self.holding.add(item)
+
+  def drop(self, item):
+    self.holding.remove(item)
+    self.cur_room.has_item(item)
+
   def analyze(self, state):
     getting_room = None
     desc = ''
@@ -314,14 +326,21 @@ class Droid(object):
 
       elif line.startswith('Items in your inventory'):
         getting_inv = True
+        self.holding = set()
       elif getting_inv and line.startswith('-'):
-        Item.get_item(line[2:]).carry()
+        self.carry(Item.get_item(line[2:]))
 
       elif line.startswith("""You take the"""):
         # 'You take the foo.' => 'foo'
         item_name = line[13:][0:-1]
         # print('======== take:', item_name)
-        Item.get_item(item_name).carry()
+        self.carry(Item.get_item(item_name))
+
+      elif line.startswith("""You drop the"""):
+        # 'You drop the foo.' => 'foo'
+        item_name = line[13:][0:-1]
+        # print('======== take:', item_name)
+        self.drop(Item.get_item(item_name))
 
       elif line.startswith("""You can't go that way"""):
         self.visited[(self.x, self.y)] = '#'

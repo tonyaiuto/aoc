@@ -56,5 +56,6 @@ west
 east
 # land in Warp Drive Maint
 pick
-go passages
-autopick on
+go security
+autopick off
+status
