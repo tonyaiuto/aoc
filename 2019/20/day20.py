@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from collections import defaultdict
+import copy
 import sys
 
 import map
@@ -35,6 +36,8 @@ class PlutoMaze(object):
       else:
         label_to_pos[label].append(pos)
     # print(label_to_pos)
+    assert self.is_pos_on_edge(self.start)
+    assert self.is_pos_on_edge(self.end)
     for l, pairs in label_to_pos.items():
       self.jumps[pairs[0]] = pairs[1]
       self.jumps[pairs[1]] = pairs[0]
@@ -53,8 +56,10 @@ class PlutoMaze(object):
   def is_pos_on_edge(self, pos):
     x = pos[0]
     y = pos[1]
-    return (x == 0 or x == self.maze.width-1
-            or y == 0 or y == self.maze.height-1)
+    ret = (x == 0 or x == self.maze.width-1
+           or y == 0 or y == self.maze.height-1)
+    # print('is_pos_on_edge(%s) => %s' % (pos, ret))
+    return ret
 
   def find_min_path(self):
     best_dist = self.maze.width * self.maze.height
@@ -116,6 +121,20 @@ def part1():
   assert 632 == best_dist
 
 
+class Context(object):
+  def __init__(self, context=None):
+    if context:
+      self.visited = copy.deepcopy(context.visited)
+      self.in_jumps = set(context.in_jumps)
+    else:
+      self.visited = {}
+      self.in_jumps = set()
+
+  def new_level(self, level):
+    if not self.visited.get(level):
+      self.visited[level] = dict()
+
+
 class RecursivePlutoMaze(PlutoMaze):
 
   def __init__(self):
@@ -123,13 +142,10 @@ class RecursivePlutoMaze(PlutoMaze):
 
   def find_min_path(self):
 
-    self.visited = {}
-    self.visited[0] = dict()
-    self.portals_used = set()
-
     best_dist = None
+    context = Context()
     for dist,more in self.walk_path(
-        self.start, self.end, self.visited[0], set(), dist=0, level=0):
+        self.start, self.end, context, dist=0, level=0):
       print(dist, more)
       if more == 'end':
         if best_dist is None:
@@ -138,56 +154,60 @@ class RecursivePlutoMaze(PlutoMaze):
           best_dist = min(best_dist, dist)
     return best_dist
 
-  def walk_path(self, pos, end, visited, in_jumps, dist, level):
+  def walk_path(self, pos, end, context, dist, level):
 
     while True:
       if pos == end and level == 0:
         yield dist, 'end'
-      visited[pos] = dist
-      moves = self.maze.get_moves(pos, visited)
-      jump = self.jumps.get(pos)
-      if jump and jump in visited:
-        jump = None
-      print('at level', level, pos, 'dist', dist, 'moves', moves)
+      context.visited[pos] = dist
+      moves = self.maze.get_moves(pos, context.visited)
+
+      jump = None
+      if not self.is_pos_on_edge(pos) or level != 0:
+        jump = self.jumps.get(pos)
+        if jump:
+          if jump in context.visited:
+            jump = None
+      if jump and not self.is_pos_on_edge(pos):
+        # inner jump
+        if pos in context.in_jumps:
+          print('would recurse on', pos, self.maze.portals[pos])
+          jump = None
+        context.in_jumps.add(pos)
+
       if not moves and not jump:
         break
+      print('at level', level, pos, 'dist', dist, 'moves', moves, 'jump', jump)
       dist += 1
       if len(moves) == 1 and not jump:
         pos = moves[0]
         continue
       for branch in moves:
         for n_dist, more in self.walk_path(
-            branch, end, self.visited[level], set(in_jumps), dist, level=level):
+            branch, end, Context(context), dist, level=level):
           yield n_dist, more
 
       if jump:
-        if self.is_pos_on_edge(jump):
+        if self.is_pos_on_edge(pos):
           # outer jump
           if level == 0:
+            print('=========== Can not jump out from level 0', pos)
             return
           new_level = level - 1
-          print('Jump out', jump, self.maze.portals[jump], 'level', level-1)
+          print('Jump out', jump, self.maze.portals[jump], 'to level', new_level)
+          for n_dist, more in self.walk_path(
+              jump, end, context, dist=dist, level=new_level):
+            yield n_dist, more
         else:
-          # inner jump
-          if jump in in_jumps:
-            print('would recurse on', jump, self.maze.portals[jump])
-            yield -1, 'recurse'
-            return
-          in_jumps.add(jump)
-
           new_level = level + 1
-          print('Jump in', jump, self.maze.portals[jump], 'level', new_level)
-          if not self.visited.get(new_level):
-            self.visited[new_level] = dict()
+          print('Jump in', jump, self.maze.portals[jump], 'to level', new_level)
+          context.new_level(new_level)
 
           # mark the jumping off point as visited so we do not go deeper
-          self.visited[new_level][pos] = dist
-
-        print('shift to level', level, pos, '=>', jump)
-        sys.stdout.flush()
-        for n_dist, more in self.walk_path(
-            jump, end, self.visited[new_level], set(in_jumps), dist=dist, level=new_level):
-          yield n_dist, more
+          # XXXX context.visited[new_level][pos] = dist
+          for n_dist, more in self.walk_path(
+              jump, end, context, dist=dist, level=new_level):
+            yield n_dist, more
       break
     yield -1, 'dead end'
 
