@@ -66,8 +66,6 @@ class Map(object):
     # computed at load
     self.walls = set()
     self.points = {}
-    self.edge_portals = {}
-    self.interior_portals = {}
     self.portals = {}
     # transient
     self.trace = False
@@ -93,25 +91,22 @@ class Map(object):
     self.is_occupied = set()
     self.height = -self.label_width
     self.width = 0
-    pre_lines = [None]
     last1 = None
     last2 = None
     last3 = None
     for line in s.split('\n'):
       if line == '':
         continue
-      x = 0
-      if self.height < 0:
-        # pre_lines.append(line[self.label_width:-self.label_width])
-        pre_lines.append(line)
-        self.height += 1
-        continue
 
+      # rolling buffer for vertical labels
       last1 = last2
       last2 = last3
       last3 = line
-      if self.label_width > 0 and self.height >= self.label_width:
-        self.extract_labels([last1, last2, last3], self.height)
+      if self.height < 0:
+        self.height += 1
+        continue
+
+      x = 0
       for c in line[self.label_width:-self.label_width]:
         if c == self.wall:
           self.walls.add((x, self.height))
@@ -122,17 +117,15 @@ class Map(object):
           else:
             self.points[(x, self.height)] = c
         x += 1
+
+      if self.label_width > 0 and self.height >= 0:
+        self.extract_labels([last1, last2, last3], self.height)
       self.height += 1
 
-    # get the top and bottom labels
     if self.label_width:
-      pre_lines[0] = ' ' * (self.width + self.label_width * 2)
-      self.extract_labels(pre_lines, -1)
-      self.extract_labels(
-          [last2, last3, ' ' * (self.width + self.label_width * 2)],
-          self.height-1)
       self.height -= self.label_width
 
+    """XXX
     # fix the right edge portals
     for pos in list(self.portals):
       if pos[0] == -1:
@@ -140,36 +133,30 @@ class Map(object):
         del self.portals[pos]
         pos = (self.width, pos[1])
         self.portals[pos] = label
-        if label in self.edge_portals:
-          self.edge_portals[label] = pos
-        if label in self.interior_portals:
-          self.interior_portals[label] = pos
-
-    print(self.portals)
+    """
 
 
   def extract_labels(self, lines, y):
-    # Note that y is the scan line, which is past height for bottom label
-    # print(lines)
+    # x includes the margins
+    # y is the scan line, which is past height for bottom label print(lines)
     for x in range(self.width):
-      label = ''.join(lines[row][x] for row in range(self.label_width+1))
+      x_i = self.label_width + x
+      label = ''.join(lines[row][x_i] for row in range(self.label_width+1))
       # label = ''.join([c if c.isalpha() else ' ' for c in label])
       label = label.replace('#', ' ')
       if len(label.replace('.', '').strip()) > 1:
         # print(x, y, '|%s|' % label, label[:-self.label_width])
-        if label[0] == ' ':
-          self.portals[(x-self.label_width, y+1)] = label[1:].strip()
-        elif label[self.label_width] == ' ':
-          self.portals[(x-self.label_width, y-self.label_width)] = label[0:self.label_width].strip()
+        if label[0] == '.':
+          self.portals[(x, y-self.label_width)] = label[1:]
+        elif label[self.label_width] == '.':
+          self.portals[(x, y)] = label[0:self.label_width]
         else:
            # raise Exception('Bad label <%s> from lines: %s' % (label, lines))
            pass
 
     for x in range(self.width + self.label_width):
       label = lines[-1][x:x+self.label_width+1]
-      if y == 8:
-        print('XXXXX |%s|' % label)
-      if label[0] in self.open and label[1].isalpha() and label[2].isalpha():
+      if label[0] == '.' and label[1].isalpha() and label[2].isalpha():
         # .AB 
         # print('   ==>', label[1:])
         self.portals[(x-self.label_width, y)] = label[1:]
@@ -179,6 +166,17 @@ class Map(object):
 
 
   def print(self):
+    if self.portals:
+      print('Portals:')
+      line = ''
+      for i, pos in enumerate(sorted(self.portals)):
+         line += '    (%2d, %2d) => %s' % (pos[0], pos[1], self.portals[pos])
+         if i % 4 == 3:
+           print(line)
+           line = ''
+      if line:
+        print(line)
+
     margin = '  ' + ' ' * self.label_width
     print(margin + ' ',
           ''.join(['        %2d' % d for d in range(1, self.width // 10 + 1)]))
@@ -199,6 +197,8 @@ class Map(object):
         pos = (x, y)
         line[x] = self.wall if pos in self.walls else (
             self.points.get(pos) or self.filler)
+        if pos in self.portals:
+          line[x] = '*'
       trailer = ''
       if self.label_width > 0:
         trailer = self.portals.get((self.width, y)) or ''
@@ -207,6 +207,9 @@ class Map(object):
       line1, line2 = self._prep_labels(self.height-1)
       print('  ', ''.join(line1))
       print('  ', ''.join(line2))
+    print(margin + ' ',
+          ''.join(['        %2d' % d for d in range(1, self.width // 10 + 1)]))
+    print(margin, ('0123456789' * (self.width // 10 + 1))[0:self.width])
 
   def _prep_labels(self, y):
     line1 = [' '] * (self.width + self.label_width*2)

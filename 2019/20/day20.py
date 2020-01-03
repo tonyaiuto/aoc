@@ -28,8 +28,8 @@ class PlutoMaze(object):
     self.end = self.label_to_pos['ZZ'][0]
 
     def change_to_walls(pos, v):
-      if v not in ('#', '.'):
-        self.maze.walls.add(pos)
+      if v and v not in ('#', '.'):
+        del self.maze.points[pos]
 
     self.maze.for_each_cell(change_to_walls)
 
@@ -37,10 +37,13 @@ class PlutoMaze(object):
   def print(self):
     self.maze.print()
 
-  def find_paths(self):
- 
+  def find_min_path(self):
+    best_dist = self.maze.width * self.maze.height
     for dist,more in self.walk_path(self.start, self.end, dict(), 0):
       print(dist, more)
+      if more == 'end':
+        best_dist = min(best_dist, dist)
+    return best_dist
 
 
   def walk_path(self, pos, end, visited, dist):
@@ -51,10 +54,10 @@ class PlutoMaze(object):
       visited[pos] = dist
       moves = self.maze.get_moves(pos, visited)
       jump = self.jumps.get(pos)
-      if jump:
-        print('JUMP', jump)
+      if jump and jump not in visited:
+        # print('JUMP', jump)
         moves.append(jump)
-      print('at', pos, 'dist', dist, 'moves', moves)
+      # print('at', pos, 'dist', dist, 'moves', moves)
       if not moves:
         break
       dist += 1
@@ -72,8 +75,14 @@ def test_part1():
   maze = PlutoMaze()
   maze.load('sample20_1.txt')
   maze.print()
+  best_dist = maze.find_min_path()
+  assert 23 == best_dist
+
+  maze = PlutoMaze()
+  maze.load('sample20_2.txt')
   maze.print()
-  maze.find_paths()
+  best_dist = maze.find_min_path()
+  assert 58 == best_dist
 
 
 
@@ -81,15 +90,12 @@ def part1():
   maze = PlutoMaze()
   maze.load('input_20.txt')
   maze.print()
-  print()
-  print('After dead end removal')
-  maze.print()
-
   print('========================================')
-
-  # print('part1:', alignment)
-  # assert 3428 == alignment
+  best_dist = maze.find_min_path()
+  print('part1:', best_dist)
+  assert 632 == best_dist
 
 
 if __name__ == '__main__':
   test_part1()
+  part1()
