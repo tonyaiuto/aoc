@@ -127,9 +127,12 @@ class Context(object):
     if context:
       self.visited = copy.deepcopy(context.visited)
       self.in_jumps = set(context.in_jumps)
+      self.level = context.level
     else:
       self.visited = {}
+      self.visited[0] = {}
       self.in_jumps = set()
+      self.level = 0
 
   def new_level(self, level):
     if not self.visited.get(level):
@@ -160,25 +163,36 @@ class RecursivePlutoMaze(PlutoMaze):
     while True:
       if pos == end and level == 0:
         yield dist, 'end'
-      context.visited[pos] = dist
-      moves = self.maze.get_moves(pos, context.visited)
 
-      jump = None
-      if not self.is_pos_on_edge(pos) or level != 0:
-        jump = self.jumps.get(pos)
-        if jump:
-          if jump in context.visited:
+      context.visited[level][pos] = dist
+      moves = self.maze.get_moves(pos, context.visited[level])
+
+      at_edge = self.is_pos_on_edge(pos)
+      jump = self.jumps.get(pos)
+      if jump:
+        if at_edge:
+          if level == 0:
+            jump = None  # Can not jump out of level 0
+          else:
+            # Do not backtrack
+            if jump in context.visited[level-1]:
+              jump = None
+        else:  # inner jump
+          if context.visited.get(level+1) and jump in context.visited[level+1]:
             jump = None
-      if jump and not self.is_pos_on_edge(pos):
-        # inner jump
-        if pos in context.in_jumps:
-          print('would recurse on', pos, self.maze.portals[pos])
-          jump = None
-        context.in_jumps.add(pos)
+          if pos in context.in_jumps:
+            print('would recurse on', pos, self.maze.portals[pos])
+            jump = None
+          context.in_jumps.add(pos)
 
       if not moves and not jump:
         break
+
       print('at level', level, pos, 'dist', dist, 'moves', moves, 'jump', jump)
+      if moves and jump:
+        print('====== this Should not happen')
+      assert not (moves and jump)
+
       dist += 1
       if len(moves) == 1 and not jump:
         pos = moves[0]
@@ -196,8 +210,6 @@ class RecursivePlutoMaze(PlutoMaze):
           level = level + 1
           print('Jump in', jump, self.maze.portals[jump], 'to level', level)
           context.new_level(level)
-          # mark the jumping off point as visited so we do not go deeper
-          # XXXX context.visited[level][pos] = dist
         pos = jump
         continue
 
@@ -225,7 +237,6 @@ def test_part2():
   maze.print()
   best_dist = maze.find_min_path()
   assert None == best_dist
-
 
   maze = RecursivePlutoMaze()
   maze.load('sample20_3.txt')
