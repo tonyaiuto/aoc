@@ -100,6 +100,18 @@ class Map(object):
         pos = (x, y)
         func(pos, self.cell(pos))
 
+  def neighbors(self, pos):
+    x = X(pos)
+    y = Y(pos)
+    if x > 0:
+      yield (x-1, y)
+    if x < self.width-1:
+      yield (x+1, y)
+    if y > 0:
+      yield (x, y-1)
+    if y < self.height-1:
+      yield (x, y+1)
+
   def load_from_string(self, s):
     self.positions = []
     self.is_occupied = set()
@@ -244,7 +256,7 @@ class Map(object):
         if content not in self.open:
           continue
         n_walls = 0
-        for neighbor in neighbors(pos):
+        for neighbor in self.neighbors(pos):
           if neighbor in self.walls:
             n_walls += 1
             if neighbor in self.points and self.points[neighbor] in self.open:
@@ -263,7 +275,7 @@ class Map(object):
   def get_moves(self, pos, visited):
     ret = []
     # print('getmoves, visited', visited.keys())
-    for neighbor in neighbors(pos):
+    for neighbor in self.neighbors(pos):
       n = self.points.get(neighbor)
       if (n
           and (neighbor not in self.walls)

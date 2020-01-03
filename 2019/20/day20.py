@@ -43,6 +43,7 @@ class PlutoMaze(object):
       self.jumps[pairs[1]] = pairs[0]
 
     self.maze.close_dead_ends()
+    self.maze.print()
 
     def change_to_walls(pos, v):
       if v and v not in ('#', '.'):
@@ -182,33 +183,31 @@ class RecursivePlutoMaze(PlutoMaze):
       if len(moves) == 1 and not jump:
         pos = moves[0]
         continue
-      for branch in moves:
-        for n_dist, more in self.walk_path(
-            branch, end, Context(context), dist, level=level):
-          yield n_dist, more
 
       if jump:
         if self.is_pos_on_edge(pos):
           # outer jump
           if level == 0:
             print('=========== Can not jump out from level 0', pos)
-            return
-          new_level = level - 1
-          print('Jump out', jump, self.maze.portals[jump], 'to level', new_level)
-          for n_dist, more in self.walk_path(
-              jump, end, context, dist=dist, level=new_level):
-            yield n_dist, more
+            yield -1, 'jumpout'
+          level = level - 1
+          print('Jump out', jump, self.maze.portals[jump], 'to level', level)
         else:
-          new_level = level + 1
-          print('Jump in', jump, self.maze.portals[jump], 'to level', new_level)
-          context.new_level(new_level)
-
+          level = level + 1
+          print('Jump in', jump, self.maze.portals[jump], 'to level', level)
+          context.new_level(level)
           # mark the jumping off point as visited so we do not go deeper
-          # XXXX context.visited[new_level][pos] = dist
+          # XXXX context.visited[level][pos] = dist
+        pos = jump
+        continue
+
+      if moves:
+        for branch in moves:
           for n_dist, more in self.walk_path(
-              jump, end, context, dist=dist, level=new_level):
+              branch, end, Context(context), dist, level=level):
             yield n_dist, more
-      break
+        break
+
     yield -1, 'dead end'
 
 
@@ -216,6 +215,8 @@ def test_part2():
   maze = RecursivePlutoMaze()
   maze.load('sample20_1.txt')
   maze.print()
+  assert maze.maze.width == 17
+  assert maze.maze.height == 15
   best_dist = maze.find_min_path()
   assert 26 == best_dist
 
@@ -245,6 +246,6 @@ def part2():
 
 
 if __name__ == '__main__':
-  #test_part1()
+  test_part1()
   #part1()
   test_part2()
