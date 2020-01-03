@@ -131,17 +131,43 @@ class Context(object):
       self.visited = copy.deepcopy(context.visited)
       self.in_jumps = set(context.in_jumps)
       self.level = context.level
+      self.inbound_labels = copy.deepcopy(context.inbound_labels)
+      self.label = '%d.%d=>%s' % (
+          self.level, Context.next_label[self.level], context.label)
+      self.label = '%d.%d' % (self.level, Context.next_label[self.level])
     else:
       self.visited = {}
       self.visited[0] = {}
       self.in_jumps = set()
+      self.inbound_labels = {}
       self.level = 0
-    self.label = '%d.%d' % (self.level, Context.next_label[self.level])
+      self.label = '%d.%d' % (self.level, Context.next_label[self.level])
     Context.next_label[self.level] += 1
 
   def ensure_level(self, level):
     if level not in self.visited:
       self.visited[level] = dict()
+
+
+  def would_recursion_loop(self, label):
+    """
+    Jump in (40, 23) ('IC', 'RF') to level 19
+    =Check for recursion at 12 ['CJ', 'OA', 'XF', 'CK', 'ZH', 'WB', 'IC', 'RF'] in ['AA', 'XF', 'CK', 'ZH', 'WB', 'IC', 'RF', 'NM', 'LP', 'FD', 'XQ', 'RE', 'CJ', 'OA', 'XF', 'CK', 'ZH', 'WB', 'IC']
+    =would NOT recurse on (34, 19) ('IC', 'RF')
+    would recurse on (34, 19) ('IC', 'RF')
+    """
+
+    stack = [self.inbound_labels[i] for i in range(self.level)]
+    if len(stack) < 4:
+      return False
+
+    pattern = stack[-3:]
+    print('=Check for recursion of', pattern, 'in', stack)
+    l_targ = len(pattern)
+    for start in range(self.level - l_targ - 1):
+      if stack[start:start+l_targ] == pattern:
+        return True
+    return False
 
 
 class RecursivePlutoMaze(PlutoMaze):
@@ -153,6 +179,7 @@ class RecursivePlutoMaze(PlutoMaze):
 
     best_dist = None
     context = Context()
+    context.inbound_labels[0] = 'AA'
     for dist,more in self.walk_path(
         self.start, self.end, context, dist=0, depth=0):
       print(dist, more)
@@ -164,6 +191,10 @@ class RecursivePlutoMaze(PlutoMaze):
     return best_dist
 
   def walk_path(self, pos, end, context, dist, depth):
+
+    if depth > 50:
+      sys.exit(2)
+      return
 
     while True:
       if pos == end and context.level == 0:
@@ -190,8 +221,6 @@ class RecursivePlutoMaze(PlutoMaze):
       if not moves and not jump:
         break
 
-      print('at level', context.level, pos, 'dist', dist, 'moves', moves,
-            'jump', jump, 'depth', depth, 'context', context.label)
       if moves and jump:
         print('====== this Should not happen')
       assert not (moves and jump)
@@ -201,23 +230,36 @@ class RecursivePlutoMaze(PlutoMaze):
         pos = moves[0]
         continue
 
+      print('at level', context.level, pos, 'dist', dist, 'moves', moves,
+            'jump', jump, 'depth', depth, 'context', context.label)
+
       if jump:
+        jump_label = self.maze.portals[jump]
+        # context = Context(context)
         if at_edge:
           # outer jump
           context.level -= 1
-          print('Jump out', jump, self.maze.portals[jump], 'to level', context.level)
-          if context.level == 0:
+          print('Jump out', jump, jump_label, 'to level', context.level)
+          if context.level == 0 and jump != self.end:
             print('=========== Can not jump out from level 0', pos)
             yield -1, 'jumpout'
             break
         else:
+          jtag = (context.inbound_labels[context.level], jump_label)
           context.level += 1
-          print('Jump in', jump, self.maze.portals[jump], 'to level', context.level)
-          if pos in context.in_jumps:
-            print('would recurse on', pos, self.maze.portals[pos])
+          print('Jump in', jump, jtag, 'to level', context.level)
+          if context.would_recursion_loop(jump_label):
+            print('=would contxt recurse on', pos, jtag)
             yield -1, 'recurse'
             break
-          context.in_jumps.add(pos)
+          else:
+            print('=would NOT recurse on', pos, jtag)
+          if jtag in context.in_jumps:
+            print('would recurse on', pos, jtag)
+            #yield -1, 'recurse'
+            #break
+          context.in_jumps.add(jtag)
+        context.inbound_labels[context.level] = jump_label
         pos = jump
         continue
 
@@ -229,7 +271,7 @@ class RecursivePlutoMaze(PlutoMaze):
             yield n_dist, more
         return
 
-    yield -1, ('=dead end %s' % str(pos))
+    yield -1, ('=dead end %s, level %d' % (str(pos), context.level))
 
 
 def test_part2():
