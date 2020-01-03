@@ -9,23 +9,36 @@ class PlutoMaze(object):
 
   def __init__(self):
     self.maze = map.Map(label_width=2, open=['.'], ignore=[' '])
+    self.jumps = {}
+    self.start = None
+    self.end = None
+
+  def clone(self):
+    ret = PlutoMaze()
+    ret.maze = self.maze.clone()
+    ret.jumps = dict(self.jumps)
+    ret.start = self.start
+    ret.end = self.end
+    return ret
 
   def load(self, file):
+    # Load the maze and make it ready to work with
     self.maze.load(file)
-    self.label_to_pos = defaultdict(list)
+
+    label_to_pos = defaultdict(list)
     for pos, label in self.maze.portals.items():
-      self.label_to_pos[label].append(pos)
-    # print(self.label_to_pos)
-    self.jumps = {}
-    for l, pairs in self.label_to_pos.items():
-      if len(pairs) == 2:
-        self.jumps[pairs[0]] = pairs[1]
-        self.jumps[pairs[1]] = pairs[0]
+      if label == 'AA':
+        self.start = pos
+      elif label == 'ZZ':
+        self.end = pos
+      else:
+        label_to_pos[label].append(pos)
+    # print(label_to_pos)
+    for l, pairs in label_to_pos.items():
+      self.jumps[pairs[0]] = pairs[1]
+      self.jumps[pairs[1]] = pairs[0]
 
     self.maze.close_dead_ends()
-
-    self.start = self.label_to_pos['AA'][0]
-    self.end = self.label_to_pos['ZZ'][0]
 
     def change_to_walls(pos, v):
       if v and v not in ('#', '.'):
@@ -87,6 +100,21 @@ def test_part1():
 
 
 def part1():
+  maze = PlutoMaze()
+  maze.load('input_20.txt')
+  maze.print()
+  print('========================================')
+  best_dist = maze.find_min_path()
+  print('part1:', best_dist)
+  assert 632 == best_dist
+
+  # check that clone works
+  m2 = maze.clone()
+  best_dist = m2.find_min_path()
+  assert 632 == best_dist
+
+
+def part2():
   maze = PlutoMaze()
   maze.load('input_20.txt')
   maze.print()

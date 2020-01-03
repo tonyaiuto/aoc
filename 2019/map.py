@@ -70,6 +70,20 @@ class Map(object):
     # transient
     self.trace = False
 
+  def clone(self):
+    ret = Map()
+    ret.width = self.width
+    ret.height = self.height
+    ret.wall = self.wall
+    ret.open = set(self.open)
+    ret.ignore = set(self.ignore)
+    ret.label_width = self.label_width
+    ret.filler = self.filler
+    ret.walls = set(self.walls)
+    ret.points = dict(self.points)
+    ret.portals = dict(self.portals)
+    return ret
+
   def load(self, path):
     with open(path, 'r') as inp:
       self.load_from_string(inp.read())
