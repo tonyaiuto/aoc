@@ -128,43 +128,46 @@ class Context(object):
 
   def __init__(self, context=None):
     if context:
-      self.visited = copy.deepcopy(context.visited)
-      self.in_jumps = set(context.in_jumps)
       self.level = context.level
-      self.inbound_labels = copy.deepcopy(context.inbound_labels)
+      self.visited = copy.deepcopy(context.visited)
+      self.jump_labels = copy.deepcopy(context.jump_labels)
+      self.in_jumps = set(context.in_jumps)
       self.label = '%d.%d=>%s' % (
           self.level, Context.next_label[self.level], context.label)
       self.label = '%d.%d' % (self.level, Context.next_label[self.level])
     else:
-      self.visited = {}
-      self.visited[0] = {}
-      self.in_jumps = set()
-      self.inbound_labels = {}
+      self.visited = [{}] * 5
       self.level = 0
+      self.visited[0] = {}
+      self.jump_labels = []
+      self.in_jumps = set()
       self.label = '%d.%d' % (self.level, Context.next_label[self.level])
     Context.next_label[self.level] += 1
 
   def ensure_level(self, level):
-    if level not in self.visited:
-      self.visited[level] = dict()
+    for _ in range(level - len(self.visited) + 1):
+      self.visited.append(dict())
 
+  def would_recursion_loop(self, label, indent=''):
 
-  def would_recursion_loop(self, label):
-    """
-    Jump in (40, 23) ('IC', 'RF') to level 19
-    =Check for recursion at 12 ['CJ', 'OA', 'XF', 'CK', 'ZH', 'WB', 'IC', 'RF'] in ['AA', 'XF', 'CK', 'ZH', 'WB', 'IC', 'RF', 'NM', 'LP', 'FD', 'XQ', 'RE', 'CJ', 'OA', 'XF', 'CK', 'ZH', 'WB', 'IC']
-    =would NOT recurse on (34, 19) ('IC', 'RF')
-    would recurse on (34, 19) ('IC', 'RF')
-    """
+    LOOP_DETECT = 4
 
-    stack = [self.inbound_labels[i] for i in range(self.level)]
-    if len(stack) < 4:
+    stack = self.jump_labels
+    if len(stack) < LOOP_DETECT * 2 + 1:
       return False
 
-    pattern = stack[-3:]
-    print('=Check for recursion of', pattern, 'in', stack)
+    last = stack[-1]
+    pattern = None
+    for targ in range(len(stack)-3, LOOP_DETECT, -1):
+      if stack[targ] == last:
+        pattern = stack[targ+1:]
+        break
+    if not pattern:
+      return False
+
+    print(indent, '=Check for recursion of', pattern, 'in', stack)
     l_targ = len(pattern)
-    for start in range(self.level - l_targ - 1):
+    for start in range(len(stack) - l_targ - 2):
       if stack[start:start+l_targ] == pattern:
         return True
     return False
@@ -179,7 +182,7 @@ class RecursivePlutoMaze(PlutoMaze):
 
     best_dist = None
     context = Context()
-    context.inbound_labels[0] = 'AA'
+    context.jump_labels.append('AA')
     for dist,more in self.walk_path(
         self.start, self.end, context, dist=0, depth=0):
       print(dist, more)
@@ -193,8 +196,11 @@ class RecursivePlutoMaze(PlutoMaze):
   def walk_path(self, pos, end, context, dist, depth):
 
     if depth > 50:
-      sys.exit(2)
+      yield -2, 'depth'
+      # sys.exit(2)
       return
+
+    indent = '  ' * depth
 
     while True:
       if pos == end and context.level == 0:
@@ -230,41 +236,48 @@ class RecursivePlutoMaze(PlutoMaze):
         pos = moves[0]
         continue
 
-      print('at level', context.level, pos, 'dist', dist, 'moves', moves,
-            'jump', jump, 'depth', depth, 'context', context.label)
+      print(indent, 'at level', context.level, pos, 'dist', dist,
+            'moves', moves, 'jump', jump, 'depth', depth,
+            'context',context.label)
 
       if jump:
         jump_label = self.maze.portals[jump]
-        # context = Context(context)
+        jtag = (context.jump_labels[-1], jump_label)
         if at_edge:
           # outer jump
-          context.level -= 1
-          print('Jump out', jump, jump_label, 'to level', context.level)
           if context.level == 0 and jump != self.end:
             print('=========== Can not jump out from level 0', pos)
             yield -1, 'jumpout'
             break
+          context.level -= 1
+          print(indent, 'Jump out', jump, jump_label, 'to level', context.level)
+          context.jump_labels.append(0)
         else:
-          jtag = (context.inbound_labels[context.level], jump_label)
-          context.level += 1
-          print('Jump in', jump, jtag, 'to level', context.level)
-          if context.would_recursion_loop(jump_label):
-            print('=would contxt recurse on', pos, jtag)
+          print(indent, 'Jump in', jump, jtag, 'to level', context.level+1)
+          if context.would_recursion_loop(jump_label, indent=indent):
+            print('=would context recurse on', pos, jtag)
             yield -1, 'recurse'
             break
           else:
-            print('=would NOT recurse on', pos, jtag)
+            print(indent, '=would NOT context recurse on', pos, jtag)
+
+          context.level += 1
+          context.jump_labels.append(1)
+          """
           if jtag in context.in_jumps:
-            print('would recurse on', pos, jtag)
-            #yield -1, 'recurse'
-            #break
+            print(indent, 'would recurse on', pos, jtag)
+            yield -1, 'recurse'
+            break
           context.in_jumps.add(jtag)
-        context.inbound_labels[context.level] = jump_label
+          """
+        # context.jump_labels[context.level] = jump_label
+        context.jump_labels.append(jump_label)
+
         pos = jump
         continue
 
       if moves:
-        print('=forking context at depth', depth)
+        print(indent, '=forking context at depth', depth)
         for branch in moves:
           for n_dist, more in self.walk_path(
               branch, end, Context(context), dist, depth=depth+1):
