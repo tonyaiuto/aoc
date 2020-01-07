@@ -206,6 +206,7 @@ class RecursivePlutoMaze(PlutoMaze):
       return
 
     indent = '  ' * depth
+    last_pos = None
 
     while True:
       if pos == end and context.level == 0:
@@ -214,26 +215,25 @@ class RecursivePlutoMaze(PlutoMaze):
       context.visited[context.level][pos] = dist
       moves = self.maze.get_moves(pos, context.visited[context.level])
 
-      at_edge = self.is_pos_on_edge(pos)
       jump = self.jumps.get(pos)
+      at_edge = self.is_pos_on_edge(pos)
+      if jump and jump == last_pos:
+        jump = None
       if jump:
         if at_edge:
           if context.level == 0 and jump != end:
             jump = None  # Can not jump out of level 0
-          else:
-            # Do not backtrack
-            if jump in context.visited[context.level-1]:
-              jump = None
         else:  # inner jump
           context.ensure_level(context.level+1)
-          if jump in context.visited[context.level+1]:
-            jump = None
 
       if not moves and not jump:
         break
 
       if moves and jump:
-        print('====== this Should not happen')
+        print('====== this should not happen')
+        print(indent, 'at level', context.level, pos, 'dist', dist,
+              'moves', moves, 'jump', jump, 'depth', depth,
+              'context',context.label)
       assert not (moves and jump)
 
       dist += 1
@@ -269,6 +269,7 @@ class RecursivePlutoMaze(PlutoMaze):
           context.jump_labels.append(1)
         context.jump_labels.append(jump_label)
 
+        last_pos = pos
         pos = jump
         continue
 
