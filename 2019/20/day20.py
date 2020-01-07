@@ -213,7 +213,7 @@ class RecursivePlutoMaze(PlutoMaze):
       jump = self.jumps.get(pos)
       if jump:
         if at_edge:
-          if context.level == 0:
+          if context.level == 0 and jump != end:
             jump = None  # Can not jump out of level 0
           else:
             # Do not backtrack
