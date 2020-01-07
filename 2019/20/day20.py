@@ -165,9 +165,11 @@ class Context(object):
 
     print(indent, '=Check for recursion of', pattern, 'in', stack)
     l_targ = len(pattern)
-    for start in range(len(stack) - l_targ - 2):
+    for start in range(len(stack) - l_targ * 2 - 2):
       if stack[start:start+l_targ] == pattern:
-        return True
+        repeat = start + l_targ
+        if stack[repeat:repeat+l_targ] == pattern:
+          return True
     return False
 
 
@@ -257,14 +259,12 @@ class RecursivePlutoMaze(PlutoMaze):
           context.jump_labels.append(0)
         else:
           print(indent, 'Jump in', jump, jump_label, 'to level', context.level+1)
-          """
           if context.would_recursion_loop(jump_label, indent=indent):
             print('=would context recurse on', pos, jtag)
             yield -1, 'recurse='
             return
           else:
             print(indent, '=would NOT context recurse on', pos, jtag)
-          """
           context.level += 1
           context.jump_labels.append(1)
         context.jump_labels.append(jump_label)
