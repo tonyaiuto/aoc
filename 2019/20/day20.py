@@ -57,7 +57,7 @@ class PlutoMaze(object):
     overlay =  None
     if visited:
       overlay = {pos: 'v' for pos in visited}
-    self.maze.print(overlay=overlay)
+    self.maze.print(overlay=overlay, print_portals=not label)
 
   def is_pos_on_edge(self, pos):
     x = pos[0]
@@ -206,7 +206,6 @@ class RecursivePlutoMaze(PlutoMaze):
     return best_dist
 
   def walk_path(self, pos, end, context, dist, depth):
-
     """
     if depth > 50:
       yield -2, 'depth='
@@ -218,6 +217,8 @@ class RecursivePlutoMaze(PlutoMaze):
       return
 
     indent = '  ' * depth
+    print(indent, 'Start walk at level', context.level, pos, 'dist', dist,
+          'depth', depth, 'context',context.label)
     last_pos = None
 
     while True:
@@ -257,6 +258,9 @@ class RecursivePlutoMaze(PlutoMaze):
             'moves', moves, 'jump', jump, 'depth', depth,
             'context',context.label)
 
+      if pos == (21, 5):
+        self.print_context_slices(context, level=3)
+
       if jump:
         dbg_print_level = -1
         if context.level == 3:
@@ -287,23 +291,37 @@ class RecursivePlutoMaze(PlutoMaze):
         if context.level == 3:
           dbg_print_level = 3
         if dbg_print_level > 0:
-          self.print(
-              label='====================\nContext: %s' % context.lineage(),
-              visited=context.visited[dbg_print_level])
+          self.print_context_slice(context, dbg_print_level)
 
         last_pos = pos
         pos = jump
         continue
 
       if moves:
-        print(indent, '=forking context at depth', depth)
+        print(indent, '=forking context', context.label, 'at depth', depth)
         for branch in moves:
           for n_dist, more in self.walk_path(
               branch, end, Context(context), dist, depth=depth+1):
             yield n_dist, more
         return
 
-    yield -1, ('=dead end %s, level %d=' % (str(pos), context.level))
+    yield -1, ('=dead end at %s, level %d, context=%s=' % (
+               str(pos), context.level, context.label))
+
+  def print_context_slices(self, context, level):
+    while context:
+      self.print_context_slice(context, level)
+      context = context.parent
+
+  def print_context_slice(self, context, level):
+    self.print(
+        label='\n'.join([
+            '====================',
+            'Context: %s' % context.lineage(),
+            'Layer: %d' % level,
+        ]),
+        visited=context.visited[level])
+
 
 
 def test_part2():

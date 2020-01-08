@@ -181,8 +181,8 @@ class Map(object):
         self.portals[(x, y)] = label[0:self.label_width]
 
 
-  def print(self, overlay=None):
-    if self.portals:
+  def print(self, print_portals=True, overlay=None):
+    if print_portals and self.portals:
       print('Portals:')
       line = ''
       for i, pos in enumerate(sorted(self.portals)):
