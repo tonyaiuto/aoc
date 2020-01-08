@@ -11,6 +11,7 @@ class PlutoMaze(object):
 
   def __init__(self):
     self.maze = map.Map(label_width=2, open=['.'], ignore=[' '])
+    # jumps is a table of where you can jump to from this point
     self.jumps = {}
     self.start = None
     self.end = None
@@ -206,24 +207,37 @@ class RecursivePlutoMaze(PlutoMaze):
     return best_dist
 
   def walk_path(self, pos, end, context, dist, depth):
-    """
-    if depth > 50:
-      yield -2, 'depth='
-      return
-    """
 
+    # Prevent flame out when I mess up the code.
     if context.level > 20:
       yield -3, 'level='
       return
 
     indent = '  ' * depth
-    print(indent, 'Start walk at level', context.level, pos, 'dist', dist,
-          'depth', depth, 'context',context.label)
-    last_pos = None
 
+    jump_label = self.maze.portals.get(pos)
+    if jump_label:
+      via = 'from %s' % jump_label
+      at_edge = self.is_pos_on_edge(pos)
+      if at_edge:
+        dir = 'recurse into'
+      else:
+        dir = 'return to'
+    else:
+      dir = 'branching to'
+      via = ''
+    print(indent, 'Start walk:', dir,
+          'level %d (%s),' % (context.level, context.label),
+          'at', pos, 'dist', dist, via, 'depth', depth)
+
+    last_pos = None
     while True:
-      if pos == end and context.level == 0:
-        yield dist, 'END'
+      if pos == end:
+        if context.level == 0:
+          yield dist, 'END'
+        else:
+          yield -1, 'illegal end, level %d, via %s, %s' % (
+            context.level, self.maze.portals[pos], pos)
 
       context.visited[context.level][pos] = dist
       moves = self.maze.get_moves(pos, context.visited[context.level])
@@ -236,6 +250,10 @@ class RecursivePlutoMaze(PlutoMaze):
         if at_edge:
           if context.level == 0 and jump != end:
             jump = None  # Can not jump out of level 0
+            print(indent, '=can not jump out from level 0', pos)
+            yield -1, 'illegal jumpout, level %d, via %s, %s' % (
+                context.level, self.maze.portals[pos], pos)
+            return
         else:  # inner jump
           context.ensure_level(context.level+1)
 
