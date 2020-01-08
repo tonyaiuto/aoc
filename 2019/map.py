@@ -62,7 +62,7 @@ class Map(object):
     self.open = open or set(['.'])
     self.ignore = ignore or set()
     self.label_width = label_width
-    self.filler = '_'
+    self.filler = ' '
     # computed at load
     self.walls = set()
     self.points = {}
@@ -151,16 +151,6 @@ class Map(object):
     if self.label_width:
       self.height -= self.label_width
 
-    """XXX
-    # fix the right edge portals
-    for pos in list(self.portals):
-      if pos[0] == -1:
-        label = self.portals[pos]
-        del self.portals[pos]
-        pos = (self.width, pos[1])
-        self.portals[pos] = label
-    """
-
 
   def extract_labels(self, lines, y):
     # x includes the margins
@@ -191,7 +181,7 @@ class Map(object):
         self.portals[(x, y)] = label[0:self.label_width]
 
 
-  def print(self):
+  def print(self, overlay=None):
     if self.portals:
       print('Portals:')
       line = ''
@@ -211,6 +201,7 @@ class Map(object):
       line1, line2 = self._prep_labels(0)
       print('  ', ''.join(line1))
       print('  ', ''.join(line2))
+
     for y in range(self.height):
       #if self.label_width > 0:
       #  line1, line2 = self._prep_labels(y)
@@ -221,14 +212,46 @@ class Map(object):
       line = [' '] * self.width
       for x in range(self.width):
         pos = (x, y)
-        line[x] = self.wall if pos in self.walls else (
+        cell = self.wall if pos in self.walls else (
             self.points.get(pos) or self.filler)
         if pos in self.portals:
-          line[x] = '*'
+          cell = '*'
+        if cell == self.filler:
+          portal = self.portals.get((x-2, y))
+          if portal:
+            line[x-1] = portal[0]
+            cell = portal[1]
+          portal = self.portals.get((x+2, y))
+          if portal:
+            cell = portal[0]
+          portal = self.portals.get((x+1, y))
+          if portal:
+            cell = portal[1]
+
+          portal = self.portals.get((x, y-1))
+          if portal:
+            cell = portal[0]
+          portal = self.portals.get((x, y-2))
+          if portal:
+            cell = portal[1]
+
+          portal = self.portals.get((x, y+2))
+          if portal:
+            cell = portal[0]
+          portal = self.portals.get((x, y+1))
+          if portal:
+            cell = portal[1]
+
+        if overlay:
+          o_val = overlay.get(pos)
+          if o_val:
+            cell = o_val
+        line[x] = cell
+
       trailer = ''
       if self.label_width > 0:
-        trailer = self.portals.get((self.width, y)) or ''
-      print(annotation + ''.join(line) + trailer)
+        trailer = self.portals.get((self.width-1, y)) or ' ' * self.label_width
+      print(annotation + ''.join(line) + trailer, '%2d' % y)
     if self.label_width > 0:
       line1, line2 = self._prep_labels(self.height-1)
       print('  ', ''.join(line1))
@@ -238,6 +261,8 @@ class Map(object):
     print(margin, ('0123456789' * (self.width // 10 + 1))[0:self.width])
 
   def _prep_labels(self, y):
+    # Does vertical labels
+    # y is top line of label
     line1 = [' '] * (self.width + self.label_width*2)
     line2 = [' '] * (self.width + self.label_width*2)
     for x in range(self.width):
