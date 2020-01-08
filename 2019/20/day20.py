@@ -51,8 +51,13 @@ class PlutoMaze(object):
 
     self.maze.for_each_cell(change_to_walls)
 
-  def print(self):
-    self.maze.print()
+  def print(self, label=None, visited=None):
+    if label:
+      print(label)
+    overlay =  None
+    if visited:
+      overlay = {pos: 'v' for pos in visited}
+    self.maze.print(overlay=overlay)
 
   def is_pos_on_edge(self, pos):
     x = pos[0]
@@ -134,13 +139,20 @@ class Context(object):
       self.label = '%d.%d=>%s' % (
           self.level, Context.next_label[self.level], context.label)
       self.label = '%d.%d' % (self.level, Context.next_label[self.level])
+      self.parent = context
     else:
       self.visited = [{}] * 5
       self.level = 0
       self.visited[0] = {}
       self.jump_labels = []
       self.label = '%d.%d' % (self.level, Context.next_label[self.level])
+      self.parent = None
     Context.next_label[self.level] += 1
+
+  def lineage(self):
+    if not self.parent:
+      return self.label
+    return '%s => %s' % (self.label, self.parent.lineage())
 
   def ensure_level(self, level):
     for _ in range(level - len(self.visited) + 1):
@@ -244,6 +256,9 @@ class RecursivePlutoMaze(PlutoMaze):
             'context',context.label)
 
       if jump:
+        dbg_print_level = -1
+        if context.level == 3:
+          dbg_print_level = 3
         jump_label = self.maze.portals[jump]
         jtag = (context.jump_labels[-1], jump_label)
         if at_edge:
@@ -268,6 +283,13 @@ class RecursivePlutoMaze(PlutoMaze):
           context.level += 1
           context.jump_labels.append(1)
         context.jump_labels.append(jump_label)
+
+        if context.level == 3:
+          dbg_print_level = 3
+        if dbg_print_level > 0:
+          self.print(
+              label='====================\nContext: %s' % context.lineage(),
+              visited=context.visited[dbg_print_level])
 
         pos = jump
         continue
