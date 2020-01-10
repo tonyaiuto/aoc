@@ -191,7 +191,7 @@ class RecursivePlutoMaze(PlutoMaze):
   def __init__(self):
     super(RecursivePlutoMaze, self).__init__()
 
-  def find_min_path(self):
+  def find_min_path_dfs(self):
 
     best_dist = None
     context = Context()
@@ -341,6 +341,111 @@ class RecursivePlutoMaze(PlutoMaze):
         visited=context.visited[level])
 
 
+  # BFS version
+  def find_min_path(self):
+
+    best_dist = None
+    context = Context()
+    print('look for end at', self.end)
+
+    heads = [(self.start, 0, 0)]
+    while heads:
+      print('====', len(heads), 'heads', heads[0:5])
+      new_heads = []
+      for (pos, level, dist) in sorted(heads, key=lambda x: x[1]):
+        jump_label = self.maze.portals.get(pos) or ''
+        if pos == self.end and level == 0:
+          print('Reached end at', pos, 'dist', dist)
+          return dist
+
+        if dist >= 400:
+          print('=== gone too far')
+          return None
+
+        print(' head', pos, 'level', level, 'dist', dist, jump_label)
+        moves = self.advance(pos, level, dist, context)
+        if not moves:  # dead end
+          continue
+        for (n_pos, n_level, n_dist) in moves:
+          if n_pos == self.end and n_level == 0:
+            print('Reached end at', pos, 'dist', dist)
+            return n_dist
+        new_heads.extend(moves)
+      heads = new_heads
+
+    return None
+
+  def advance(self, pos, level, dist, context, depth=0):
+
+    d = context.visited[level].get(pos, dist+1)
+    if dist >= d:
+      print('=reached', pos, level, 'at distances', d, dist)
+      return None
+    context.visited[level][pos] = dist
+
+    moves = self.maze.get_moves(pos, context.visited[level], dist=dist)
+    # print(moves)
+    jump = self.jumps.get(pos)
+    at_edge = self.is_pos_on_edge(pos)
+
+    if jump:
+      if at_edge:  # would jump out
+        if level == 0 and jump != self.end:
+          jump = None  # Can not jump out of level 0
+          print('  =can not jump out from level 0', pos)
+          jump = None
+        if level > 0:
+          d = context.visited[level-1].get(jump, dist+1)
+          if d < dist:
+            jump = None
+      else:  # inner jump
+        context.ensure_level(level+1)
+        d = context.visited[level+1].get(jump, dist+1)
+        if d < dist:
+          jump = None
+
+    if not moves and not jump:
+      print('=dead end', pos, level, dist)
+      return None
+
+    if moves and jump:
+      print('====== this should not happen: moves and jump')
+      print('at level', level, pos, 'dist', dist,
+            'moves', moves, 'jump', jump)
+    assert not (moves and jump)
+
+    dist += 1
+
+    #print('at level', level, pos, 'dist', dist,
+    #        'moves', moves, 'jump', jump, 'depth', depth,
+    #        'context',context.label)
+
+    if jump:
+      jump_label = self.maze.portals[jump]
+      if at_edge:
+        # outer jump
+        print('  Jump out', jump, jump_label, 'to level', level-1)
+        print('- Return to level', level-1, 'through', jump_label)
+        if level == 0 and jump != self.end:
+          print('=========== Can not jump out from level 0', pos)
+          return None
+        level -= 1
+      else:
+        print('  Jump in', jump, jump_label, 'to level', level+1)
+        print('- REcurse into level', level-1, 'thorugh', jump_label)
+        level += 1
+      return [(jump, level, dist)]
+
+    if moves:
+      if len(moves) > 1:
+        print('=forking at', pos, level, dist)
+      new_heads = [(branch, level, dist) for branch in moves]
+      print('  return', new_heads)
+      return new_heads
+
+    print('=dead end at %s, level %d=' % (str(pos), level))
+    return None, 0, 0, None
+
 
 def test_part2():
   maze = RecursivePlutoMaze()
@@ -362,7 +467,7 @@ def test_part2():
   maze.print()
   best_dist = maze.find_min_path()
   print('sample3 best', best_dist)
-  assert 100 <= best_dist
+  assert 396 <= best_dist
 
 
 def part2():

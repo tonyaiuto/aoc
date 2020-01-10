@@ -297,13 +297,17 @@ class Map(object):
       if not new_walls:
         break
 
-  def get_moves(self, pos, visited):
+  def get_moves(self, pos, visited, dist=-1):
     ret = []
     # print('getmoves, visited', visited.keys())
     for neighbor in self.neighbors(pos):
       n = self.points.get(neighbor)
-      if (n
-          and (neighbor not in self.walls)
-          and (neighbor not in visited.keys())):
-        ret.append(neighbor)
+      if n and (neighbor not in self.walls):
+        if dist >= 0:
+          n_dist = visited.get(neighbor, dist+1)
+          if n_dist > dist:
+            ret.append(neighbor)
+        else:
+          if neighbor not in visited:
+            ret.append(neighbor)
     return ret
