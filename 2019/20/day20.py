@@ -5,6 +5,7 @@ import copy
 import sys
 
 import map
+from watcher import watcher
 
 
 class PlutoMaze(object):
@@ -142,7 +143,7 @@ class Context(object):
       self.label = '%d.%d' % (self.level, Context.next_label[self.level])
       self.parent = context
     else:
-      self.visited = [{}] * 5
+      self.visited = [{}]
       self.level = 0
       self.visited[0] = {}
       self.jump_labels = []
@@ -158,6 +159,8 @@ class Context(object):
   def ensure_level(self, level):
     for _ in range(level - len(self.visited) + 1):
       self.visited.append(dict())
+    # print('ensure_level', level, len(self.visited))
+    assert level <= len(self.visited) - 1
 
   def would_recursion_loop(self, label, indent=''):
 
@@ -348,42 +351,55 @@ class RecursivePlutoMaze(PlutoMaze):
     context = Context()
     print('look for end at', self.end)
 
-    heads = [(self.start, 0, 0)]
+    dist = 0
+    level = 0
+    heads = [(self.start, level, ('AA', 0))]
     while heads:
-      print('====', len(heads), 'heads', heads[0:5])
+      print('==== dist', dist, len(heads), 'heads', heads[0:5])
       new_heads = []
-      for (pos, level, dist) in sorted(heads, key=lambda x: x[1]):
-        jump_label = self.maze.portals.get(pos) or ''
+      for (pos, level, level_entry_tag) in sorted(heads, key=lambda x: x[1]):
+
+        context.ensure_level(level)
+        prev_d = context.visited[level].get(pos, dist+1)
+        if dist >= prev_d:
+          print('===reached', pos, level, 'at distances', prev_d, dist)
+          # return None
+        context.visited[level][pos] = dist
+        #print('==set context.visited', pos, level, '=', dist)
+        #if len(context.visited) > 3:
+        #  if context.visited[3].get((19, 6)):
+        #    print('==WTF')
+
         if pos == self.end and level == 0:
-          print('Reached end at', pos, 'dist', dist)
+          print('===reached end at', pos, 'dist', dist)
           return dist
 
-        if dist >= 400:
+        if dist >= 10000:
           print('=== gone too far')
           return None
 
+        jump_label = self.maze.portals.get(pos) or ''
         print(' head', pos, 'level', level, 'dist', dist, jump_label)
-        moves = self.advance(pos, level, dist, context)
+        if jump_label == 'RE':
+          print('   ======= mark RE', pos, level)
+
+        moves = self.advance(pos, level, dist, level_entry_tag, context)
         if not moves:  # dead end
           continue
-        for (n_pos, n_level, n_dist) in moves:
+        for (n_pos, n_level, _) in moves:
           if n_pos == self.end and n_level == 0:
-            print('Reached end at', pos, 'dist', dist)
-            return n_dist
+            print('===will end at', pos, 'dist', dist + 1)
+            return dist + 1
         new_heads.extend(moves)
+      dist += 1
       heads = new_heads
 
+    print('===ran out of heads')
     return None
 
-  def advance(self, pos, level, dist, context, depth=0):
 
-    d = context.visited[level].get(pos, dist+1)
-    if dist >= d:
-      print('=reached', pos, level, 'at distances', d, dist)
-      return None
-    context.visited[level][pos] = dist
-
-    moves = self.maze.get_moves(pos, context.visited[level], dist=dist)
+  def advance(self, pos, level, dist, level_entry_tag, context):
+    moves = self.maze.get_moves(pos, context.visited[level])
     # print(moves)
     jump = self.jumps.get(pos)
     at_edge = self.is_pos_on_edge(pos)
@@ -397,12 +413,16 @@ class RecursivePlutoMaze(PlutoMaze):
         if level > 0:
           d = context.visited[level-1].get(jump, dist+1)
           if d < dist:
+            print('  =suppress out jump on distance', jump, level-1, d, dist)
             jump = None
+
       else:  # inner jump
         context.ensure_level(level+1)
         d = context.visited[level+1].get(jump, dist+1)
         if d < dist:
+          print('  =suppress in jump on distance', jump, level+1, d, dist)
           jump = None
+
 
     if not moves and not jump:
       print('=dead end', pos, level, dist)
@@ -414,37 +434,37 @@ class RecursivePlutoMaze(PlutoMaze):
             'moves', moves, 'jump', jump)
     assert not (moves and jump)
 
-    dist += 1
-
     #print('at level', level, pos, 'dist', dist,
-    #        'moves', moves, 'jump', jump, 'depth', depth,
-    #        'context',context.label)
+    #        'moves', moves, 'jump', jump)
 
     if jump:
       jump_label = self.maze.portals[jump]
+      e_name = level_entry_tag[0]
+      walk_dist = dist - level_entry_tag[1]
+      print('walk from %s to %s (%d steps)' % (e_name, jump_label, walk_dist))
       if at_edge:
         # outer jump
-        print('  Jump out', jump, jump_label, 'to level', level-1)
-        print('- Return to level', level-1, 'through', jump_label)
         if level == 0 and jump != self.end:
           print('=========== Can not jump out from level 0', pos)
           return None
         level -= 1
+        print('  Jump out', jump, jump_label, 'to level', level)
+        print('- Return to level', level, 'through', jump_label)
       else:
-        print('  Jump in', jump, jump_label, 'to level', level+1)
-        print('- REcurse into level', level-1, 'thorugh', jump_label)
         level += 1
-      return [(jump, level, dist)]
+        print('  Jump in', jump, jump_label, 'to level', level)
+        print('- Recurse into level', level, 'thorugh', jump_label)
+      return [(jump, level, (jump_label, dist+1))]
 
     if moves:
       if len(moves) > 1:
         print('=forking at', pos, level, dist)
-      new_heads = [(branch, level, dist) for branch in moves]
+      new_heads = [(branch, level, level_entry_tag) for branch in moves]
       print('  return', new_heads)
       return new_heads
 
     print('=dead end at %s, level %d=' % (str(pos), level))
-    return None, 0, 0, None
+    return None, 0, None
 
 
 def test_part2():
@@ -471,16 +491,19 @@ def test_part2():
 
 
 def part2():
-  maze = PlutoMaze()
+  maze = RecursivePlutoMaze()
   maze.load('input_20.txt')
   maze.print()
   print('========================================')
   best_dist = maze.find_min_path()
   print('part2:', best_dist)
-  assert 632 == best_dist
+  assert 632 <= best_dist
+  assert 901 <= best_dist
+  assert 7162 == best_dist
 
 
 if __name__ == '__main__':
   # test_part1()
   #part1()
-  test_part2()
+  # test_part2()
+  part2()
