@@ -5,7 +5,6 @@ import copy
 import sys
 
 import map
-from watcher import watcher
 
 
 class PlutoMaze(object):
