@@ -146,7 +146,6 @@ class Map(object):
             pass
           else:
             self.points[(x, self.height)] = c
-            print("self.points", x, self.height, c)
         x += 1
 
       if self.label_width > 0 and self.height >= 0:
