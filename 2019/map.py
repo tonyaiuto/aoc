@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import textwrap
 
 def need_turn(from_pos, dir, to):
   dx = to[0] - from_pos[0]
@@ -86,7 +87,7 @@ class Map(object):
 
   def load(self, path):
     with open(path, 'r') as inp:
-      self.load_from_string(inp.read())
+      self.load_from_string(inp.read(), dedent=False)
 
   def is_wall(self, pos):
     return pos in self.walls
@@ -112,7 +113,7 @@ class Map(object):
     if y < self.height-1:
       yield (x, y+1)
 
-  def load_from_string(self, s):
+  def load_from_string(self, s, dedent=True):
     self.positions = []
     self.is_occupied = set()
     self.height = -self.label_width
@@ -120,6 +121,8 @@ class Map(object):
     last1 = None
     last2 = None
     last3 = None
+    if dedent:
+      s = textwrap.dedent(s)
     for line in s.split('\n'):
       if line == '':
         continue
@@ -133,7 +136,8 @@ class Map(object):
         continue
 
       x = 0
-      for c in line[self.label_width:-self.label_width]:
+      end_of_line = -self.label_width if self.label_width > 0 else None
+      for c in line[self.label_width:end_of_line]:
         if c == self.wall:
           self.walls.add((x, self.height))
           self.width = max(self.width, x+1)
@@ -142,6 +146,7 @@ class Map(object):
             pass
           else:
             self.points[(x, self.height)] = c
+            print("self.points", x, self.height, c)
         x += 1
 
       if self.label_width > 0 and self.height >= 0:
