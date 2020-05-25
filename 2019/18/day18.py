@@ -145,6 +145,7 @@ class Vault(object):
     self.resolve_edges()
     self.top.print_tree()  # TEMP
     self.compute_distances()
+    self.print_distances()
     self.best_dist = self.worst_path
     print('=upper bound for distance', self.best_dist)
     self.tsort()
@@ -185,6 +186,7 @@ class Vault(object):
       #   self.all_keys[blocker_name.lower()].blocks.append(key)
 
   def compute_distances(self):
+    # Compute distances from each key to key, ignoring doors.
     self.worst_path = 0
     for name, key in self.all_keys.items():
       if name.isupper():
@@ -222,6 +224,23 @@ class Vault(object):
         key.dists[other_name] = dist
         other_key.dists[name] = dist
         self.worst_path += dist
+
+  def print_distances(self):
+    keys = sorted(filter(lambda x: x.islower(), self.all_keys.keys()))
+    l = [' ']
+    for x in keys:
+      l.append(' %s' % x)
+    print(' '.join(l))
+    for start in keys:
+      the_key = self.all_keys[start]
+      l = [start]
+      for other in keys:
+        if other in the_key.dists:
+          l.append('%2d' % the_key.dists[other])
+        else:
+          l.append(' x')
+      print(' '.join(l))
+
 
   def route_distance(self, route):
     # What is distance along a specific route
@@ -358,6 +377,7 @@ class Vault(object):
     visit_list.append(at_key.name)
     # If we are at a key, then we must have picked up all the upstream things
     for key in at_key.upstream_keys:
+      assert key != at_key
       if key.is_key and key not in holding:
         visit_list.append(key.name)
       holding.add(key)
@@ -370,11 +390,14 @@ class Vault(object):
       self.best_dist = min(self.best_dist, total_dist)
       return 1
 
-    print(sp, 'holding', P(holding), 'now reachable', P(reachable))
+    # print(sp, 'holding', P(holding), 'now reachable', P(reachable))
 
     # visit each that are now reachable
     to_visit = reachable - holding
     to_visit = set(key for key in to_visit if key.is_key)
+
+    print(sp, 'holding', P(holding), 'to_visit', P(to_visit))
+
     # to_visit = sorted(to_visit, key=lambda k: k.dists[at_key.name])
     #to_visit = sorted(
     #  to_visit,
@@ -487,7 +510,8 @@ def dist_check(vault, k1, k2, expect):
   assert expect == dist
 
 
-def test_part1():
+def test_part1_a():
+  print('========================================  test a')
   maze = map.Map()
       #0123456789 123456789 12
   maze.load_from_string("""\
@@ -498,7 +522,6 @@ def test_part1():
       ########################
       """)
   # Shortest path is 132 steps: b, a, c, d, f, e, g
-
   maze.print()
   vault = Vault(maze)
   dist_check(vault, 'a', 'f', 30)
@@ -509,12 +532,13 @@ def test_part1():
   vault.print_block_list()
   print('========================================')
   vault.top.print_tree()
-  # vault.do_it(vault.top)
   vault.all_solutions()
   # vault.tsort_solutions()
+  assert 132 == vault.best_dist
 
 
 def test_part1_b():
+  print('========================================  test b')
   maze = map.Map()
   maze.load_from_string("""\
       #################
@@ -527,17 +551,17 @@ def test_part1_b():
       #l.F..d...h..C.m#
       #################
       """)
+  maze.print()
   # Shortest paths are 136 steps;
   # one is: a, f, b, j, g, n, h, d, l, o, e, p, c, i, k, m
-  maze.print()
+
   vault = Vault(maze)
-  print('========================================')
   print(vault.blocked_by)
   print('========================================')
   vault.top.print_tree()
-  # vault.do_it(vault.top)
   vault.all_solutions()
-  assert 136 == vault.best_dist
+  #vault.tsort_solutions()
+  #assert 136 == vault.best_dist
 
 
 def test_part1_c():
@@ -581,7 +605,7 @@ def part1():
 
 
 if __name__ == '__main__':
-  test_part1()
-  test_part1_c()
-  # test_part1_b()
+  test_part1_a()
+  test_part1_b()
+  # test_part1_c()
   # part1()
