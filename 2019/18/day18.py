@@ -353,8 +353,8 @@ class Vault(object):
       print('=Starting from', start)
       state = State(reachable=set(unblocked), total_dist=start.dist_from_root)
       total_dist = start.dist_from_root
-      status, dist = self.try_paths(start, state,
-                                    total_dist, visit_list=[], indent=0)
+      status = self.try_paths(start, state,
+                              total_dist, visit_list=[], indent=0)
     print('best traversal distance', self.best_dist)
 
 
@@ -408,13 +408,13 @@ class Vault(object):
     print(sp, 'visiting ', at_key, 'dist', total_dist)
     if total_dist > self.best_dist:
       print(sp, 'gone too far')
-      return -1, total_dist
+      return -1
 
     """ Not ready yet
     if ((total_dist + self.minimal_distance_possible_left(at_key, state.holding))
        > self.best_dist):
       print(sp, '=point of no return')
-      return -2, total_dist
+      return -2
     """
 
     state.pick_up(at_key)
@@ -432,7 +432,7 @@ class Vault(object):
       print('=complete set: dist', total_dist,
             ', '.join(visit_list[0:self.n_keys]))
       self.best_dist = min(self.best_dist, total_dist)
-      return 1, total_dist
+      return 1
 
     # print(sp, 'holding', P(state.holding), 'now reachable', P(state.reachable))
 
@@ -460,14 +460,14 @@ class Vault(object):
             holding=set(state.holding),
             reachable=set(state.reachable),
             total_dist=total_dist + at_key.dists[to_unblock.name])
-        status, _ = self.try_paths(
+        status = self.try_paths(
             to_unblock, state,
             total_dist = total_dist + at_key.dists[to_unblock.name],
             visit_list = list(visit_list),
             indent = indent + 1)
         if status < 0:
-          return 0, total_dist
-    return 0, total_dist
+          return 0
+    return 0
 
   def minimal_distance_possible_left(self, at_key, holding):
     # this is a theoretcial minimal distance
