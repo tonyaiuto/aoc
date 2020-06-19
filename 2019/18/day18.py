@@ -38,8 +38,8 @@ class Key(object):
     return 'Key<%s, %d>' % (self.name, self.dist_from_root)
 
   def print(self):
-    print('Key:%s, dist:%d, upstream:%s' % (
-        self.name, self.dist_from_root, P(self.upstream_keys)))
+    print('Key:%s, dist:%2d, upstream:%-10s blocks:%s' % (
+        self.name, self.dist_from_root, P(self.upstream_keys), P(self.blocks)))
 
   def path_from_root(self):
     ret = []
@@ -62,16 +62,14 @@ class Key(object):
   def key_name(self):
     return self.name.lower()
 
-  def is_reachable(self, holding, reachable):
+  def is_reachable(self, state):
     for key in self.upstream_keys:
-      if key in holding:
+      if key in state.holding:
         continue
-      if key.is_key and key in reachable:
+      if key.is_key and key in state.reachable:
         continue
       return False
     return True
-
-
 
 
 class Path(object):
@@ -138,6 +136,24 @@ class Path(object):
     return None
 
 
+class State(object):
+
+  def __init__(self, holding=None, reachable=None, total_dist=0):
+    self.holding = holding or set()   # set of keys we have picked up
+    # what we can reach (which may include what we picked up)
+    self.reachable = reachable or set()
+    self.total_dist = total_dist
+
+  def pick_up(self, key):
+    self.holding.add(key)
+
+  def is_holding(self, key):
+    return key in self.holding
+
+  def is_reachable(self, key):
+    return key in self.reachable
+
+
 class Vault(object):
 
   def __init__(self, maze):
@@ -171,6 +187,11 @@ class Vault(object):
     for name, key in self.keys_and_doors.items():
       print('= key', name, 'blocks', key.blocks)
 
+
+  def print_keys(self):
+    for name in sorted(self.keys_and_doors):
+      self.get_key(name).print()
+
   def set_start(self):
     self.start = None
     for pos, c in self.maze.points.items():
@@ -201,7 +222,7 @@ class Vault(object):
       #   self.keys_and_doors[blocker_name.lower()].blocks.append(key)
 
   def compute_distances(self):
-    # Compute distances from each key to key, ignoring doors.
+    """Compute distances from each key to key, ignoring doors."""
     self.worst_path = 0
     for name, key in self.keys_and_doors.items():
       if name.isupper():
@@ -322,97 +343,104 @@ class Vault(object):
     print('=unblocked', unblocked)
 
     # make sure the things behind the reachable keys are also reachable
-    holding = set()
-    reachable = set(unblocked)
+    state = State(reachable = set(unblocked))
     for key in unblocked:
-      self.unblock_reachable_downstream(key, None, reachable)
+      self.unblock_reachable_downstream(key, state)
     # now try them all
     self.try_count = 0
     self.start_time = time.time()
     for start in unblocked:
       print('=Starting from', start)
+      state = State(reachable=set(unblocked), total_dist=start.dist_from_root)
       total_dist = start.dist_from_root
-      self.try_paths(start, set(), set(reachable), total_dist, visit_list=[],
-                     indent=0)
+      status, dist = self.try_paths(start, state,
+                                    total_dist, visit_list=[], indent=0)
     print('best traversal distance', self.best_dist)
 
 
-  def unblock_reachable_downstream(self, key, holding, reachable, indent=0):
+  def unblock_reachable_downstream(self, key, state, indent=0):
     # given what we are holding, add 
     if TRACE_USE_KEY > 0:
       sp = ' ' * indent
       print(sp, 'adding downstream reachabilty for', key, 'blocks', key.blocks)
     for downstream in key.blocks:
-      reachable.add(downstream)
-      if holding and (downstream.is_key or downstream.key_name in holding):
+      state.reachable.add(downstream)
+      if state.holding and (
+          downstream.is_key or downstream.key_name in state.holding):
         self.unblock_reachable_downstream(
-            downstream, holding, reachable, indent)
+            downstream, state, indent)
 
-  def use_key(self, at_key, holding, reachable, indent=0):
-    # make the keys downstream of the door for this key reachable
+  def pick_up_key(self, at_key, state, indent=0):
+    """Unlock what we can based on having this key.
+
+    Mark the keys downstream of the door for this key reachable.
+    """
     sp = ' ' * indent
     door = self.keys_and_doors.get(at_key.name.upper())
     if not door:
       return
-    holding.add(door)
+    state.pick_up(door)
     if TRACE_USE_KEY > 0:
-      print(sp, 'use_key', at_key, 'holding', P(holding),
-            'reachable', P(reachable))
-    if door.is_reachable(holding, reachable):
-      reachable.add(door)
-      self.unblock_reachable_downstream(door, holding, reachable, indent+1)
+      print(sp, 'pick_up_key', at_key, 'holding', P(state.holding),
+            'reachable', P(state.reachable))
+    if door.is_reachable(state):
+      state.reachable.add(door)
+      self.unblock_reachable_downstream(door, state, indent+1)
     else:
       print(sp+' ', 'can not ulock', door)
     if TRACE_USE_KEY > 1:
-      print(sp+' ', 'done: holding', P(holding), 'now reachable', P(reachable))
+      print(sp+' ', 'done: holding', P(state.holding), 'now reachable', P(state.reachable))
 
-  def try_paths(self, at_key, holding, reachable, total_dist, visit_list,
+  def try_paths(self, at_key, state, total_dist, visit_list,
                 indent):
-    # holding is the keys we have picked up
-    # reachable is what we can reach (which may include what we picked up
-    if at_key in holding:
-      return 0
+    """Try all the paths from at_key to end of maze.
+
+    Args:
+      at_key: start point
+    """
+    assert at_key not in state.holding
+
     self.try_count += 1
     if self.try_count % 1000 == 0:
       t = int(time.time() - self.start_time)
       print('=tried paths', self.try_count, ', t:', t)
     sp = ' ' * indent
     print(sp, 'visiting ', at_key, 'dist', total_dist)
-    if total_dist >= self.best_dist:
+    if total_dist > self.best_dist:
       print(sp, 'gone too far')
-      return -1
+      return -1, total_dist
 
     """ Not ready yet
-    if ((total_dist + self.minimal_distance_possible_left(at_key, holding))
+    if ((total_dist + self.minimal_distance_possible_left(at_key, state.holding))
        > self.best_dist):
       print(sp, '=point of no return')
-      return -2
+      return -2, total_dist
     """
 
-    holding.add(at_key)
+    state.pick_up(at_key)
     visit_list.append(at_key.name)
     # If we are at a key, then we must have picked up all the upstream things
     for key in at_key.upstream_keys:
       assert key != at_key
-      if key.is_key and key not in holding:
+      if key.is_key and key not in state.holding:
         visit_list.append(key.name)
-      holding.add(key)
-      self.use_key(key, holding, reachable, indent=indent)
-    self.use_key(at_key, holding, reachable, indent=indent)
+      state.pick_up(key)
+      self.pick_up_key(key, state, indent=indent)
+    self.pick_up_key(at_key, state, indent=indent)
 
-    if len(holding) == len(self.keys_and_doors):
+    if len(state.holding) == len(self.keys_and_doors):
       print('=complete set: dist', total_dist,
             ', '.join(visit_list[0:self.n_keys]))
       self.best_dist = min(self.best_dist, total_dist)
-      return 1
+      return 1, total_dist
 
-    # print(sp, 'holding', P(holding), 'now reachable', P(reachable))
+    # print(sp, 'holding', P(state.holding), 'now reachable', P(state.reachable))
 
     # visit each that are now reachable
-    to_visit = reachable - holding
+    to_visit = state.reachable - state.holding
     to_visit = set(key for key in to_visit if key.is_key)
 
-    print(sp, 'holding', P(holding), 'to_visit', P(to_visit))
+    print(sp, 'holding', P(state.holding), 'to_visit', P(to_visit))
 
     # to_visit = sorted(to_visit, key=lambda k: k.dists[at_key.name])
     #to_visit = sorted(
@@ -424,17 +452,22 @@ class Vault(object):
     print(sp, 'at %s want to visit' % at_key.name, P(to_visit))
 
     for to_unblock in to_visit:
-      if at_key == to_unblock:
+      if at_key == to_unblock or to_unblock in state.holding:
         continue
-      if to_unblock.is_key and to_unblock not in holding:
-        status = self.try_paths(
-            to_unblock, set(holding), set(reachable),
+
+      if to_unblock.is_key:
+        state = State(
+            holding=set(state.holding),
+            reachable=set(state.reachable),
+            total_dist=total_dist + at_key.dists[to_unblock.name])
+        status, _ = self.try_paths(
+            to_unblock, state,
             total_dist = total_dist + at_key.dists[to_unblock.name],
             visit_list = list(visit_list),
             indent = indent + 1)
         if status < 0:
-          return 0
-    return 0
+          return 0, total_dist
+    return 0, total_dist
 
   def minimal_distance_possible_left(self, at_key, holding):
     # this is a theoretcial minimal distance
@@ -510,7 +543,7 @@ class Vault(object):
           start_pos = u
       for u_i in range(start_pos, len(an_ordering)-1):
         u = an_ordering[u]
-        v = an_ordering[u+1]
+        v = an_ordering[u_i]   # OR  an_ordering[u+1]
         dist = an_ordering[u].dists[v.name]
         if d[v] > d[u] + dist:
           d[v] = d[u] + dist
@@ -549,8 +582,8 @@ def test_part1_a():
   print('========================================')
   vault.top.print_tree()
   vault.all_solutions()
-  # vault.tsort_solutions()
   assert 132 == vault.best_dist
+  # vault.tsort_solutions()
 
 
 def test_part1_b():
@@ -575,7 +608,8 @@ def test_part1_b():
   print(vault.blocked_by)
   print('========================================')
   vault.top.print_tree()
-  vault.all_solutions()
+  vault.print_keys()
+  #vault.all_solutions()
   #vault.tsort_solutions()
   #assert 136 == vault.best_dist
 
@@ -622,6 +656,6 @@ def part1():
 
 if __name__ == '__main__':
   test_part1_a()
-  # test_part1_b()
+  test_part1_b()
   # test_part1_c()
   # part1()
