@@ -25,8 +25,8 @@ class Key(object):
     self.dist_from_root = dist_from_root
     self.dist_down_path = dist_down_path
     self.blocked_by = blocked_by
-    self.upstream_keys = upstream_keys
-    self.blocks = []
+    self.upstream_keys = upstream_keys  # keys between me and root
+    self.blocks = []  # list of Keys that can not be reached unless I am held
     self.dists = {}
     self.loop_detect = False
     self.is_key = name.islower()
@@ -50,6 +50,18 @@ class Key(object):
     ret.reverse()
     return ret
 
+  @property
+  def is_door(self):
+    return self.name.isupper()
+
+  @property
+  def door_name(self):
+    return self.name.upper()
+
+  @property
+  def key_name(self):
+    return self.name.lower()
+
   def is_reachable(self, holding, reachable):
     for key in self.upstream_keys:
       if key in holding:
@@ -58,6 +70,8 @@ class Key(object):
         continue
       return False
     return True
+
+
 
 
 class Path(object):
@@ -132,8 +146,8 @@ class Vault(object):
     self.cur_dist = 0
     self.trace = True
     self.total_moved = 0
-    self.all_keys = {}
-    self.blocked_by = {}
+    self.keys_and_doors = {}
+    self.blocked_by = {}  # map of key or door to immediately upstream blocking door
     self.init()
 
   def init(self):
@@ -151,10 +165,10 @@ class Vault(object):
     self.tsort()
     self.best_dist = self.route_distance(self.top_sorted)
     print('=better upper bound for distance', self.best_dist)
-    self.n_keys = len([k for k in self.all_keys if k.islower()])
+    self.n_keys = len([k for k in self.keys_and_doors if k.islower()])
 
   def print_block_list(self):
-    for name, key in self.all_keys.items():
+    for name, key in self.keys_and_doors.items():
       print('= key', name, 'blocks', key.blocks)
 
   def set_start(self):
@@ -165,34 +179,35 @@ class Vault(object):
         return
 
   def add_key(self, keylock):
-    self.all_keys[keylock.name] = keylock
+    self.keys_and_doors[keylock.name] = keylock
 
   def get_key(self, keyname):
-    return self.all_keys.get(keyname)
+    return self.keys_and_doors.get(keyname)
 
   def resolve_edges(self):
-    for name, key in self.all_keys.items():
-      if name.isupper():
-        # I am a door, make sure my key blocks me
-        k = self.all_keys[name.lower()]
-        if key.blocked_by != k:
-          k.blocks.append(key)
+    """Create edges from keys to the doors they unlock."""
+    for key in self.keys_and_doors.values():
+      # Make sure all doors are blocked by the key that opens them
+      if key.is_door:
+        k = self.keys_and_doors[key.key_name]
+        k.blocks.append(key)
+
     for key, blocker_name in self.blocked_by.items():
-      blocker = self.all_keys[blocker_name]
+      blocker = self.keys_and_doors[blocker_name]
       blocker.blocks.append(key)
       # Why does this not work. If I am blocked by a door, then
       # also make the door key block me.
-      # if blocker_name.isupper():
-      #   self.all_keys[blocker_name.lower()].blocks.append(key)
+      # if blocker.is_door:
+      #   self.keys_and_doors[blocker_name.lower()].blocks.append(key)
 
   def compute_distances(self):
     # Compute distances from each key to key, ignoring doors.
     self.worst_path = 0
-    for name, key in self.all_keys.items():
+    for name, key in self.keys_and_doors.items():
       if name.isupper():
         continue
       rp = key.path_from_root()
-      for other_name, other_key in self.all_keys.items():
+      for other_name, other_key in self.keys_and_doors.items():
         if other_name == name or other_name.isupper():
           continue
         if key.dists.get(other_name):
@@ -226,13 +241,13 @@ class Vault(object):
         self.worst_path += dist
 
   def print_distances(self):
-    keys = sorted(filter(lambda x: x.islower(), self.all_keys.keys()))
+    keys = sorted(filter(lambda x: x.islower(), self.keys_and_doors.keys()))
     l = [' ']
     for x in keys:
       l.append(' %s' % x)
     print(' '.join(l))
     for start in keys:
-      the_key = self.all_keys[start]
+      the_key = self.keys_and_doors[start]
       l = [start]
       for other in keys:
         if other in the_key.dists:
@@ -299,7 +314,7 @@ class Vault(object):
     # path.print()
 
   def all_solutions(self):
-    keys = set([k for k in self.all_keys.values() if k.is_key])
+    keys = set([k for k in self.keys_and_doors.values() if k.is_key])
     blocked = set(self.blocked_by.keys())
     unblocked = keys - blocked
     print('=keys', keys)
@@ -310,7 +325,7 @@ class Vault(object):
     holding = set()
     reachable = set(unblocked)
     for key in unblocked:
-      self.unblock_reachable_downstream(key, holding, reachable)
+      self.unblock_reachable_downstream(key, None, reachable)
     # now try them all
     self.try_count = 0
     self.start_time = time.time()
@@ -323,19 +338,20 @@ class Vault(object):
 
 
   def unblock_reachable_downstream(self, key, holding, reachable, indent=0):
+    # given what we are holding, add 
     if TRACE_USE_KEY > 0:
       sp = ' ' * indent
       print(sp, 'adding downstream reachabilty for', key, 'blocks', key.blocks)
     for downstream in key.blocks:
       reachable.add(downstream)
-      if downstream.is_key or downstream.name.lower() in holding:
+      if holding and (downstream.is_key or downstream.key_name in holding):
         self.unblock_reachable_downstream(
             downstream, holding, reachable, indent)
 
   def use_key(self, at_key, holding, reachable, indent=0):
     # make the keys downstream of the door for this key reachable
     sp = ' ' * indent
-    door = self.all_keys.get(at_key.name.upper())
+    door = self.keys_and_doors.get(at_key.name.upper())
     if not door:
       return
     holding.add(door)
@@ -384,7 +400,7 @@ class Vault(object):
       self.use_key(key, holding, reachable, indent=indent)
     self.use_key(at_key, holding, reachable, indent=indent)
 
-    if len(holding) == len(self.all_keys):
+    if len(holding) == len(self.keys_and_doors):
       print('=complete set: dist', total_dist,
             ', '.join(visit_list[0:self.n_keys]))
       self.best_dist = min(self.best_dist, total_dist)
@@ -422,7 +438,7 @@ class Vault(object):
 
   def minimal_distance_possible_left(self, at_key, holding):
     # this is a theoretcial minimal distance
-    keys = set([k for k in self.all_keys.values()
+    keys = set([k for k in self.keys_and_doors.values()
                if k != at_key and k.is_key])
     left = keys - holding
     to_visit = sorted(left, key=lambda k: k.dists[at_key.name])
@@ -435,7 +451,7 @@ class Vault(object):
     return min_dist
 
   def tsort(self):
-    self.top_sorted = self.tsort_keys(self.all_keys.values())
+    self.top_sorted = self.tsort_keys(self.keys_and_doors.values())
     print('=tsort:', self.top_sorted)
 
   @staticmethod
@@ -474,7 +490,7 @@ class Vault(object):
 
 
   def tsort_solutions(self):
-    keys = set([k for k in self.all_keys.values() if k.is_key])
+    keys = set([k for k in self.keys_and_doors.values() if k.is_key])
     blocked = set(self.blocked_by.keys())
     unblocked = keys - blocked
     print('=keys', keys)
@@ -525,8 +541,8 @@ def test_part1_a():
   maze.print()
   vault = Vault(maze)
   dist_check(vault, 'a', 'f', 30)
-  print('==all_keys')
-  print(vault.all_keys)
+  print('==keys_and_doors')
+  print(vault.keys_and_doors)
   print('==blocked by')
   print(vault.blocked_by)
   vault.print_block_list()
@@ -606,6 +622,6 @@ def part1():
 
 if __name__ == '__main__':
   test_part1_a()
-  test_part1_b()
+  # test_part1_b()
   # test_part1_c()
   # part1()
