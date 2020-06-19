@@ -369,18 +369,16 @@ class Vault(object):
     print('best traversal distance', self.best_dist)
 
 
-  def unblock_reachable_downstream(self, key, state, indent=0):
-    # assert indent == state.indent
+  def unblock_reachable_downstream(self, key, state):
     # given what we are holding, add 
     if TRACE_USE_KEY > 0:
-      sp = ' ' * indent
+      sp = ' ' * (state.indent + 1)
       print(sp, 'adding downstream reachabilty for', key, 'blocks', key.blocks)
     for downstream in key.blocks:
       state.reachable.add(downstream)
       if state.holding and (
           downstream.is_key or downstream.key_name in state.holding):
-        self.unblock_reachable_downstream(
-            downstream, state, indent)
+        self.unblock_reachable_downstream(downstream, state)
 
   def pick_up_key(self, at_key, state):
     """Unlock what we can based on having this key.
@@ -397,7 +395,7 @@ class Vault(object):
             'reachable', P(state.reachable))
     if door.is_reachable(state):
       state.reachable.add(door)
-      self.unblock_reachable_downstream(door, state, state.indent+1)
+      self.unblock_reachable_downstream(door, state)
     else:
       print(sp+' ', 'can not ulock', door)
     if TRACE_USE_KEY > 1:
