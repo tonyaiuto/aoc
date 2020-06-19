@@ -378,12 +378,12 @@ class Vault(object):
         self.unblock_reachable_downstream(
             downstream, state, indent)
 
-  def pick_up_key(self, at_key, state, indent=0):
+  def pick_up_key(self, at_key, state):
     """Unlock what we can based on having this key.
 
     Mark the keys downstream of the door for this key reachable.
     """
-    sp = ' ' * indent
+    sp = ' ' * state.indent
     door = self.keys_and_doors.get(at_key.name.upper())
     if not door:
       return
@@ -393,7 +393,7 @@ class Vault(object):
             'reachable', P(state.reachable))
     if door.is_reachable(state):
       state.reachable.add(door)
-      self.unblock_reachable_downstream(door, state, indent+1)
+      self.unblock_reachable_downstream(door, state, state.indent+1)
     else:
       print(sp+' ', 'can not ulock', door)
     if TRACE_USE_KEY > 1:
@@ -432,8 +432,8 @@ class Vault(object):
       if key.is_key and key not in state.holding:
         visit_list.append(key.name)
       state.pick_up(key)
-      self.pick_up_key(key, state, indent=state.indent)
-    self.pick_up_key(at_key, state, indent=state.indent)
+      self.pick_up_key(key, state)
+    self.pick_up_key(at_key, state)
 
     if len(state.holding) == len(self.keys_and_doors):
       print('=complete set: dist', state.total_dist,
