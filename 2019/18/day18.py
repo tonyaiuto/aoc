@@ -143,10 +143,13 @@ class State(object):
     # what we can reach (which may include what we picked up)
     self.reachable = reachable or set()
     self.total_dist = total_dist
+    self.indent = 0
 
   def clone(self):
-    return State(holding=set(self.holding), reachable=set(self.reachable),
-                 total_dist=self.total_dist)
+    ret = State(holding=set(self.holding), reachable=set(self.reachable),
+                total_dist=self.total_dist)
+    ret.indent = self.indent + 1
+    return ret
 
   def travel(self, dist):
     self.total_dist += dist
@@ -359,7 +362,7 @@ class Vault(object):
     for start in unblocked:
       print('=Starting from', start)
       state = State(reachable=set(unblocked), total_dist=start.dist_from_root)
-      status = self.try_paths(start, state, visit_list=[], indent=0)
+      status = self.try_paths(start, state, visit_list=[])
     print('best traversal distance', self.best_dist)
 
 
@@ -396,7 +399,7 @@ class Vault(object):
     if TRACE_USE_KEY > 1:
       print(sp+' ', 'done: holding', P(state.holding), 'now reachable', P(state.reachable))
 
-  def try_paths(self, at_key, state, visit_list, indent):
+  def try_paths(self, at_key, state, visit_list):
     """Try all the paths from at_key to end of maze.
 
     Args:
@@ -408,7 +411,7 @@ class Vault(object):
     if self.try_count % 1000 == 0:
       t = int(time.time() - self.start_time)
       print('=tried paths', self.try_count, ', t:', t)
-    sp = ' ' * indent
+    sp = ' ' * state.indent
     print(sp, 'visiting ', at_key, 'dist', state.total_dist)
     if state.total_dist > self.best_dist:
       print(sp, 'gone too far')
@@ -429,8 +432,8 @@ class Vault(object):
       if key.is_key and key not in state.holding:
         visit_list.append(key.name)
       state.pick_up(key)
-      self.pick_up_key(key, state, indent=indent)
-    self.pick_up_key(at_key, state, indent=indent)
+      self.pick_up_key(key, state, indent=state.indent)
+    self.pick_up_key(at_key, state, indent=state.indent)
 
     if len(state.holding) == len(self.keys_and_doors):
       print('=complete set: dist', state.total_dist,
@@ -464,8 +467,7 @@ class Vault(object):
         v_state.travel(at_key.dists[to_unblock.name])
         status = self.try_paths(
             to_unblock, v_state,
-            visit_list = list(visit_list),
-            indent = indent + 1)
+            visit_list = list(visit_list))
         if status < 0:
           return 0
     return 0
