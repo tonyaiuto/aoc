@@ -15,6 +15,9 @@ TRACE_TSORT = 1
 def P(key_set):
   return ','.join(sorted(key.name for key in key_set))
 
+def sort_keys(key_set):
+  return sorted(key_set, key=lambda k: k.name)
+
 
 class Key(object):
 
@@ -345,9 +348,9 @@ class Vault(object):
     # path.print()
 
   def all_solutions(self):
-    keys = set([k for k in self.keys_and_doors.values() if k.is_key])
-    blocked = set(self.blocked_by.keys())
-    unblocked = keys - blocked
+    keys = set(sort_keys([k for k in self.keys_and_doors.values() if k.is_key]))
+    blocked = set(sort_keys(self.blocked_by.keys()))
+    unblocked = set(sort_keys(keys - blocked))
     print('=keys', keys)
     print('=blocked', blocked)
     print('=unblocked', unblocked)
@@ -367,6 +370,7 @@ class Vault(object):
 
 
   def unblock_reachable_downstream(self, key, state, indent=0):
+    # assert indent == state.indent
     # given what we are holding, add 
     if TRACE_USE_KEY > 0:
       sp = ' ' * indent
