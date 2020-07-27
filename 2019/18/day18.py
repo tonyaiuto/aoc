@@ -10,8 +10,8 @@ from memoized import memoized
 TRACE_DIST = 0
 TRACE_USE_KEY = 0
 TRACE_TSORT = 1
-TRACE_MEMO = 1
-
+TRACE_MEMO = 0
+VERBOSE = 0
 
 def P(key_set):
   return ','.join(sorted(key.name for key in key_set))
@@ -163,6 +163,9 @@ class State(object):
   def pick_up(self, key):
     if key.is_key and not self.is_holding(key):
       self.visited.append(key.name)
+      for k in key.blocks:
+        if k.is_key:
+          self.reachable.add(k)
     self.holding.add(key)
 
   def is_holding(self, key):
@@ -171,14 +174,20 @@ class State(object):
   def is_reachable(self, key):
     return key in self.reachable
 
-
-  def holding_hash(self):
+  @staticmethod
+  def hash_keys(s):
     ret = 0
     pos_a = ord('A')
-    for k in self.holding:
+    for k in s:
       pos = ord(k.name)
       ret |= (1 << (pos - pos_a))
     return ret
+
+  def holding_hash(self):
+    return self.hash_keys(self.holding)
+
+  def reachable_hash(self):
+    return self.hash_keys(self.reachable)
 
 
 class Vault(object):
@@ -422,9 +431,11 @@ class Vault(object):
       state.reachable.add(door)
       self.unblock_reachable_downstream(door, state)
     else:
-      print(sp+' ', 'can not ulock', door)
+      if TRACE_USE_KEY > 1:
+        print(sp+' ', 'can not ulock', door)
     if TRACE_USE_KEY > 1:
       print(sp+' ', 'done: holding', P(state.holding), 'now reachable', P(state.reachable))
+
 
   def min_route(self, at_key, state):
     """Try all the paths from at_key to end of maze.
@@ -438,14 +449,10 @@ class Vault(object):
     if self.try_count % 1000 == 0:
       t = int(time.time() - self.start_time)
       print('=tried paths', self.try_count, ', t:', t)
-    sp = ' ' * state.indent
-    print(sp, 'visiting ', at_key, 'dist', state.total_dist)
+    if VERBOSE > 0:
+      sp = ' ' * state.indent
+      print(sp, 'visiting ', at_key, 'dist', state.total_dist)
 
-    """
-    if state.total_dist > self.best_dist:
-      print(sp, 'gone too far')
-      return -1
-    """
     """ Not ready yet
     if ((state.total_dist + self.minimal_distance_possible_left(at_key, state.holding))
        > self.best_dist):
@@ -460,7 +467,7 @@ class Vault(object):
       state.pick_up(key)
       self.pick_up_key(key, state)
     self.pick_up_key(at_key, state)
-    route_key = (at_key, state.holding_hash())
+    route_key = (at_key, state.holding_hash(), state.reachable_hash())
 
     if len(state.holding) == len(self.keys_and_doors):
       print('=complete set: dist', state.total_dist,
@@ -480,7 +487,8 @@ class Vault(object):
     to_visit = state.reachable - state.holding
     to_visit = set(key for key in to_visit if key.is_key)
 
-    print(sp, 'holding', P(state.holding), 'to_visit', P(to_visit))
+    if VERBOSE > 0:
+      print(sp, 'holding', P(state.holding), 'to_visit', P(to_visit))
 
     # to_visit = sorted(to_visit, key=lambda k: k.dists[at_key.name])
     #to_visit = sorted(
@@ -489,7 +497,8 @@ class Vault(object):
     to_visit = sorted(
         to_visit,
         key=lambda k: k.dists[at_key.name] - 1000 * int(k.path == at_key.path))
-    print(sp, 'at %s want to visit' % at_key.name, P(to_visit))
+    if VERBOSE > 0:
+      print(sp, 'at %s want to visit' % at_key.name, P(to_visit))
 
     min_r = 10000000
     for to_unblock in to_visit:
@@ -696,4 +705,4 @@ if __name__ == '__main__':
   test_part1_a()
   test_part1_b()
   test_part1_c()
-  # part1()
+  part1()
