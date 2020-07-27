@@ -166,6 +166,9 @@ class State(object):
       for k in key.blocks:
         if k.is_key:
           self.reachable.add(k)
+          for k2 in k.blocks:
+            if k2.is_key:
+             self.reachable.add(k2)
     self.holding.add(key)
 
   def is_holding(self, key):
@@ -310,16 +313,16 @@ class Vault(object):
     keys = sorted(filter(lambda x: x.islower(), self.keys_and_doors.keys()))
     l = [' ']
     for x in keys:
-      l.append(' %s' % x)
+      l.append('  %s' % x)
     print(' '.join(l))
     for start in keys:
       the_key = self.keys_and_doors[start]
       l = [start]
       for other in keys:
         if other in the_key.dists:
-          l.append('%2d' % the_key.dists[other])
+          l.append('%3d' % the_key.dists[other])
         else:
-          l.append(' x')
+          l.append('  x')
       print(' '.join(l))
 
 
@@ -694,10 +697,11 @@ def part1():
   print('========================================')
   vault = Vault(maze)
   vault.top.print_tree()
-  assert vault.best_dist <= 5218
+  vault.print_block_list()
+  assert vault.best_dist <= 4950
   print('========================================')
   vault.all_solutions()
-  assert 5218 > vault.best_dist
+  assert 4950 > vault.best_dist
 
 
 
