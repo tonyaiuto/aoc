@@ -28,7 +28,7 @@ class Key(object):
     self.dist_from_root = dist_from_root
     self.dist_down_path = dist_down_path
     self.blocked_by = blocked_by
-    self.upstream_keys = upstream_keys  # keys between me and root
+    self.upstream_keys = list(upstream_keys)  # keys between me and root
     self.blocks = []  # list of Keys that can not be reached unless I am held
     self.dists = {}
     self.loop_detect = False
@@ -200,6 +200,7 @@ class Vault(object):
     print('=better upper bound for distance', self.best_dist)
     self.n_keys = len([k for k in self.keys_and_doors if k.islower()])
 
+
   def print_block_list(self):
     for name, key in self.keys_and_doors.items():
       print('= key', name, 'blocks', key.blocks)
@@ -208,6 +209,7 @@ class Vault(object):
   def print_keys(self):
     for name in sorted(self.keys_and_doors):
       self.get_key(name).print()
+
 
   def set_start(self):
     self.start = None
@@ -233,10 +235,16 @@ class Vault(object):
     for key, blocker_name in self.blocked_by.items():
       blocker = self.keys_and_doors[blocker_name]
       blocker.blocks.append(key)
-      # Why does this not work. If I am blocked by a door, then
-      # also make the door key block me.
-      # if blocker.is_door:
-      #   self.keys_and_doors[blocker_name.lower()].blocks.append(key)
+
+    # This does not work, and for good reasons
+    # replace the door I block with the things the door blocks
+    #for key in self.keys_and_doors.values():
+    #  if key.is_key:
+    #    for i, k in enumerate(key.blocks):
+    #      if k.name == key.name.upper():
+    #        key.blocks = key.blocks[0:i] + key.blocks[i+1:] + k.blocks
+    #        break
+
 
   def compute_distances(self):
     """Compute distances from each key to key, ignoring doors."""
@@ -319,7 +327,7 @@ class Vault(object):
       if content.isalpha():
         key = Key(content, path, dist_from_root + path.dist,
                   blocked_by=last_key, dist_down_path=path.dist,
-                  upstream_keys=list(path.keys))
+                  upstream_keys=path.keys)
         self.add_key(key)
         path.keys.append(key)
         if last_key:
@@ -368,8 +376,11 @@ class Vault(object):
     self.start_time = time.time()
     for start in unblocked:
       print('=Starting from', start)
-      state = State(reachable=set(unblocked), total_dist=start.dist_from_root)
-      status = self.try_paths(start, state)
+      # state = State(reachable=set(unblocked), total_dist=start.dist_from_root)
+      state = State(reachable=set(unblocked))
+      d = start.dist_from_root + self.min_route(start, state)
+      if d < self.best_dist:
+        self.best_dist = d
     print('best traversal distance', self.best_dist)
 
 
@@ -405,7 +416,8 @@ class Vault(object):
     if TRACE_USE_KEY > 1:
       print(sp+' ', 'done: holding', P(state.holding), 'now reachable', P(state.reachable))
 
-  def try_paths(self, at_key, state):
+  @memoized
+  def min_route(self, at_key, state):
     """Try all the paths from at_key to end of maze.
 
     Args:
@@ -419,9 +431,12 @@ class Vault(object):
       print('=tried paths', self.try_count, ', t:', t)
     sp = ' ' * state.indent
     print(sp, 'visiting ', at_key, 'dist', state.total_dist)
+
+    """
     if state.total_dist > self.best_dist:
       print(sp, 'gone too far')
       return -1
+    """
 
     """ Not ready yet
     if ((state.total_dist + self.minimal_distance_possible_left(at_key, state.holding))
@@ -441,8 +456,8 @@ class Vault(object):
     if len(state.holding) == len(self.keys_and_doors):
       print('=complete set: dist', state.total_dist,
             ', '.join(state.visited))
-      self.best_dist = min(self.best_dist, state.total_dist)
-      return 1
+      # XXXX self.best_dist = min(self.best_dist, state.total_dist)
+      return 0
 
     # print(sp, 'holding', P(state.holding), 'now reachable', P(state.reachable))
 
@@ -461,17 +476,20 @@ class Vault(object):
         key=lambda k: k.dists[at_key.name] - 1000 * int(k.path == at_key.path))
     print(sp, 'at %s want to visit' % at_key.name, P(to_visit))
 
+    min_r = 10000000
     for to_unblock in to_visit:
       if at_key == to_unblock or to_unblock in state.holding:
         continue
 
       if to_unblock.is_key:
         v_state = state.clone()
-        v_state.travel(at_key.dists[to_unblock.name])
-        status = self.try_paths(to_unblock, v_state)
-        if status < 0:
-          return 0
-    return 0
+        base_dist = at_key.dists[to_unblock.name]
+        # v_state.travel(at_key.dists[to_unblock.name])
+        d = self.min_route(to_unblock, v_state)
+        if base_dist + d < min_r:
+          min_r = base_dist + d
+
+    return min_r
 
   def minimal_distance_possible_left(self, at_key, holding):
     # this is a theoretcial minimal distance
@@ -612,6 +630,8 @@ def test_part1_b():
   print(vault.blocked_by)
   print('========================================')
   vault.top.print_tree()
+  vault.print_block_list()
+
   vault.print_keys()
   vault.all_solutions()
   # vault.tsort_solutions()
@@ -661,5 +681,5 @@ def part1():
 if __name__ == '__main__':
   test_part1_a()
   test_part1_b()
-  # test_part1_c()
+  test_part1_c()
   # part1()
