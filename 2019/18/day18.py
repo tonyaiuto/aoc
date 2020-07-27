@@ -8,8 +8,9 @@ from memoized import memoized
 
 
 TRACE_DIST = 0
-TRACE_USE_KEY = 1
+TRACE_USE_KEY = 0
 TRACE_TSORT = 1
+TRACE_MEMO = 1
 
 
 def P(key_set):
@@ -171,6 +172,15 @@ class State(object):
     return key in self.reachable
 
 
+  def holding_hash(self):
+    ret = 0
+    pos_a = ord('A')
+    for k in self.holding:
+      pos = ord(k.name)
+      ret |= (1 << (pos - pos_a))
+    return ret
+
+
 class Vault(object):
 
   def __init__(self, maze):
@@ -181,6 +191,7 @@ class Vault(object):
     self.total_moved = 0
     self.keys_and_doors = {}
     self.blocked_by = {}  # map of key or door to immediately upstream blocking door
+    self.min_routes = {}
     self.init()
 
   def init(self):
@@ -376,8 +387,7 @@ class Vault(object):
     self.start_time = time.time()
     for start in unblocked:
       print('=Starting from', start)
-      # state = State(reachable=set(unblocked), total_dist=start.dist_from_root)
-      state = State(reachable=set(unblocked))
+      state = State(reachable=set(unblocked), total_dist=start.dist_from_root)
       d = start.dist_from_root + self.min_route(start, state)
       if d < self.best_dist:
         self.best_dist = d
@@ -416,7 +426,6 @@ class Vault(object):
     if TRACE_USE_KEY > 1:
       print(sp+' ', 'done: holding', P(state.holding), 'now reachable', P(state.reachable))
 
-  @memoized
   def min_route(self, at_key, state):
     """Try all the paths from at_key to end of maze.
 
@@ -437,7 +446,6 @@ class Vault(object):
       print(sp, 'gone too far')
       return -1
     """
-
     """ Not ready yet
     if ((state.total_dist + self.minimal_distance_possible_left(at_key, state.holding))
        > self.best_dist):
@@ -452,12 +460,19 @@ class Vault(object):
       state.pick_up(key)
       self.pick_up_key(key, state)
     self.pick_up_key(at_key, state)
+    route_key = (at_key, state.holding_hash())
 
     if len(state.holding) == len(self.keys_and_doors):
       print('=complete set: dist', state.total_dist,
             ', '.join(state.visited))
-      # XXXX self.best_dist = min(self.best_dist, state.total_dist)
+      self.best_dist = min(self.best_dist, state.total_dist)
+      self.min_routes[route_key] = state.total_dist
       return 0
+
+    if route_key in self.min_routes:
+      if TRACE_MEMO > 0:
+        print('   === got a memo', P(state.holding), 'dist:', state.total_dist)
+      return self.min_routes[route_key]
 
     # print(sp, 'holding', P(state.holding), 'now reachable', P(state.reachable))
 
@@ -484,12 +499,14 @@ class Vault(object):
       if to_unblock.is_key:
         v_state = state.clone()
         base_dist = at_key.dists[to_unblock.name]
-        # v_state.travel(at_key.dists[to_unblock.name])
+        v_state.travel(at_key.dists[to_unblock.name])
         d = self.min_route(to_unblock, v_state)
         if base_dist + d < min_r:
           min_r = base_dist + d
 
+    self.min_routes[route_key] = min_r
     return min_r
+
 
   def minimal_distance_possible_left(self, at_key, holding):
     # this is a theoretcial minimal distance
@@ -631,14 +648,13 @@ def test_part1_b():
   print('========================================')
   vault.top.print_tree()
   vault.print_block_list()
-
   vault.print_keys()
   vault.all_solutions()
-  # vault.tsort_solutions()
   assert 136 == vault.best_dist
 
 
 def test_part1_c():
+  print('========================================  test c')
   maze = map.Map()
   maze.load_from_string("""\
       ########################
@@ -652,16 +668,14 @@ def test_part1_c():
   maze.print()
   vault = Vault(maze)
   vault.top.print_tree()
-
   dist_check(vault, 'd', 'g', 2)
   dist_check(vault, 'd', 'e', 4)
   dist_check(vault, 'd', 'h', 6)
-  print('========================================')
-  print(vault.blocked_by)
-  print('========================================')
+
+  vault.print_block_list()
+  vault.print_keys()
   vault.all_solutions()
   assert 81 == vault.best_dist
-
 
 
 def part1():
