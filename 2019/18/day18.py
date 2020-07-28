@@ -182,8 +182,7 @@ class State(object):
     ret = 0
     pos_a = ord('A')
     for k in s:
-      pos = ord(k.name)
-      ret |= (1 << (pos - pos_a))
+      ret |= (1 << (ord(k.name) - pos_a))
     return ret
 
   def holding_hash(self):
@@ -482,6 +481,13 @@ class Vault(object):
       return -2
     """
 
+    # XXX route_key = (at_key.name, state.holding_hash(), state.reachable_hash())
+    route_key = (at_key.name, state.holding_hash())
+    if route_key in self.min_routes:
+      if TRACE_MEMO > 0 or at_key.name == self.debug_key:
+        print('   === got a memo', P(state.holding), 'dist:', self.min_routes[route_key])
+      return self.min_routes[route_key]
+
     state.pick_up(at_key)
     # If we are at a key, then we must have picked up all the upstream things
     for key in at_key.upstream_keys:
@@ -489,8 +495,6 @@ class Vault(object):
       state.pick_up(key)
       self.pick_up_key(key, state)
     self.pick_up_key(at_key, state)
-    # XXX route_key = (at_key.name, state.holding_hash(), state.reachable_hash())
-    route_key = (at_key.name, state.holding_hash())
 
     if len(state.holding) == len(self.keys_and_doors):
       print('=complete set: dist', state.total_dist,
@@ -499,11 +503,6 @@ class Vault(object):
       # XXX self.min_routes[route_key] = state.total_dist
       self.min_routes[route_key] = 0
       return 0
-
-    if route_key in self.min_routes:
-      if TRACE_MEMO > 0 or at_key.name == self.debug_key:
-        print('   === got a memo', P(state.holding), 'dist:', self.min_routes[route_key])
-      return self.min_routes[route_key]
 
     # print(sp, 'holding', P(state.holding), 'now reachable', P(state.reachable))
 
@@ -577,7 +576,7 @@ class Vault(object):
       if TRACE_TSORT > 1:
         print(' '*depth, '=tsort_visit', key)
       for blocked in key.blocks:
-        #if blocked.is_key:
+        # if blocked.is_key:
         tsort_visit(blocked, depth=depth+1)
       key.loop_detect = False
       ordered.add(key)
