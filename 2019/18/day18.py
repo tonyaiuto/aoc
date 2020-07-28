@@ -14,6 +14,8 @@ TRACE_MEMO = 0
 TRACE_TIME = 1
 VERBOSE = 0
 
+MEMO_HOLDING = True
+
 def P(key_set):
   return ','.join(sorted(key.name for key in key_set))
 
@@ -490,19 +492,21 @@ class Vault(object):
       sp = ' ' * state.indent
       print(sp, 'visiting ', at_key, 'dist', state.total_dist)
 
-    """ Not ready yet
+    """
     if ((state.total_dist + self.minimal_distance_possible_left(at_key, state.holding))
        > self.best_dist):
-      print(sp, '=point of no return')
-      return -2
+      sp = ' ' * state.indent
+      print(sp, '=point of no return', )
+      return self.worst_path
     """
 
-    # XXX route_key = (at_key.name, state.holding_hash(), state.reachable_hash())
-    route_key = (at_key.name, state.holding_hash())
-    if route_key in self.min_routes:
-      if TRACE_MEMO > 0 or at_key.name == self.debug_key:
-        print('   === got a memo', P(state.holding), 'dist:', self.min_routes[route_key])
-      return self.min_routes[route_key]
+    if MEMO_HOLDING:
+      # XXX route_key = (at_key.name, state.holding_hash(), state.reachable_hash())
+      route_key = (at_key.name, state.holding_hash())
+      if route_key in self.min_routes:
+        if TRACE_MEMO > 0 or at_key.name == self.debug_key:
+          print('   === got a memo', P(state.holding), 'dist:', self.min_routes[route_key])
+        return self.min_routes[route_key]
 
     state.pick_up(at_key)
     # If we are at a key, then we must have picked up all the upstream things
@@ -516,8 +520,9 @@ class Vault(object):
       print('=complete set: dist', state.total_dist,
             ', '.join(state.visited))
       self.best_dist = min(self.best_dist, state.total_dist)
-      # XXX self.min_routes[route_key] = state.total_dist
-      self.min_routes[route_key] = 0
+      if MEMO_HOLDING:
+        # XXX self.min_routes[route_key] = state.total_dist
+        self.min_routes[route_key] = 0
       return 0
 
     # print(sp, 'holding', P(state.holding), 'now reachable', P(state.reachable))
@@ -545,22 +550,31 @@ class Vault(object):
         continue
 
       if to_unblock.is_key:
-        v_state = state.clone()
         base_dist = at_key.dists[to_unblock.name]
-        v_state.travel(at_key.dists[to_unblock.name])
-        d = self.min_route(to_unblock, v_state)
-        if base_dist + d < min_r:
-          min_r = base_dist + d
+        if state.total_dist + base_dist < self.best_dist:
+          v_state = state.clone()
+          v_state.travel(at_key.dists[to_unblock.name])
+          d = self.min_route(to_unblock, v_state)
+          if base_dist + d < min_r:
+            min_r = base_dist + d
 
-    self.min_routes[route_key] = min_r
+    if MEMO_HOLDING:
+      self.min_routes[route_key] = min_r
     return min_r
 
 
   def minimal_distance_possible_left(self, at_key, holding):
-    # this is a theoretcial minimal distance
+    """If we ignored doors, what would be the theorectial minimal distance"""
+
+    # This is not right
     keys = set([k for k in self.keys_and_doors.values()
                if k != at_key and k.is_key])
     left = keys - holding
+    a_path = self.tsort_keys(left)
+    return self.route_distance(a_path) - at_key.dist_from_root
+
+    # nor this
+    """
     to_visit = sorted(left, key=lambda k: k.dists[at_key.name])
     last_dist = 0
     min_dist = 0
@@ -569,6 +583,8 @@ class Vault(object):
       min_dist += (d - last_dist)
       last_dist = d
     return min_dist
+    """
+
 
   def tsort(self):
     self.top_sorted = self.tsort_keys(self.keys_and_doors.values())
