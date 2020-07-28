@@ -11,6 +11,7 @@ TRACE_DIST = 0
 TRACE_USE_KEY = 0
 TRACE_TSORT = 1
 TRACE_MEMO = 0
+TRACE_TIME = 1
 VERBOSE = 0
 
 def P(key_set):
@@ -254,6 +255,7 @@ class Vault(object):
       blocker = self.keys_and_doors[blocker_name]
       blocker.blocks.append(key)
 
+    # remove doors that do not block anything
     v = {}
     dead_doors = set()
     for k in self.keys_and_doors.values():
@@ -266,23 +268,28 @@ class Vault(object):
         v[k.name] = k
     self.keys_and_doors = v
 
+    # remove the dead doors from the blocks list of any keys
     for k in self.keys_and_doors.values():
       k.blocks = list(filter(lambda x: x not in dead_doors, k.blocks))
 
+    # Make sure all doors are blocked by the key that opens them
     for key in self.keys_and_doors.values():
-      # Make sure all doors are blocked by the key that opens them
       if key.is_door:
         k = self.keys_and_doors[key.key_name]
         k.blocks.append(key)
 
-    # This does not work, and for good reasons
+    # Replace  x blocks X blocks y  with x -> y
+    # This does not work. It unblocks things that might be far away.
     # replace the door I block with the things the door blocks
-    #for key in self.keys_and_doors.values():
-    #  if key.is_key:
-    #    for i, k in enumerate(key.blocks):
-    #      if k.name == key.name.upper():
-    #        key.blocks = key.blocks[0:i] + key.blocks[i+1:] + k.blocks
-    #        break
+    if False:
+      for key in self.keys_and_doors.values():
+        if key.is_key:
+          for i, k in enumerate(key.blocks):
+            if k.name == key.name.upper():
+              print('reduce key: from', key, key.blocks)
+              key.blocks = key.blocks[0:i] + key.blocks[i+1:] + k.blocks
+              print('reduce key:   to', key, key.blocks)
+              break
 
 
   def compute_distances(self):
@@ -474,10 +481,11 @@ class Vault(object):
     """
     assert at_key not in state.holding
 
-    self.try_count += 1
-    if self.try_count % 1000 == 0:
-      t = int(time.time() - self.start_time)
-      print('=tried paths', self.try_count, ', t:', t)
+    if TRACE_TIME > 0:
+      self.try_count += 1
+      if self.try_count % 10000 == 0:
+        t = int(time.time() - self.start_time)
+        print('=tried paths', self.try_count, ', t:', t)
     if VERBOSE > 0 or at_key.name == self.debug_key:
       sp = ' ' * state.indent
       print(sp, 'visiting ', at_key, 'dist', state.total_dist)
