@@ -399,7 +399,12 @@ class Vault(object):
     # path.print()
 
   def all_solutions(self):
-    keys = set(sort_keys([k for k in self.keys_and_doors.values() if k.is_key]))
+    # start in name order
+    # keys = set(sort_keys([k for k in self.keys_and_doors.values() if k.is_key]))
+    # start in distance order
+    keys = set(sorted(filter(lambda k: k.is_key, self.keys_and_doors.values()),
+                             key=lambda k: k.dist_from_root))
+
     blocked = set(sort_keys(self.blocked_by.keys()))
     unblocked = set(sort_keys(keys - blocked))
     print('=keys', keys)
@@ -410,8 +415,11 @@ class Vault(object):
     state = State(reachable = set(unblocked))
     for key in unblocked:
       self.unblock_reachable_downstream(key, state)
-    first = self.top_sorted[0]
-    unblocked = [first] + list(filter(lambda x: x != first, unblocked))
+
+    # Attempt to start from first thing in tsort. Did not help
+    #first = self.top_sorted[0]
+    #unblocked = [first] + list(filter(lambda x: x != first, unblocked))
+
     # now try them all
     self.try_count = 0
     self.start_time = time.time()
