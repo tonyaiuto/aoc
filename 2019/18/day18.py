@@ -204,6 +204,7 @@ class Vault(object):
     self.keys_and_doors = {}
     self.blocked_by = {}  # map of key or door to immediately upstream blocking door
     self.min_routes = {}
+    self.debug_key = ''
     self.init()
 
   def init(self):
@@ -249,15 +250,31 @@ class Vault(object):
 
   def resolve_edges(self):
     """Create edges from keys to the doors they unlock."""
+
+    for key, blocker_name in self.blocked_by.items():
+      blocker = self.keys_and_doors[blocker_name]
+      blocker.blocks.append(key)
+
+    v = {}
+    dead_doors = set()
+    for k in self.keys_and_doors.values():
+      if k.is_door and not k.blocks:
+        print("Dead door", k)
+        dead_doors.add(k)
+        if k in self.blocked_by:
+          del self.blocked_by[k]
+      else:
+        v[k.name] = k
+    self.keys_and_doors = v
+
+    for k in self.keys_and_doors.values():
+      k.blocks = list(filter(lambda x: x not in dead_doors, k.blocks))
+
     for key in self.keys_and_doors.values():
       # Make sure all doors are blocked by the key that opens them
       if key.is_door:
         k = self.keys_and_doors[key.key_name]
         k.blocks.append(key)
-
-    for key, blocker_name in self.blocked_by.items():
-      blocker = self.keys_and_doors[blocker_name]
-      blocker.blocks.append(key)
 
     # This does not work, and for good reasons
     # replace the door I block with the things the door blocks
@@ -394,6 +411,8 @@ class Vault(object):
     state = State(reachable = set(unblocked))
     for key in unblocked:
       self.unblock_reachable_downstream(key, state)
+    first = self.top_sorted[0]
+    unblocked = [first] + list(filter(lambda x: x != first, unblocked))
     # now try them all
     self.try_count = 0
     self.start_time = time.time()
@@ -452,7 +471,7 @@ class Vault(object):
     if self.try_count % 1000 == 0:
       t = int(time.time() - self.start_time)
       print('=tried paths', self.try_count, ', t:', t)
-    if VERBOSE > 0:
+    if VERBOSE > 0 or at_key.name == self.debug_key:
       sp = ' ' * state.indent
       print(sp, 'visiting ', at_key, 'dist', state.total_dist)
 
@@ -470,18 +489,20 @@ class Vault(object):
       state.pick_up(key)
       self.pick_up_key(key, state)
     self.pick_up_key(at_key, state)
-    route_key = (at_key, state.holding_hash(), state.reachable_hash())
+    # XXX route_key = (at_key.name, state.holding_hash(), state.reachable_hash())
+    route_key = (at_key.name, state.holding_hash())
 
     if len(state.holding) == len(self.keys_and_doors):
       print('=complete set: dist', state.total_dist,
             ', '.join(state.visited))
       self.best_dist = min(self.best_dist, state.total_dist)
-      self.min_routes[route_key] = state.total_dist
+      # XXX self.min_routes[route_key] = state.total_dist
+      self.min_routes[route_key] = 0
       return 0
 
     if route_key in self.min_routes:
-      if TRACE_MEMO > 0:
-        print('   === got a memo', P(state.holding), 'dist:', state.total_dist)
+      if TRACE_MEMO > 0 or at_key.name == self.debug_key:
+        print('   === got a memo', P(state.holding), 'dist:', self.min_routes[route_key])
       return self.min_routes[route_key]
 
     # print(sp, 'holding', P(state.holding), 'now reachable', P(state.reachable))
@@ -490,7 +511,7 @@ class Vault(object):
     to_visit = state.reachable - state.holding
     to_visit = set(key for key in to_visit if key.is_key)
 
-    if VERBOSE > 0:
+    if VERBOSE > 0 or at_key.name == self.debug_key:
       print(sp, 'holding', P(state.holding), 'to_visit', P(to_visit))
 
     # to_visit = sorted(to_visit, key=lambda k: k.dists[at_key.name])
@@ -500,7 +521,7 @@ class Vault(object):
     to_visit = sorted(
         to_visit,
         key=lambda k: k.dists[at_key.name] - 1000 * int(k.path == at_key.path))
-    if VERBOSE > 0:
+    if VERBOSE > 0 or at_key.name == self.debug_key:
       print(sp, 'at %s want to visit' % at_key.name, P(to_visit))
 
     min_r = 10000000
@@ -631,10 +652,8 @@ def test_part1_a():
   print(vault.blocked_by)
   vault.print_block_list()
   print('========================================')
-  vault.top.print_tree()
   vault.all_solutions()
   assert 132 == vault.best_dist
-  # vault.tsort_solutions()
 
 
 def test_part1_b():
@@ -658,7 +677,6 @@ def test_part1_b():
   vault = Vault(maze)
   print(vault.blocked_by)
   print('========================================')
-  vault.top.print_tree()
   vault.print_block_list()
   vault.print_keys()
   vault.all_solutions()
@@ -679,13 +697,12 @@ def test_part1_c():
   # Shortest paths are 81 steps; one is: a, c, f, i, d, g, b, e, h
   maze.print()
   vault = Vault(maze)
-  vault.top.print_tree()
   dist_check(vault, 'd', 'g', 2)
   dist_check(vault, 'd', 'e', 4)
   dist_check(vault, 'd', 'h', 6)
 
   vault.print_block_list()
-  vault.print_keys()
+  # vault.print_keys()
   vault.all_solutions()
   assert 81 == vault.best_dist
 
@@ -696,13 +713,12 @@ def part1():
   maze.print()
   print('========================================')
   vault = Vault(maze)
-  vault.top.print_tree()
+  # vault.debug_key = 'q'
   vault.print_block_list()
   assert vault.best_dist <= 4950
   print('========================================')
   vault.all_solutions()
   assert 4950 > vault.best_dist
-
 
 
 if __name__ == '__main__':
