@@ -45,7 +45,7 @@ class Key(object):
     return 'Key<%s, %d>' % (self.name, self.dist_from_root)
 
   def print(self):
-    print('Key:%s, dist:%2d, upstream:%-10s blocks:%s' % (
+    print('Key:%s, dist:%3d  upstream:%-10s blocks:%s' % (
         self.name, self.dist_from_root, P(self.upstream_keys), P(self.blocks)))
 
   def path_from_root(self):
@@ -206,7 +206,7 @@ class Vault(object):
     self.keys_and_doors = {}
     self.blocked_by = {}  # map of key or door to immediately upstream blocking door
     self.min_routes = {}
-    self.debug_key = ''
+    self.debug_key = None  # (char) print more tracing when visiting this key
     self.init()
 
   def init(self):
@@ -219,6 +219,7 @@ class Vault(object):
     self.top.print_tree()  # TEMP
     self.compute_distances()
     self.print_distances()
+    self.print_keys()
     self.best_dist = self.worst_path
     print('=upper bound for distance', self.best_dist)
     self.tsort()
@@ -226,16 +227,10 @@ class Vault(object):
     print('=better upper bound for distance', self.best_dist)
     self.n_keys = len([k for k in self.keys_and_doors if k.islower()])
 
-
-  def print_block_list(self):
-    for name, key in self.keys_and_doors.items():
-      print('= key', name, 'blocks', key.blocks)
-
-
   def print_keys(self):
+    print('=== keys')
     for name in sorted(self.keys_and_doors):
       self.get_key(name).print()
-
 
   def set_start(self):
     self.start = None
@@ -407,7 +402,13 @@ class Vault(object):
       break
     # path.print()
 
-  def all_solutions(self):
+  def all_solutions(self, force_start_from=None):
+    """Run through the possible paths.
+
+    Args:
+      force_start_from: (char) start with this key first
+    """
+
     # start in name order
     # keys = set(sort_keys([k for k in self.keys_and_doors.values() if k.is_key]))
     # start in distance order
@@ -416,9 +417,9 @@ class Vault(object):
 
     blocked = set(sort_keys(self.blocked_by.keys()))
     unblocked = set(sort_keys(keys - blocked))
-    print('=keys', keys)
-    print('=blocked', blocked)
-    print('=unblocked', unblocked)
+    print('=keys     ', P(keys))
+    print('=blocked  ', P(blocked))
+    print('=unblocked', P(unblocked))
 
     # make sure the things behind the reachable keys are also reachable
     state = State(reachable = set(unblocked))
@@ -428,6 +429,10 @@ class Vault(object):
     # Attempt to start from first thing in tsort. Did not help
     #first = self.top_sorted[0]
     #unblocked = [first] + list(filter(lambda x: x != first, unblocked))
+
+    if force_start_from:
+      first = self.get_key(force_start_from)
+      unblocked = [first] + list(filter(lambda x: x != first, unblocked))
 
     # now try them all
     self.try_count = 0
@@ -681,7 +686,6 @@ def test_part1_a():
   print(vault.keys_and_doors)
   print('==blocked by')
   print(vault.blocked_by)
-  vault.print_block_list()
   print('========================================')
   vault.all_solutions()
   assert 132 == vault.best_dist
@@ -708,8 +712,6 @@ def test_part1_b():
   vault = Vault(maze)
   print(vault.blocked_by)
   print('========================================')
-  vault.print_block_list()
-  vault.print_keys()
   vault.all_solutions()
   assert 136 == vault.best_dist
 
@@ -732,9 +734,7 @@ def test_part1_c():
   dist_check(vault, 'd', 'e', 4)
   dist_check(vault, 'd', 'h', 6)
 
-  vault.print_block_list()
-  # vault.print_keys()
-  vault.all_solutions()
+  vault.all_solutions(force_start_from='e')
   assert 81 == vault.best_dist
 
 
@@ -745,7 +745,6 @@ def part1():
   print('========================================')
   vault = Vault(maze)
   # vault.debug_key = 'q'
-  vault.print_block_list()
   assert vault.best_dist <= 4950
   print('========================================')
   vault.all_solutions()
@@ -756,4 +755,4 @@ if __name__ == '__main__':
   test_part1_a()
   test_part1_b()
   test_part1_c()
-  part1()
+  # part1()
