@@ -19,6 +19,9 @@ MEMO_HOLDING = True
 def P(key_set):
   return ','.join(sorted(key.name for key in key_set))
 
+def key_names(key_set):
+  return ','.join(key.name for key in key_set)
+
 def sort_keys(key_set):
   return sorted(key_set, key=lambda k: k.name)
 
@@ -34,6 +37,8 @@ class Key(object):
     self.blocked_by = blocked_by
     self.upstream_keys = list(upstream_keys)  # keys between me and root
     self.blocks = []  # list of Keys that can not be reached unless I am held
+    # list of keys which must be reached before me
+    self.all_edges_in = [blocked_by]
     self.dists = {}
     self.loop_detect = False
     self.is_key = name.islower()
@@ -46,7 +51,8 @@ class Key(object):
 
   def print(self):
     print('Key:%s, dist:%3d  upstream:%-10s blocks:%s' % (
-        self.name, self.dist_from_root, P(self.upstream_keys), P(self.blocks)))
+        self.name, self.dist_from_root, key_names(self.upstream_keys),
+        P(self.blocks)))
 
   def path_from_root(self):
     ret = []
@@ -59,7 +65,7 @@ class Key(object):
 
   @property
   def is_door(self):
-    return self.name.isupper()
+    return not self.is_key
 
   @property
   def door_name(self):
@@ -215,6 +221,8 @@ class Vault(object):
     self.cur_path = self.top
     self.maze.close_dead_ends()
     self.walk_path(self.top)
+    self.all_nodes = set(self.keys_and_doors.values())
+
     self.resolve_edges()
     self.top.print_tree()  # TEMP
     self.compute_distances()
@@ -255,9 +263,9 @@ class Vault(object):
     # remove doors that do not block anything
     v = {}
     dead_doors = set()
-    for k in self.keys_and_doors.values():
+    for k in self.all_nodes:
       if k.is_door and not k.blocks:
-        print("Dead door", k)
+        print("=== Dead door", k)
         dead_doors.add(k)
         if k in self.blocked_by:
           del self.blocked_by[k]
@@ -266,11 +274,11 @@ class Vault(object):
     self.keys_and_doors = v
 
     # remove the dead doors from the blocks list of any keys
-    for k in self.keys_and_doors.values():
+    for k in self.all_nodes:
       k.blocks = list(filter(lambda x: x not in dead_doors, k.blocks))
 
     # Make sure all doors are blocked by the key that opens them
-    for key in self.keys_and_doors.values():
+    for key in self.all_nodes:
       if key.is_door:
         k = self.keys_and_doors[key.key_name]
         k.blocks.append(key)
@@ -279,7 +287,7 @@ class Vault(object):
     # This does not work. It unblocks things that might be far away.
     # replace the door I block with the things the door blocks
     if False:
-      for key in self.keys_and_doors.values():
+      for key in self.all_nodes:
         if key.is_key:
           for i, k in enumerate(key.blocks):
             if k.name == key.name.upper():
@@ -402,7 +410,7 @@ class Vault(object):
       break
     # path.print()
 
-  def all_solutions(self, force_start_from=None):
+  def all_solutions1(self, force_start_from=None):
     """Run through the possible paths.
 
     Args:
@@ -410,9 +418,9 @@ class Vault(object):
     """
 
     # start in name order
-    # keys = set(sort_keys([k for k in self.keys_and_doors.values() if k.is_key]))
+    # keys = set(sort_keys([k for k in self.all_nodes if k.is_key]))
     # start in distance order
-    keys = set(sorted(filter(lambda k: k.is_key, self.keys_and_doors.values()),
+    keys = set(sorted(filter(lambda k: k.is_key, self.all_nodes),
                              key=lambda k: k.dist_from_root))
 
     blocked = set(sort_keys(self.blocked_by.keys()))
@@ -572,7 +580,7 @@ class Vault(object):
     """If we ignored doors, what would be the theorectial minimal distance"""
 
     # This is not right
-    keys = set([k for k in self.keys_and_doors.values()
+    keys = set([k for k in self.all_nodes
                if k != at_key and k.is_key])
     left = keys - holding
     a_path = self.tsort_keys(left)
@@ -592,7 +600,7 @@ class Vault(object):
 
 
   def tsort(self):
-    self.top_sorted = self.tsort_keys(self.keys_and_doors.values())
+    self.top_sorted = self.tsort_keys(self.all_nodes)
     print('=tsort:', self.top_sorted)
 
   @staticmethod
@@ -631,7 +639,7 @@ class Vault(object):
 
 
   def tsort_solutions(self):
-    keys = set([k for k in self.keys_and_doors.values() if k.is_key])
+    keys = set([k for k in self.all_nodes if k.is_key])
     blocked = set(self.blocked_by.keys())
     unblocked = keys - blocked
     print('=keys', keys)
@@ -657,6 +665,66 @@ class Vault(object):
           d[v] = d[u] + dist
           # p[v] = u
 
+  def all_solutions(self, force_start_from=None):
+    """Run through the possible paths.
+
+    Args:
+      force_start_from: (char) start with this key first
+    """
+
+    possible_ends = [k for k in self.all_nodes
+                     if k.is_key and not k.blocks]
+    print('posible ends:', possible_ends)
+
+    blocked = set(self.blocked_by.keys())
+    unblocked = self.all_nodes - blocked
+    print('=unblocked', P(unblocked))
+
+    for last in possible_ends:
+      self.walk_backwards(last, path_tail=[], needs=set(possible_ends), level=0)
+
+  def walk_backwards(self, from_key, path_tail, needs, level):
+    sp = ' ' * level
+
+    print(sp, 'walk_backwards:', from_key.name, ', tail:', key_names(path_tail))
+
+    if path_tail:
+      assert from_key != path_tail[0]
+    if from_key.upstream_keys:
+      assert from_key != from_key.upstream_keys[-1]
+
+    path_tail = from_key.upstream_keys + [from_key] + path_tail
+    print(sp, 'walk_backwards2:', from_key.name, ', tail:', key_names(path_tail))
+
+    # compute the keys we need to hold to get through this tail
+    holding = set()
+    # we also have to visit the remaining 
+    need = needs - set([from_key])
+    for node in path_tail:
+      if node.is_key:
+        holding.add(node)
+      else:
+        need_key = self.get_key(node.key_name)
+        if need_key not in holding:
+          need.add(need_key)
+
+    print(sp, 'at', from_key.name, ', need:', key_names(need),
+          'tail:', key_names(path_tail))
+
+    # left = all_nodes - set(path_tail)
+
+    if not need:
+      dist = self.route_distance(path_tail)
+      print(sp, '==== Got a path: dist:', dist, path_tail)
+      if dist < self.best_dist:
+        self.best_dist = dist
+      return
+
+    for node in need:
+      if node != path_tail[0]:
+        self.walk_backwards(node, path_tail, need, level+1)
+      else:
+        print(sp, 'why does need have head of path_tail')
 
 
 def dist_check(vault, k1, k2, expect):
@@ -734,8 +802,11 @@ def test_part1_c():
   dist_check(vault, 'd', 'e', 4)
   dist_check(vault, 'd', 'h', 6)
 
-  vault.all_solutions(force_start_from='e')
-  assert 81 == vault.best_dist
+  for start_from in ('d', 'e', 'f', 'a'):
+    print('============ test c - start from %s' % start_from)
+    vault = Vault(maze)
+    vault.all_solutions(force_start_from=start_from)
+    assert 81 == vault.best_dist
 
 
 def part1():
