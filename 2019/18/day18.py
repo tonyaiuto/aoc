@@ -754,9 +754,10 @@ class Vault(object):
     print('=possible start nodes:', P(possible_start_nodes))
     print('=possible end nodes:  ', P(possible_end_nodes))
 
-    for start in possible_start_nodes:
-      self.tsort_nodes(key_nodes, start_from=start)
+    #for start in possible_start_nodes:
+    self.all_top_sorts(key_nodes)
 
+    """
     if False:
       for last in possible_end_nodes:
         self.tsort_nodes_back(key_nodes, end_at=last)
@@ -766,6 +767,8 @@ class Vault(object):
     if False:
       self.walk_backwards(last, path_tail=[], needs=set(possible_end_nodes),
                           level=0)
+    """
+
 
   def walk_backwards(self, from_key, path_tail, needs, level):
     sp = ' ' * level
@@ -810,47 +813,25 @@ class Vault(object):
       else:
         print(sp, 'why does need have head of path_tail')
 
-  def tsort_nodes(self, all_nodes, start_from):
+  def all_top_sorts(self, all_nodes, start_from=None):
     """ Produce all topological sorts
     From: https://www.geeksforgeeks.org/all-topological-sorts-of-a-directed-acyclic-graph/
     """
+    print('=all_top_sorts(', P(all_nodes), ')')
     for node in all_nodes:
       node.visited = False
       node.n_in = len(node.edges_in)
 
+    n_results = 0
     path_temp = []
-    for result in Vault.tsort_nodes_util(all_nodes, path_temp):
+    for result in tsort_nodes_util(all_nodes, path_temp):
+      n_results += 1
       total_dist = self.route_distance(result)
       print('= Complete path: dist:', total_dist, ',', key_names(result))
       if self.best_dist < total_dist:
         self.best_dist = total_dist
         print('= ####### New best')
-
-
-  @staticmethod
-  def tsort_nodes_util(all_nodes, path_temp):
-    working = False
-    sp = ' ' * len(path_temp)
-    for node in all_nodes:
-      if node.n_in == 0 and not node.visited:
-        print(sp, 'VISIT:', node, 'path:', key_names(path_temp))
-        # reduce n_in of adjacent
-        for out in node.edges_out:
-          out.n_in -= 1
-          print(sp, ' > adjust', out, 'n_in:', out.n_in)
-
-        path_temp.append(node)
-        node.visited = True
-        Vault.tsort_nodes_util(all_nodes, path_temp)
-        node.visited = False
-        path_temp.pop()
-
-        for out in node.edges_out:
-          out.n_in += 1
-        working = True
-
-    if not working:
-      yield path_temp
+    assert n_results > 0
 
 
   def tsort_nodes_back(self, all_nodes, end_at):
@@ -906,15 +887,49 @@ class Vault(object):
       if not nodes_left:
         break
       for try_node in nodes_left:
-        self.tsort_nodes(nodes_left, try_node)
+        self.tsort_nodes_back(nodes_left, try_node)
 
     print('= ### Complete path: dist:', cur_path.total_dist, ',', key_names(cur_path.path))
     if self.best_dist < cur_path.total_dist:
       self.best_dist = cur_path.total_dist
       print('= ####### New best')
 
+
+
   def all_solutions(self, force_start_from=None):
     return self.all_solutions2(force_start_from=force_start_from)
+
+
+def tsort_nodes_util(all_nodes, path_temp):
+  sp = ' ' * len(path_temp)
+  print(sp, 'tsort_nodes_util(nodes:%s, path: %s)' % (
+      P(all_nodes), key_names(path_temp)))
+
+  working = False
+  for node in all_nodes:
+    if node.n_in == 0 and not node.visited:
+      print(sp, 'VISIT:', node, 'path:', key_names(path_temp))
+      # reduce n_in of adjacent
+      for out in node.edges_out:
+        out.n_in -= 1
+        print(sp, ' > adjust', out, 'n_in:', out.n_in)
+
+      node.visited = True
+      path_temp.append(node)
+
+      print(sp, ' > recurse:', node, 'new_path:', key_names(path_temp))
+      tsort_nodes_util(all_nodes, path_temp)
+      path_temp.pop()
+      print(sp, ' > return:', node, 'new_path:', key_names(path_temp))
+
+      node.visited = False
+
+      for out in node.edges_out:
+        out.n_in += 1
+      working = True
+
+  if not working:
+    yield path_temp
 
 
 class NodePath(object):
