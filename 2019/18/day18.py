@@ -12,7 +12,8 @@ TRACE_USE_KEY = 0
 TRACE_TSORT = 1
 TRACE_MEMO = 0
 TRACE_TIME = 1
-TRACE_REDUCE = 0
+TRACE_RESOLVE = 0
+TRACE_REDUCE = 1
 VERBOSE = 0
 
 MEMO_HOLDING = True
@@ -37,25 +38,30 @@ class Key(object):
     self.dist_down_path = dist_down_path
     self.blocked_by = blocked_by
     self.upstream_keys = list(upstream_keys)  # keys between me and root
+
+    # Computed state
     self.blocks = []  # list of Keys that can not be reached unless I am held
     # list of keys which must be reached before me
     self.edges_in = set()
     if blocked_by:
       self.edges_in.add(blocked_by)
-    self.dists = {}
-    self.loop_detect = False
+    self.edges_out = set()
+    self.dists = {}  # distance to every other node
+    self.loop_detect = False  # used for graph error detection
     self.is_key = name.islower()
+
 
   def __str__(self):
     return 'Key<%s, %d, in_from:%s>' % (self.name, self.dist_from_root, key_names(self.edges_in))
 
   def __repr__(self):
-    return 'Key<%s, %d, in_from:%s>' % (self.name, self.dist_from_root, key_names(self.edges_in))
+    return 'Key<%s, %d, in:%s, out:%s>' % (self.name, self.dist_from_root,
+        key_names(self.edges_in), key_names(self.edges_out))
 
   def print(self):
-    print('Key:%s, dist:%3d  upstream:%-10s in_edges:%-15s blocks:%-15s' % (
-        self.name, self.dist_from_root, key_names(self.upstream_keys),
-        key_names(self.edges_in), P(self.blocks)))
+    print('Key:%s, dist:%3d  in:%-12s out:%-12s upstream:%-15s blocks:%-15s' % (
+        self.name, self.dist_from_root, key_names(self.edges_in),
+        key_names(self.edges_out),  key_names(self.upstream_keys),P(self.blocks)))
 
   def path_from_root(self):
     ret = []
@@ -260,26 +266,38 @@ class Vault(object):
 
   def resolve_edges(self):
     """Create edges from keys to the doors they unlock."""
-    if TRACE_REDUCE > 0:
+
+    if TRACE_RESOLVE > 0:
       print('===== resolve_edges()')
       self.print_keys()
 
-    for key, blocker_name in self.blocked_by.items():
-      blocker = self.keys_and_doors[blocker_name]
-      blocker.blocks.append(key)
-
-    # Make sure all doors are blocked by the key that opens them
+    #
+    # Replace doors in edges_in with the keys that unlock them. This gives a
+    # graph of key to key without any doors.
+    #
+    # - make sure all doors are blocked by the key that opens them
     for node in self.all_nodes:
       if not node.is_key:
         k = self.keys_and_doors[node.key_name]
         node.edges_in.add(k)
-    # Replace doors in edges_in with the keys that unlock them
+    # - now we can reduce each
     self.r_level = 0
     for node in self.all_nodes:
       self.reduce_edges_in(node)
+    # - and now we can create input edges
+    for node in self.all_nodes:
+      if node.is_key:
+        for e_in in node.edges_in:
+          e_in.edges_out.add(node)
     if TRACE_REDUCE > 0:
       print('== reduced edges')
       self.print_keys()
+
+    # The rest might be useless
+
+    for key, blocker_name in self.blocked_by.items():
+      blocker = self.keys_and_doors[blocker_name]
+      blocker.blocks.append(key)
 
     # remove doors that do not block anything
     v = {}
@@ -320,6 +338,11 @@ class Vault(object):
 
   @memoized
   def reduce_edges_in(self, node):
+    """Reduce edges into a node from doors.
+
+    From: {a} -> A,  {a,b} -> B,  {B} -> c
+    To: {a,b} -> c
+    """
     sp = '  ' * self.r_level
     assert node
     new_edges_in = set([])
