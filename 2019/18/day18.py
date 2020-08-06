@@ -12,6 +12,7 @@ TRACE_USE_KEY = 0
 TRACE_TSORT = 1
 TRACE_MEMO = 0
 TRACE_TIME = 1
+TRACE_REDUCE = 1
 VERBOSE = 0
 
 MEMO_HOLDING = True
@@ -38,21 +39,23 @@ class Key(object):
     self.upstream_keys = list(upstream_keys)  # keys between me and root
     self.blocks = []  # list of Keys that can not be reached unless I am held
     # list of keys which must be reached before me
-    self.all_edges_in = [blocked_by]
+    self.edges_in = set()
+    if blocked_by:
+      self.edges_in.add(blocked_by)
     self.dists = {}
     self.loop_detect = False
     self.is_key = name.islower()
 
   def __str__(self):
-    return 'Key<%s, %d>' % (self.name, self.dist_from_root)
+    return 'Key<%s, %d, in_from:%s>' % (self.name, self.dist_from_root, key_names(self.edges_in))
 
   def __repr__(self):
-    return 'Key<%s, %d>' % (self.name, self.dist_from_root)
+    return 'Key<%s, %d, in_from:%s>' % (self.name, self.dist_from_root, key_names(self.edges_in))
 
   def print(self):
-    print('Key:%s, dist:%3d  upstream:%-10s blocks:%s' % (
+    print('Key:%s, dist:%3d  upstream:%-10s in_edges:%-15s blocks:%-15s' % (
         self.name, self.dist_from_root, key_names(self.upstream_keys),
-        P(self.blocks)))
+        key_names(self.edges_in), P(self.blocks)))
 
   def path_from_root(self):
     ret = []
@@ -69,10 +72,12 @@ class Key(object):
 
   @property
   def door_name(self):
+    assert self.is_key
     return self.name.upper()
 
   @property
   def key_name(self):
+    assert not self.is_key
     return self.name.lower()
 
   def is_reachable(self, state):
@@ -255,10 +260,25 @@ class Vault(object):
 
   def resolve_edges(self):
     """Create edges from keys to the doors they unlock."""
+    print('===== resolve_edges()')
+    self.print_keys()
 
     for key, blocker_name in self.blocked_by.items():
       blocker = self.keys_and_doors[blocker_name]
       blocker.blocks.append(key)
+
+    # Make sure all doors are blocked by the key that opens them
+    for node in self.all_nodes:
+      if not node.is_key:
+        k = self.keys_and_doors[node.key_name]
+        node.edges_in.add(k)
+    # Replace doors in edges_in with the keys that unlock them
+    self.r_level = 0
+    for node in self.all_nodes:
+      self.reduce_edges_in(node)
+    if TRACE_REDUCE > 0:
+      print('== reduced edges')
+      self.print_keys()
 
     # remove doors that do not block anything
     v = {}
@@ -272,16 +292,17 @@ class Vault(object):
       else:
         v[k.name] = k
     self.keys_and_doors = v
+    self.all_nodes = set(self.keys_and_doors.values())
 
     # remove the dead doors from the blocks list of any keys
     for k in self.all_nodes:
       k.blocks = list(filter(lambda x: x not in dead_doors, k.blocks))
 
     # Make sure all doors are blocked by the key that opens them
-    for key in self.all_nodes:
-      if key.is_door:
-        k = self.keys_and_doors[key.key_name]
-        k.blocks.append(key)
+    for node in self.all_nodes:
+      if not node.is_key:
+        k = self.keys_and_doors[node.key_name]
+        k.blocks.append(node)
 
     # Replace  x blocks X blocks y  with x -> y
     # This does not work. It unblocks things that might be far away.
@@ -296,6 +317,29 @@ class Vault(object):
               print('reduce key:   to', key, key.blocks)
               break
 
+  @memoized
+  def reduce_edges_in(self, node):
+    sp = '  ' * self.r_level
+    assert node
+    new_edges_in = set([])
+    if TRACE_REDUCE > 1:
+      print('reduce_in:', node)
+    for from_node in node.edges_in:
+      if TRACE_REDUCE > 1:
+        print('  reduce_from:', from_node)
+      if from_node.is_key:
+        new_edges_in.add(from_node)
+      else:
+        self.r_level += 1
+        door_blockers = self.reduce_edges_in(from_node)
+        self.r_level -= 1
+        # Do not add an ancestor key.  E.g.
+        #  a B c d A e   =>   e blocked_by d, NOT blocked by d,a
+        for n in door_blockers:
+          if from_node.key_name != n.name or n not in from_node.upstream_keys:
+            new_edges_in.add(n)
+    node.edges_in = new_edges_in
+    return new_edges_in
 
   def compute_distances(self):
     """Compute distances from each key to key, ignoring doors."""
@@ -665,7 +709,7 @@ class Vault(object):
           d[v] = d[u] + dist
           # p[v] = u
 
-  def all_solutions(self, force_start_from=None):
+  def all_solutions2(self, force_start_from=None):
     """Run through the possible paths.
 
     Args:
@@ -725,6 +769,9 @@ class Vault(object):
         self.walk_backwards(node, path_tail, need, level+1)
       else:
         print(sp, 'why does need have head of path_tail')
+
+  def all_solutions(self, force_start_from=None):
+    return self.all_solutions1(force_start_from=force_start_from)
 
 
 def dist_check(vault, k1, k2, expect):
