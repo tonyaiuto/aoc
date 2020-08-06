@@ -918,7 +918,7 @@ def tsort_nodes_util(all_nodes, path_temp):
       path_temp.append(node)
 
       print(sp, ' > recurse:', node, 'new_path:', key_names(path_temp))
-      tsort_nodes_util(all_nodes, path_temp)
+      XXtsort_nodes_util(all_nodes, path_temp)
       path_temp.pop()
       print(sp, ' > return:', node, 'new_path:', key_names(path_temp))
 
