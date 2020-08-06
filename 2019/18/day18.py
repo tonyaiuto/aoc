@@ -47,8 +47,13 @@ class Key(object):
       self.edges_in.add(blocked_by)
     self.edges_out = set()
     self.dists = {}  # distance to every other node
-    self.loop_detect = False  # used for graph error detection
+
     self.is_key = name.islower()
+
+    # helpers for tsort
+    self.loop_detect = False  # used for graph error detection
+    self.n_in = 0
+    self.visited = 0
 
 
   def __str__(self):
@@ -666,45 +671,46 @@ class Vault(object):
     return min_dist
     """
 
-
   def tsort(self):
     self.top_sorted = self.tsort_keys(self.all_nodes)
     print('=tsort:', self.top_sorted)
 
   @staticmethod
-  def tsort_keys(list_of_keys):
+  def tsort_keys(list_of_nodes, start_from=None):
 
     ordered = set()
     result = []
 
-    def tsort_visit(key, depth):
+    def tsort_visit(node, depth):
       nonlocal result
       nonlocal ordered
 
-      if key in ordered:
+      if node in ordered:
         return
-      if key.loop_detect:
+      if node.loop_detect:
         raise Exception('not a DAG')
-      key.loop_detect = True
+      node.loop_detect = True
       if TRACE_TSORT > 1:
-        print(' '*depth, '=tsort_visit', key)
-      for blocked in key.blocks:
-        # if blocked.is_key:
+        print(' '*depth, '=tsort_visit', node)
+      for blocked in node.edges_out:
         tsort_visit(blocked, depth=depth+1)
-      key.loop_detect = False
-      ordered.add(key)
-      result = [key] + result
+      node.loop_detect = False
+      ordered.add(node)
+      result = [node] + result
       if TRACE_TSORT > 1:
         print(' '*depth, '=tsort order', result)
       # END
 
     while True:
-      keys = [k for k in list_of_keys if k not in ordered]
-      if not keys:
+      nodes = [k for k in list_of_nodes if k not in ordered]
+      if not nodes:
         break
-      tsort_visit(keys[0], depth=0)
+      n = nodes[0]
+      if start_from:
+        n = start_from
+        start_from = None
+      tsort_visit(n, depth=0)
     return result
-
 
   def tsort_solutions(self):
     keys = set([k for k in self.all_nodes if k.is_key])
@@ -741,21 +747,25 @@ class Vault(object):
     """
 
     key_nodes = set([k for k in self.all_nodes if k.is_key])
-    possible_end_nodes = [k for k in key_nodes if not k.blocks]
+    possible_start_nodes = [k for k in key_nodes if not k.edges_in]
+    possible_end_nodes = [k for k in key_nodes if not k.edges_out]
+
     print('=all nodes:', P(key_nodes))
-    print('=possible end nodes:', P(possible_end_nodes))
+    print('=possible start nodes:', P(possible_start_nodes))
+    print('=possible end nodes:  ', P(possible_end_nodes))
 
-    blocked = set(self.blocked_by.keys())
-    unblocked = self.all_nodes - blocked
-    print('=unblocked', P(unblocked))
+    for start in possible_start_nodes:
+      self.tsort_nodes(key_nodes, start_from=start)
 
-    for last in possible_end_nodes:
-      self.tsort_nodes(key_nodes, end_at=last)
+    if False:
+      for last in possible_end_nodes:
+        self.tsort_nodes_back(key_nodes, end_at=last)
+
       #if self.best_dist < path.total_dist:
       #  self.best_dist = path.total_dist
-
-      #self.walk_backwards(last, path_tail=[], needs=set(possible_end_nodes),
-      #                    level=0)
+    if False:
+      self.walk_backwards(last, path_tail=[], needs=set(possible_end_nodes),
+                          level=0)
 
   def walk_backwards(self, from_key, path_tail, needs, level):
     sp = ' ' * level
@@ -800,7 +810,50 @@ class Vault(object):
       else:
         print(sp, 'why does need have head of path_tail')
 
-  def tsort_nodes(self, all_nodes, end_at):
+  def tsort_nodes(self, all_nodes, start_from):
+    """ Produce all topological sorts
+    From: https://www.geeksforgeeks.org/all-topological-sorts-of-a-directed-acyclic-graph/
+    """
+    for node in all_nodes:
+      node.visited = False
+      node.n_in = len(node.edges_in)
+
+    path_temp = []
+    for result in Vault.tsort_nodes_util(all_nodes, path_temp):
+      total_dist = self.route_distance(result)
+      print('= Complete path: dist:', total_dist, ',', key_names(result))
+      if self.best_dist < total_dist:
+        self.best_dist = total_dist
+        print('= ####### New best')
+
+
+  @staticmethod
+  def tsort_nodes_util(all_nodes, path_temp):
+    working = False
+    sp = ' ' * len(path_temp)
+    for node in all_nodes:
+      if node.n_in == 0 and not node.visited:
+        print(sp, 'VISIT:', node, 'path:', key_names(path_temp))
+        # reduce n_in of adjacent
+        for out in node.edges_out:
+          out.n_in -= 1
+          print(sp, ' > adjust', out, 'n_in:', out.n_in)
+
+        path_temp.append(node)
+        node.visited = True
+        Vault.tsort_nodes_util(all_nodes, path_temp)
+        node.visited = False
+        path_temp.pop()
+
+        for out in node.edges_out:
+          out.n_in += 1
+        working = True
+
+    if not working:
+      yield path_temp
+
+
+  def tsort_nodes_back(self, all_nodes, end_at):
 
     visited = set()
     cur_path = None
@@ -841,8 +894,6 @@ class Vault(object):
           continue
         tsort_visit(NodePath(from_node, tail=path))
       visited.add(node)
-
-
 
       cur_path = path
       if TRACE_TSORT > 1:
