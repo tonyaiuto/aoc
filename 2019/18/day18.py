@@ -12,7 +12,7 @@ TRACE_USE_KEY = 0
 TRACE_TSORT = 1
 TRACE_MEMO = 0
 TRACE_TIME = 1
-TRACE_REDUCE = 1
+TRACE_REDUCE = 0
 VERBOSE = 0
 
 MEMO_HOLDING = True
@@ -260,8 +260,9 @@ class Vault(object):
 
   def resolve_edges(self):
     """Create edges from keys to the doors they unlock."""
-    print('===== resolve_edges()')
-    self.print_keys()
+    if TRACE_REDUCE > 0:
+      print('===== resolve_edges()')
+      self.print_keys()
 
     for key, blocker_name in self.blocked_by.items():
       blocker = self.keys_and_doors[blocker_name]
@@ -499,7 +500,7 @@ class Vault(object):
 
 
   def unblock_reachable_downstream(self, key, state):
-    # given what we are holding, add 
+    # given what we are holding, add
     if TRACE_USE_KEY > 0:
       sp = ' ' * (state.indent + 1)
       print(sp, 'adding downstream reachabilty for', key, 'blocks', key.blocks)
@@ -716,16 +717,22 @@ class Vault(object):
       force_start_from: (char) start with this key first
     """
 
-    possible_ends = [k for k in self.all_nodes
-                     if k.is_key and not k.blocks]
-    print('posible ends:', possible_ends)
+    key_nodes = set([k for k in self.all_nodes if k.is_key])
+    possible_end_nodes = [k for k in key_nodes if not k.blocks]
+    print('=all nodes:', P(key_nodes))
+    print('=possible end nodes:', P(possible_end_nodes))
 
     blocked = set(self.blocked_by.keys())
     unblocked = self.all_nodes - blocked
     print('=unblocked', P(unblocked))
 
-    for last in possible_ends:
-      self.walk_backwards(last, path_tail=[], needs=set(possible_ends), level=0)
+    for last in possible_end_nodes:
+      self.tsort_nodes(key_nodes, end_at=last)
+      #if self.best_dist < path.total_dist:
+      #  self.best_dist = path.total_dist
+
+      #self.walk_backwards(last, path_tail=[], needs=set(possible_end_nodes),
+      #                    level=0)
 
   def walk_backwards(self, from_key, path_tail, needs, level):
     sp = ' ' * level
@@ -742,7 +749,7 @@ class Vault(object):
 
     # compute the keys we need to hold to get through this tail
     holding = set()
-    # we also have to visit the remaining 
+    # we also have to visit the remaining
     need = needs - set([from_key])
     for node in path_tail:
       if node.is_key:
@@ -770,8 +777,91 @@ class Vault(object):
       else:
         print(sp, 'why does need have head of path_tail')
 
+  def tsort_nodes(self, all_nodes, end_at):
+
+    visited = set()
+    cur_path = None
+ 
+    def tsort_visit(path):
+      nonlocal visited
+      nonlocal cur_path
+
+      node = path.path[0]
+      print(' '*len(path.path), path)
+      if len(all_nodes) == len(path.path):
+        print('= Complete path: dist:', path.total_dist,
+              ',', key_names(path.path))
+        if self.best_dist < path.total_dist:
+          self.best_dist = path.total_dist
+          print('= ####### New best')
+        assert not node.edges_in
+        return
+
+      if node in visited:
+        raise Exception('Revisit:', node, path.path)
+      #if node in path.path:
+      #  raise Exception('Loop:', node, path.path)
+      if path.total_dist > self.best_dist:
+        print('= trimming work on path because dist:',
+              try_path.total_dist, '>', self.best_dist)
+        path.too_long = True
+
+      if TRACE_TSORT > 1:
+        print(' '*len(path), '=tsort_visit', node)
+
+      if node.edges_in:
+        to_try = node.edges_in
+      else:
+        to_try = all_nodes - set(path.path)
+      for from_node in to_try:
+        if from_node in path.path:
+          continue
+        tsort_visit(NodePath(from_node, tail=path))
+      visited.add(node)
+
+
+
+      cur_path = path
+      if TRACE_TSORT > 1:
+        print(' '*len(path), '=tsort order', result)
+      # END
+
+    tsort_visit(NodePath(end_at))
+    while True:
+      nodes_left = all_nodes - visited
+      if not nodes_left:
+        break
+      for try_node in nodes_left:
+        self.tsort_nodes(nodes_left, try_node)
+
+    print('= ### Complete path: dist:', cur_path.total_dist, ',', key_names(cur_path.path))
+    if self.best_dist < cur_path.total_dist:
+      self.best_dist = cur_path.total_dist
+      print('= ####### New best')
+
   def all_solutions(self, force_start_from=None):
-    return self.all_solutions1(force_start_from=force_start_from)
+    return self.all_solutions2(force_start_from=force_start_from)
+
+
+class NodePath(object):
+  """Path through nodes."""
+
+  def __init__(self, head, tail=None):
+    assert head
+    if tail:
+      self.path = [head] + list(tail.path)
+      self.dist = head.dists[tail.path[0].name] + tail.dist
+    else:
+      self.path = [head]
+      self.dist = 0
+    self.too_long = False
+
+  def __repr__(self):
+    return 'Path<dist:%d, %s>' % (self.dist, key_names(self.path))
+  
+  @property
+  def total_dist(self):
+    return self.path[0].dist_from_root + self.dist
 
 
 def dist_check(vault, k1, k2, expect):
