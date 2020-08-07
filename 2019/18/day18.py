@@ -822,16 +822,25 @@ class Vault(object):
       node.visited = False
       node.n_in = len(node.edges_in)
 
-    n_results = 0
     path_temp = []
-    for result in tsort_nodes_util(all_nodes, path_temp):
+    n_results = 0
+
+    def check_result(path):
+      nonlocal n_results
       n_results += 1
-      total_dist = self.route_distance(result)
-      print('= Complete path: dist:', total_dist, ',', key_names(result))
-      if self.best_dist < total_dist:
+      total_dist = self.route_distance(path)
+      print('= Complete path: dist:', total_dist, ',', key_names(path))
+      if self.best_dist >= total_dist:
         self.best_dist = total_dist
-        print('= ####### New best')
+        print('= ####### New best', path)
+
+    tsort_nodes_helper(all_nodes, path_temp, check_result)
+    """
+    for path in tsort_all_paths(all_nodes, path_temp):
+      check_result(path)
+    """
     assert n_results > 0
+    print('====== BEST DIST', self.best_dist)
 
 
   def tsort_nodes_back(self, all_nodes, end_at):
@@ -848,7 +857,7 @@ class Vault(object):
       if len(all_nodes) == len(path.path):
         print('= Complete path: dist:', path.total_dist,
               ',', key_names(path.path))
-        if self.best_dist < path.total_dist:
+        if self.best_dist >= path.total_dist:
           self.best_dist = path.total_dist
           print('= ####### New best')
         assert not node.edges_in
@@ -895,14 +904,14 @@ class Vault(object):
       print('= ####### New best')
 
 
-
   def all_solutions(self, force_start_from=None):
     return self.all_solutions2(force_start_from=force_start_from)
 
 
-def tsort_nodes_util(all_nodes, path_temp):
+
+def tsort_nodes_helper(all_nodes, path_temp, consume_path):
   sp = ' ' * len(path_temp)
-  print(sp, 'tsort_nodes_util(nodes:%s, path: %s)' % (
+  print(sp, 'tsort_nodes_helper(nodes:%s, path: %s)' % (
       P(all_nodes), key_names(path_temp)))
 
   working = False
@@ -916,12 +925,10 @@ def tsort_nodes_util(all_nodes, path_temp):
 
       node.visited = True
       path_temp.append(node)
-
-      print(sp, ' > recurse:', node, 'new_path:', key_names(path_temp))
-      XXtsort_nodes_util(all_nodes, path_temp)
+      #print(sp, ' > call helper (nodes:%s, path: %s)' % (
+      #    P(all_nodes), key_names(path_temp)))
+      tsort_nodes_helper(all_nodes, path_temp, consume_path)
       path_temp.pop()
-      print(sp, ' > return:', node, 'new_path:', key_names(path_temp))
-
       node.visited = False
 
       for out in node.edges_out:
@@ -929,7 +936,7 @@ def tsort_nodes_util(all_nodes, path_temp):
       working = True
 
   if not working:
-    yield path_temp
+    consume_path(path_temp)
 
 
 class NodePath(object):
