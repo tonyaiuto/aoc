@@ -9,7 +9,7 @@ from memoized import memoized
 
 TRACE_DIST = 0
 TRACE_USE_KEY = 0
-TRACE_TSORT = 1
+TRACE_TSORT = 0
 TRACE_MEMO = 0
 TRACE_TIME = 1
 TRACE_RESOLVE = 0
@@ -911,13 +911,15 @@ class Vault(object):
 
 def tsort_nodes_helper(all_nodes, path_temp, consume_path):
   sp = ' ' * len(path_temp)
-  print(sp, 'tsort_nodes_helper(nodes:%s, path: %s)' % (
-      P(all_nodes), key_names(path_temp)))
+  if TRACE_TSORT > 0:
+    print(sp, 'tsort_nodes_helper(nodes:%s, path: %s)' % (
+        P(all_nodes), key_names(path_temp)))
 
   working = False
   for node in all_nodes:
     if node.n_in == 0 and not node.visited:
-      print(sp, 'VISIT:', node, 'path:', key_names(path_temp))
+      if TRACE_TSORT > 1:
+        print(sp, 'VISIT:', node, 'path:', key_names(path_temp))
       # reduce n_in of adjacent
       for out in node.edges_out:
         out.n_in -= 1
