@@ -770,6 +770,7 @@ class Vault(object):
     """
 
 
+
   def walk_backwards(self, from_key, path_tail, needs, level):
     sp = ' ' * level
 
@@ -834,7 +835,13 @@ class Vault(object):
         self.best_dist = total_dist
         print('= ####### New best', path)
 
-    tsort_nodes_helper(all_nodes, path_temp, check_result)
+    def cutoff(path):
+      if self.route_distance(path) > self.best_dist:
+        print('  > truncate:', key_names(path))
+        return True
+      return False
+
+    tsort_nodes_helper(all_nodes, path_temp, check_result, cutoff=cutoff)
     """
     for path in tsort_all_paths(all_nodes, path_temp):
       check_result(path)
@@ -847,7 +854,7 @@ class Vault(object):
 
     visited = set()
     cur_path = None
- 
+
     def tsort_visit(path):
       nonlocal visited
       nonlocal cur_path
@@ -907,9 +914,68 @@ class Vault(object):
   def all_solutions(self, force_start_from=None):
     return self.all_solutions2(force_start_from=force_start_from)
 
+  """
+    # A recursive function used by shortestPath
+    def topologicalSortUtil(self,v,visited,stack):
+
+        # Mark the current node as visited.
+        visited[v] = True
+
+        # Recur for all the vertices adjacent to this vertex
+        if v in self.graph.keys():
+            for node,weight in self.graph[v]:
+                if visited[node] == False:
+                    self.topologicalSortUtil(node,visited,stack)
+
+        # Push current vertex to stack which stores topological sort
+        stack.append(v)
+  """
+
+  def weighted_dag(self):
+    key_nodes = set([k for k in self.all_nodes if k.is_key])
+    possible_start_nodes = [k for k in key_nodes if not k.edges_in]
+    possible_end_nodes = [k for k in key_nodes if not k.edges_out]
+
+    def dist_from_start(start, tsorted_path):
+      print('weighted_dag: start', start, ', path', key_names(tsorted_path))
+      # Initialize distances to all vertices as infinite and
+      # distance to source as 0
+      dist = {node.name: 100000000 for node in tsorted_path}
+      dist[start.name] = 0
+
+      for i in range(len(tsorted_path)):
+        node = tsorted_path[i]
+        print("At node", node)
+        # All start nodes are always edges
+        for out in possible_start_nodes:
+          if out != node:
+            if dist[out.name] > dist[node.name] + node.dists[out.name]:
+              dist[out.name] = dist[node.name] + node.dists[out.name]
+        # and so are real edges
+        for out in node.edges_out:
+          print(" edge to", out)
+          if dist[out.name] > dist[node.name] + node.dists[out.name]:
+            dist[out.name] = dist[node.name] + node.dists[out.name]
+
+        """
+        if i + 1 < len(tsorted_path):
+          out = tsorted_path[i+1]
+          if out not in node.edges_out:
+            if dist[out.name] > dist[node.name] + node.dists[out.name]:
+              dist[out.name] = dist[node.name] + node.dists[out.name]
+        """
+      print(' -> weighted_dag: dists:', dist)
+      return sum(dist.values())
+
+    for start in possible_start_nodes:
+      path = self.tsort_keys(key_nodes, start_from=start)
+      d = dist_from_start(start, path)
+      print('  -> weighted_dag: dist:', d)
+      if d < self.best_dist:
+        self.best_dist = d
 
 
-def tsort_nodes_helper(all_nodes, path_temp, consume_path):
+def tsort_nodes_helper(all_nodes, path_temp, consume_path, cutoff=None):
   sp = ' ' * len(path_temp)
   if TRACE_TSORT > 0:
     print(sp, 'tsort_nodes_helper(nodes:%s, path: %s)' % (
@@ -927,9 +993,10 @@ def tsort_nodes_helper(all_nodes, path_temp, consume_path):
 
       node.visited = True
       path_temp.append(node)
-      #print(sp, ' > call helper (nodes:%s, path: %s)' % (
-      #    P(all_nodes), key_names(path_temp)))
-      tsort_nodes_helper(all_nodes, path_temp, consume_path)
+      if cutoff and not cutoff(path_temp):
+        #print(sp, ' > call helper (nodes:%s, path: %s)' % (
+        #    P(all_nodes), key_names(path_temp)))
+        tsort_nodes_helper(all_nodes, path_temp, consume_path, cutoff=cutoff)
       path_temp.pop()
       node.visited = False
 
@@ -956,7 +1023,7 @@ class NodePath(object):
 
   def __repr__(self):
     return 'Path<dist:%d, %s>' % (self.dist, key_names(self.path))
-  
+
   @property
   def total_dist(self):
     return self.path[0].dist_from_root + self.dist
@@ -1015,7 +1082,8 @@ def test_part1_b():
   vault = Vault(maze)
   print(vault.blocked_by)
   print('========================================')
-  vault.all_solutions()
+  # vault.all_solutions()
+  vault.weighted_dag()
   assert 136 == vault.best_dist
 
 
