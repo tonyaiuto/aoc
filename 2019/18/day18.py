@@ -701,15 +701,19 @@ class Vault(object):
         print(' '*depth, '=tsort order', result)
       # END
 
+    if start_from:
+      print('==== Force start from', start_from.name)
+      ordered.add(start_from)
+      for blocked in start_from.edges_out:
+        tsort_visit(blocked, depth=0)
+
     while True:
       nodes = [k for k in list_of_nodes if k not in ordered]
       if not nodes:
         break
-      n = nodes[0]
-      if start_from:
-        n = start_from
-        start_from = None
-      tsort_visit(n, depth=0)
+      tsort_visit(nodes[0], depth=0)
+    if start_from:
+      return [start_from] + result
     return result
 
   def tsort_solutions(self):
@@ -940,30 +944,52 @@ class Vault(object):
       print('weighted_dag: start', start, ', path', key_names(tsorted_path))
       # Initialize distances to all vertices as infinite and
       # distance to source as 0
-      dist = {node.name: 100000000 for node in tsorted_path}
-      dist[start.name] = 0
+      dist = {node.name: 100000 for node in tsorted_path}
+      dist[start.name] = start.dist_from_root 
+
+      def update_dist(node, out, tag):
+        assert node != out
+        before = dist[out.name]
+        new_min = dist[node.name] + node.dists[out.name]
+        if before > new_min:
+          dist[out.name] = new_min
+          print(tag, ':', out.name, 'changed from', before, 'to', new_min)
+        else:
+          print(tag, ':', out.name, 'unchanged changed from', before, 'vs', new_min)
 
       for i in range(len(tsorted_path)):
         node = tsorted_path[i]
         print("At node", node)
-        # All start nodes are always edges
-        for out in possible_start_nodes:
-          if out != node:
-            if dist[out.name] > dist[node.name] + node.dists[out.name]:
-              dist[out.name] = dist[node.name] + node.dists[out.name]
-        # and so are real edges
+        # Look at outgoing edges real edges
         for out in node.edges_out:
+          update_dist(node, out, '  =edge to')
+          """
           print(" edge to", out)
           if dist[out.name] > dist[node.name] + node.dists[out.name]:
             dist[out.name] = dist[node.name] + node.dists[out.name]
+          """
 
-        """
-        if i + 1 < len(tsorted_path):
-          out = tsorted_path[i+1]
-          if out not in node.edges_out:
+        # All unvisited start nodes are also edges
+        for unvisited_i in range(i+1, len(tsorted_path)):
+          out = tsorted_path[unvisited_i]
+          if out != node:
+            update_dist(node, out, '  =unvisited')
+          """
+            print(" un-visited", out)
             if dist[out.name] > dist[node.name] + node.dists[out.name]:
               dist[out.name] = dist[node.name] + node.dists[out.name]
-        """
+          """
+
+        # and end nodes we have already visited
+        for visited_i in range(i):
+          out = tsorted_path[visited_i]
+          update_dist(node, out, '  =previsited')
+          """
+          print(" pre-visited", out)
+          if dist[out.name] > dist[node.name] + node.dists[out.name]:
+            dist[out.name] = dist[node.name] + node.dists[out.name]
+          """
+
       print(' -> weighted_dag: dists:', dist)
       return sum(dist.values())
 
