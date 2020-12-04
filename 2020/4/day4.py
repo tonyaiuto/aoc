@@ -122,14 +122,19 @@ class day4(object):
     pass
 
   def load(self, file):
+    n = 0
     n_valid = 0
     cur_pass = Passport()
     with open(file, 'r') as inp:
       for line in inp:
         l = line.strip()   
         if not l:
+          n += 1
           if cur_pass.is_valid():
             n_valid += 1
+            print('== ok', n, n_valid)
+          else:
+            print('== bad', n, n_valid, cur_pass.fields)
           # print(cur_pass.fields)
           cur_pass = Passport()
         else:
