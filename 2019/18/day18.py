@@ -502,10 +502,12 @@ class Vault(object):
     print('=blocked  ', P(blocked))
     print('=unblocked', P(unblocked))
 
+    """
     # make sure the things behind the reachable keys are also reachable
     state = State(reachable = set(unblocked))
     for key in unblocked:
       self.unblock_reachable_downstream(key, state)
+    """
 
     # Attempt to start from first thing in tsort. Did not help
     #first = self.top_sorted[0]
@@ -916,7 +918,7 @@ class Vault(object):
 
 
   def all_solutions(self, force_start_from=None):
-    return self.all_solutions2(force_start_from=force_start_from)
+    return self.all_solutions1(force_start_from=force_start_from)
 
   """
     # A recursive function used by shortestPath
