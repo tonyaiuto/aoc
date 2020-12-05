@@ -1,3 +1,3 @@
 
 go:
-	python day@N@.py
+	python3 day@N@.py
