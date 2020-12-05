@@ -1,16 +1,8 @@
+"""AOC 2020: day 5"""
 
+# First solution
 
 NROWS=127
-
-class Foo(object):
-
-  def __init__(self):
-    pass
-
-
-  def __str__(self):
-    return str(self)
-
 
 def pass_to_row(s):
   front = 0
@@ -26,7 +18,6 @@ def pass_to_row(s):
   return front
 
 assert pass_to_row('FBFBBFFRLR') == 44
-
 
 SEAT_MAP = {
   'LLL': 0,
@@ -49,12 +40,12 @@ assert pass_to_seat('FFFBBBFRRR') == 119
 assert pass_to_seat('BBFFBBFRLL') == 820
 
 
+# Better solution
+
 def p2s(s):
   ret = 0
   for c in s:
-    ret <<= 1
-    if c in ('B', 'R'):
-      ret |= 1
+    ret = ret << 1 | (1 if c in ('B', 'R') else 0)
   return ret
 
 assert p2s('FBFBBFFRLR') == 357
@@ -73,19 +64,24 @@ class day5(object):
   def load(self, file):
     with open(file, 'r') as inp:
       for line in inp:
-        l = line.strip()   
-        seat = pass_to_seat(l)
+        l = line.strip()
+        seat = p2s(l)
         self.occupied.add(seat)
         self.max_seat = max(self.max_seat, seat)
 
   def part1(self):
     print('part1', self.max_seat)
+    assert self.max_seat == 864
 
   def part2(self):
+    last_vacant = True
     for i in range(self.max_seat):
       if i not in self.occupied:
-        print('vacant', i)
-
+        if not last_vacant:
+          print('vacant', i)
+      else:
+        last_vacant = False
+    print('739 should be the one')
 
 
 def main(input):
