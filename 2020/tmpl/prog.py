@@ -1,4 +1,4 @@
-
+"AOC 2020: day @N@"
 
 class Foo(object):
 
@@ -17,14 +17,12 @@ class day@N@(object):
     pass
 
   def load(self, file):
-    self
     with open(file, 'r') as inp:
       for line in inp:
-        l = line.strip()   
+        l = line.strip()
 
   def part1(self):
     pass
-
 
 
 def main(input):
