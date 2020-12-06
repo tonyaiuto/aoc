@@ -16,10 +16,10 @@ def do_group_part1(group):
   for person in group:
     for q in person:
       all.add(q)
-  print(all)
+  # print(all)
   return len(all)
 
-def do_group(group):
+def do_group_part2(group):
   all = {}
   for person in group:
     for q in person:
@@ -38,18 +38,28 @@ class day6(object):
     pass
 
   def load(self, file):
-    sum = 0
+    n_groups = 0
+    sum_part1 = 0
+    sum_part2 = 0
     with open(file, 'r') as inp:
       group = []
+      n_groups += 1
       for line in inp:
         l = line.strip()
         if l:
           group.append(l)
         else:
-          sum += do_group(group)
+          sum_part1 += do_group_part1(group)
+          sum_part2 += do_group_part2(group)
           group = []
-      sum += do_group(group)
-    print('part1', sum)
+          n_groups += 1
+      sum_part1 += do_group_part1(group)
+      sum_part2 += do_group_part2(group)
+    print(n_groups, 'groups')
+    print('part1', sum_part1)
+    print('part2', sum_part2)
+    assert 7110 == sum_part1
+    assert 3628 == sum_part2
    
 
   def part1(self):
