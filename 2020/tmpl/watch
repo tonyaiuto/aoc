@@ -1,0 +1,10 @@
+#!/bin/sh
+
+cmd="$*"
+
+
+
+while : ; do
+  sleep 1
+  $cmd
+done
