@@ -11,7 +11,7 @@ class Foo(object):
 
 
 def do_group_part1(group):
-  print('-------')
+  # print('-------')
   all = set()
   for person in group:
     for q in person:
@@ -20,7 +20,6 @@ def do_group_part1(group):
   return len(all)
 
 def do_group(group):
-  print('-------')
   all = {}
   for person in group:
     for q in person:
