@@ -54,7 +54,6 @@ assert p2s('FFFBBBFRRR') == 119
 assert p2s('BBFFBBFRLL') == 820
 
 
-
 class day5(object):
 
   def __init__(self):
