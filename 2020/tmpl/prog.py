@@ -1,5 +1,7 @@
 "AOC 2020: day @N@"
 
+from collections import defaultdict
+
 class Foo(object):
 
   def __init__(self):
