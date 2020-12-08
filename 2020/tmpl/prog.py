@@ -2,6 +2,25 @@
 
 from collections import defaultdict
 
+
+def sample_test(s, expect):
+  puzz = day@N@()
+  puzz.load_str(s)
+  res = puzz.part1()
+  if expect == res:
+    print('FAIL: expect', expect, 'got', res)
+    assert expect == res
+
+
+def main(input):
+  puzz = day@N@()
+  puzz.load_file(input)
+  res = puzz.part1()
+  print('part1', res)
+  res = puzz.part2()
+  print('part2', res)
+
+
 class Foo(object):
 
   def __init__(self):
@@ -18,19 +37,27 @@ class day@N@(object):
   def __init__(self):
     pass
 
-  def load(self, file):
+  def load_file(self, file):
     with open(file, 'r') as inp:
       for line in inp:
-        l = line.strip()
+        self.do_line(line.strip())
 
-  def part1(self):
+
+  def load_str(self, s):
+    for line in s.split('\n'):
+      self.do_line(line.strip())
+
+
+  def do_line(self, line):
     pass
 
+  def part1(self):
+    return None
 
-def main(input):
-  puzz = day@N@()
-  puzz.load(input)
-  puzz.part1()
+  def part2(self):
+    return None
+
+
 
 
 
