@@ -7,7 +7,7 @@ def sample_test(s, expect):
   puzz = day@N@()
   puzz.load_str(s)
   res = puzz.part1()
-  if expect == res:
+  if expect != res:
     print('FAIL: expect', expect, 'got', res)
     assert expect == res
 
