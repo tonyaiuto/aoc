@@ -4,7 +4,7 @@ import sys
 import time
 
 import map
-from memoized import memoized
+from tools.memoized import memoized
 
 
 TRACE_DIST = 0

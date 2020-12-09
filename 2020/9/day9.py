@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 
-import reader
+from tools import reader
 
 
 def sample_test1(s, window, expect):

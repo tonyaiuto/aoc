@@ -2,7 +2,7 @@
 
 import sys
 
-from elf_image import ElfImage
+from tools.elf_image import ElfImage
 import intcode
 
 

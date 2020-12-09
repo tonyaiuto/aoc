@@ -3,7 +3,7 @@
 import sys
 import textwrap
 
-from elf_image import ElfImage
+from tools.elf_image import ElfImage
 import intcode
 
 

@@ -1,7 +1,7 @@
 "AOC 2020: day @N@"
 
 from collections import defaultdict
-import reader
+from tools import reader
 
 
 def sample_test(s, expect):
