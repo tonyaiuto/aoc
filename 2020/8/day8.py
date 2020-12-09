@@ -2,6 +2,8 @@
 
 from collections import defaultdict
 
+import reader
+
 
 def sample_test(s, expect):
   puzz = day8()
@@ -92,22 +94,20 @@ class day8(object):
   def __init__(self):
     self.proc = Proc()
 
-
   def load_file(self, file):
-    with open(file, 'r') as inp:
-      for line in inp:
-        self.do_line(line.strip())
-
+    all = reader.FileReader(file).load()
+    for x in all:
+      self.do_line(x)
 
   def load_str(self, s):
-    for line in s.split('\n'):
-      self.do_line(line.strip())
-
+    all = reader.StringReader(s).load()
+    for x in all:
+      self.do_line(x)
 
   def do_line(self, line):
-    x = line.split(' ')
-    self.proc.mem.append(Ins(x[0], x[1]))
-
+    if line:
+      x = line.split(' ')
+      self.proc.mem.append(Ins(x[0], x[1]))
 
   def part1(self):
     self.proc.run(loop_detect=True)
