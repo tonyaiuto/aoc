@@ -1,5 +1,4 @@
 
-
 class Reader(object):
 
   def __init__(self, by_group=False, strip_lines=True):
@@ -101,7 +100,7 @@ if __name__ == '__main__':
 
 
 
-def tests():
+def self_check():
   r = StringReader("""abc  \ndef\n\nghi""")
   result = [l for l in r.next()]
   assert result == ['abc', 'def', '', 'ghi']
@@ -138,4 +137,5 @@ group 3
 
 
 if __name__ == '__main__':
-  tests()
+  self_check()
+  print('PASS:', __file__)

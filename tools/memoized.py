@@ -69,6 +69,8 @@ def self_check():
   assert 12 == test.foo_call
   assert 9 == test.bar_call
   assert 9 == baz_call
+  if _DEFAULT_TRACE:
+    print('PASS:', __file__)
 
 
 if __name__ == '__main__':

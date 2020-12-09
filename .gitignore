@@ -6,4 +6,6 @@ out_*.png
 /2019/*/elf_image.py
 /2019/*/intcode.py
 /2019/*/memoized.py
+/2020/*/memoized.py
+/2020/*/reader.py
 /2019/18/map.py
