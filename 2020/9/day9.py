@@ -2,6 +2,8 @@
 
 from collections import defaultdict
 
+import reader
+
 
 def sample_test1(s, window, expect):
   puzz = day9(window=window)
@@ -29,6 +31,7 @@ def main(input):
   print('part1', res)
   res2 = puzz.part2(res)
   print('part2', res2)
+  assert res2 == 3340942
 
 
 class day9(object):
@@ -45,18 +48,17 @@ class day9(object):
     self.first = -1
 
   def load_file(self, file):
-    with open(file, 'r') as inp:
-      for line in inp:
-        l = line.strip()
-        if l:
-          self.do_line(l)
+    all = reader.FileReader(file).load()
+    for line in all:
+      if line:
+        self.do_line(line)
 
 
   def load_str(self, s):
-    for line in s.split('\n'):
-      l = line.strip()
-      if l:
-        self.do_line(l)
+    all = reader.StringReader(s).load()
+    for line in all:
+      if line:
+        self.do_line(line)
 
 
   def do_line(self, line):
