@@ -1,6 +1,7 @@
 "AOC 2020: day @N@"
 
 from collections import defaultdict
+import reader
 
 
 def sample_test(s, expect):
@@ -35,28 +36,33 @@ class Foo(object):
 class day@N@(object):
 
   def __init__(self):
+    self.result1 = None
+    self.result2 = None
     pass
 
   def load_file(self, file):
-    with open(file, 'r') as inp:
-      for line in inp:
-        self.do_line(line.strip())
-
+    all = reader.FileReader(file).load()
+    for x in all:
+      self.do_line(x)
 
   def load_str(self, s):
-    for line in s.split('\n'):
-      self.do_line(line.strip())
-
+    all = reader.StringReader(file).load()
+    for x in all:
+      self.do_line(x)
 
   def do_line(self, line):
     pass
 
   def part1(self):
+    self.result1 = None
     return None
 
   def part2(self):
+    self.result2 = None
     return None
 
+
+# sample_test("""   """, expect):
 
 
 if __name__ == '__main__':

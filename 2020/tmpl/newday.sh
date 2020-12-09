@@ -14,3 +14,4 @@ fi
 mkdir $day
 sed -e "s/@N@/$day/g" tmpl/Makefile.tmpl >$day/Makefile
 sed -e "s/@N@/$day/g" tmpl/prog.py >$day/day${day}.py
+(cd $day ; ln -s ../tmpl/reader.py)
