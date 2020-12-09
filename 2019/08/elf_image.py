@@ -1,1 +1,0 @@
-../elf_image.py

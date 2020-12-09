@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import elf_image
+from tools import elf_image
 
 
 def part1():

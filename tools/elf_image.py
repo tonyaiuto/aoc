@@ -160,3 +160,7 @@ def self_check():
   assert expected == got.getvalue()
 
 self_check()
+
+if __name__ == '__main__':
+  self_check()
+  print('PASS:', __file__)

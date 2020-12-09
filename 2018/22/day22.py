@@ -170,7 +170,7 @@ class Cave(object):
     if cached:
       return cached[0], cached[1]
 
-    new_costs = PossibleCostsToReach(this, x, y):
+    new_costs = PossibleCostsToReach(this, x, y)
 
     # cost, tool = this.MinimalCostToReach(x+dx, y+dy)
     verbose = (x == 2 and y == 1)
