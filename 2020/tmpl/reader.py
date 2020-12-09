@@ -2,12 +2,11 @@
 
 class Reader(object):
 
-  def __init__(self, by_group=False, strip_lines=True, collect=False):
+  def __init__(self, by_group=False, strip_lines=True):
     self._nlines = 0
     self._ngroups = 0
     self._by_group = by_group
     self._strip_lines = strip_lines
-    self._collect = collect
     self.all = []
 
   @property
@@ -20,11 +19,8 @@ class Reader(object):
 
   def _do_line(self, line):
     self._nlines += 1
-    self._ngroups += 1
     if self._strip_lines:
       line = line.strip()
-    if self._collect:
-      self.all.append(line)
     return line
 
   def _do_group(self, group):
@@ -39,63 +35,40 @@ class StringReader(Reader):
 
   def next(self):
     if not self._by_group:
-      for l in self.inp.split('\n'):
-        yield self._do_line(l)
+      for line in self.inp.split('\n'):
+        self._ngroups += 1
+        yield self._do_line(line)
       return
 
     group = []
-    for l in self.inp.split('\n'):
-      self._nlines += 1
-      if self._strip_lines:
-        l = l.strip()
-      if not l:
+    for line in self.inp.split('\n'):
+      line = self._do_line(line)
+      # TODO: other delimiter formats?
+      if not line:
         if group:
           self._ngroups += 1
-          if self._collect:
-            self.all.append(group)
           yield group
           group = []
       else:
-        group.append(l)
+        group.append(line)
 
     if group:
       self._ngroups += 1
-      if self._collect:
-        self.all.append(group)
       yield group
 
+  def load(self):
+    for v in self.next():
+      self.all.append(v)
+    return self.all
 
-class FileReader(Reader):
+
+class FileReader(StringReader):
 
   def __init__(self, file, **kwargs):
-    super(FileReader, self).__init__(**kwargs)
     self.file = file
-
-  def next(self):
-    with open(self.file, 'r') as inp:
-      if not self._by_group:
-        for line in inp:
-          yield self._do_line(line)
-        return
-
-      group = []
-      for line in inp:
-        self._nlines += 1
-        if self._strip_lines:
-          line = line.strip()
-        if not line:
-          if group:
-            self._ngroups += 1
-            yield group
-            group = []
-        else:
-          group.append(line)
-
-      if group:
-        self._ngroups += 1
-        yield group
-
-
+    with open(file, 'r') as inp:
+      s = inp.read()
+    super(FileReader, self).__init__(s, **kwargs)
 
 
 def tests():
@@ -137,8 +110,8 @@ def tests():
   result = [l for l in r.next()]
   assert result == ['abc  ', 'def', '', 'ghi']
 
-  r = StringReader("""abc  \ndef\n\nghi""", strip_lines=False, collect=True)
-  result = [l for l in r.next()]
+  r = StringReader("""abc  \ndef\n\nghi""", strip_lines=False)
+  result = r.load()
   assert result == ['abc  ', 'def', '', 'ghi']
   assert r.all == ['abc  ', 'def', '', 'ghi']
 
