@@ -12,5 +12,5 @@ if [[ -d $day ]] ; then
 fi
   
 mkdir $day
-sed -e "s/@N@/$day/g" tmpl/Makefile >$day/Makefile
+sed -e "s/@N@/$day/g" tmpl/Makefile.tmpl >$day/Makefile
 sed -e "s/@N@/$day/g" tmpl/prog.py >$day/day${day}.py

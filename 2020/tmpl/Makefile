@@ -1,7 +1,4 @@
 
 go:
-	python3 day@N@.py
+	python3 reader.py
 
-
-watch:
-	../tmpl/watch make go

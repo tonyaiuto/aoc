@@ -59,7 +59,5 @@ class day@N@(object):
 
 
 
-
-
 if __name__ == '__main__':
   main('input.txt')
