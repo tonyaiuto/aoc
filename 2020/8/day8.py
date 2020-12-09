@@ -58,7 +58,7 @@ class Proc(object):
     while self.pc != len(self.mem):
       n_cycles += 1
       if n_cycles > 1000:
-        print('====== infinite loop')
+        # print('====== infinite loop')
         return 'loop'
       if loop_detect:
         if self.pc in seen:
