@@ -1,6 +1,6 @@
 
 go:
-	python3 day@N@.py
+	python3 day10.py
 
 
 watch:

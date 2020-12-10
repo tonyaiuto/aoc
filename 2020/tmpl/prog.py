@@ -44,13 +44,18 @@ class day@N@(object):
     all = reader.FileReader(file).load()
     for x in all:
       self.do_line(x)
+    self.post_load()
 
   def load_str(self, s):
-    all = reader.StringReader(file).load()
+    all = reader.StringReader(s).load()
     for x in all:
       self.do_line(x)
+    self.post_load()
 
   def do_line(self, line):
+    pass
+
+  def post_load(self):
     pass
 
   def part1(self):
