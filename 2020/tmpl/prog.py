@@ -20,13 +20,19 @@ def sample_test(s, expect, expect2=None):
       assert expect2 == res
 
 
-def main(input):
+def main(input, e1=None, e2=None):
   puzz = day@N@()
   puzz.load_file(input)
   res = puzz.part1()
   print('part1', res)
+  if e1 and  e1 != res:
+    print('FAIL: expect', e1, 'got', res)
+    assert e1 == res
   res = puzz.part2()
   print('part2', res)
+  if e2 and  e2 != res:
+    print('FAIL: expect', e2, 'got', res)
+    assert e2 == res
 
 
 class Foo(object):
@@ -93,4 +99,4 @@ class day@N@(object):
 
 
 if __name__ == '__main__':
-  main('input.txt')
+  main('input.txt', None, None)
