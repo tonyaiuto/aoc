@@ -1,16 +1,23 @@
 "AOC 2020: day @N@"
 
 from collections import defaultdict
+import math
+
 from tools import reader
 
 
-def sample_test(s, expect):
+def sample_test(s, expect, expect2=None):
   puzz = day@N@()
   puzz.load_str(s)
   res = puzz.part1()
   if expect != res:
     print('FAIL: expect', expect, 'got', res)
     assert expect == res
+  if expect2:
+    res = puzz.part2()
+    if expect2 != res:
+      print('FAIL: expect', expect2, 'got', res)
+      assert expect2 == res
 
 
 def main(input):
@@ -38,6 +45,9 @@ class day@N@(object):
   def __init__(self):
     self.result1 = None
     self.result2 = None
+    self.trace = True
+
+  def reset(self):
     pass
 
   def load_file(self, file):
@@ -58,16 +68,28 @@ class day@N@(object):
   def post_load(self):
     pass
 
+
+
   def part1(self):
+    self.reset()
     self.result1 = None
-    return None
+
+    print('part1', self.result1)
+    return self.result1
+
+
 
   def part2(self):
+    self.reset()
     self.result2 = None
-    return None
+
+    print('part2', self.result2)
+    return self.result2
 
 
-# sample_test("""   """, expect):
+
+# sample_test("""   """, expect)
+
 
 
 if __name__ == '__main__':
