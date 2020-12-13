@@ -6,7 +6,7 @@ import traceback
 from tools import reader
 
 
-def sample_test(s, expect):
+def sample_test(s, expect, gens):
   puzz = day11()
   puzz.load_str(s)
   res = puzz.part1()
@@ -17,7 +17,7 @@ def sample_test(s, expect):
 
   p2 = day11()
   p2.load_str(s)
-  res = p2.part2()
+  res = p2.part2(expect_gens=gens)
 
 
 def main(input):
@@ -27,7 +27,7 @@ def main(input):
   print('part1', res)
 
   puzz = day11()
-  puzz.load_str(input)
+  puzz.load_file(input)
   res = puzz.part2()
   print('part2', res)
 
@@ -107,6 +107,14 @@ class day11(object):
     self.rows = nrows
     return match
 
+  def check_match(self, expected):
+    match = True
+    e = expected.split('\n')
+    for i in range(len(e)):
+      if e[i] != self.rows[i+1][1:-1]:
+        print('fail row %2d' % i, e[i], self.rows[i+1][1:-1])
+        match = False
+
 
   def ncount(self, row, col):
     ret = 0
@@ -171,7 +179,7 @@ class day11(object):
           print('  inc_end: INC to', vc[ri][ci])
       if ri == 1 and ci == 1:
         assert vc[ri][ci] <= 3
-      return seat == '#'
+      return seat in ('L', '#')
 
     trace = False
     if row == 2 and col == 2:
@@ -194,7 +202,6 @@ class day11(object):
   def run_gen2(self):
     self.gen += 1
     self.nrows = len(self.rows)
-    assert self.nrows == 12
     nrows = [self.rows[0]]
     upvis = [False] * self.ncols
     downvis = [False] * self.ncols
@@ -296,11 +303,16 @@ class day11(object):
 
         if lseat == '#':
           lvis = True
+          upvis[col] = True
+        elif lseat == 'L':
+          lvis = False
+          upvis[col] = False
         if rseat == '#':
           rvis = True
+        elif rseat == 'L':
+          rvis = False
 
         if lseat == '#':
-          upvis[col] = True
           """
           #diag_l_up[col] = True
           #diag_r_up[col] = True
@@ -309,7 +321,8 @@ class day11(object):
 
         if dseat == '#':
           downvis[col] = True
-
+        elif dseat == 'L':
+          downvis[col] = False
           """
           #diag_l_down[col] = True
           #diag_r_down[col] = True
@@ -345,16 +358,19 @@ class day11(object):
     return match
 
 
-  def part2(self):
+  def part2(self, expect_gens=None):
     print('========= start part 2===========')
     self.result2 = None
     while self.gen < 1000:
-      #if self.gen % 10 == 0:
-      self.print()
+      if self.gen % 10 == 0:
+        self.print()
       if self.run_gen2():
         print("======================== match")
         self.print()
         break
+      if expect_gens and len(expect_gens) > self.gen:
+        self.check_match(expect_gens[self.gen -1])
+
     self.result2 = self.nocc()
     print('part2', self.result2)
     return self.result2
@@ -378,7 +394,35 @@ L.LLLLL.LL
 LLLLLLLLLL
 L.LLLLLL.L
 L.LLLLL.LL
-""", 37)
+""", 37, gens=["""#.##.##.##
+#######.##
+#.#.#..#..
+####.##.##
+#.##.##.##
+#.#####.##
+..#.#.....
+##########
+#.######.#
+#.#####.##""", """#.LL.LL.L#
+#LLLLLL.LL
+L.L.L..L..
+LLLL.LL.LL
+L.LL.LL.LL
+L.LLLLL.LL
+..L.L.....
+LLLLLLLLL#
+#.LLLLLL.L
+#.LLLLL.L#""", """#.L#.##.L#
+#L#####.LL
+L.#.#..#..
+##L#.##.##
+#.##.#L.##
+#.#####.#L
+..#.#.....
+LLL####LL#
+#.L#####.L
+#.L####.L#"""])
+
 
 gen2("""
 .......#.
@@ -393,5 +437,5 @@ gen2("""
 """)
 
 if __name__ == '__main__':
-  # main('input.txt')
+  main('input.txt')
   pass
