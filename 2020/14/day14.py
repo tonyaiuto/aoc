@@ -1,10 +1,10 @@
 "AOC 2020: day 14"
 
 from collections import defaultdict
+import functools
 import math
 
 from tools import reader
-import intcode
 
 
 def sample_test(s, expect, expect2=None):
@@ -99,7 +99,6 @@ class day14(object):
     self.result2 = None
     self.trace = True
     self.mask = 0
-    self.proc = intcode.Intcode()
     self.mem = {}
     self.mode = 1
 
@@ -124,8 +123,6 @@ class day14(object):
     # mem[8] = 11
     # mem[7] = 101
     # mem[8] = 0
-    if not line:
-      return
     if line.startswith('mask = '):
       mask = line[7:]
       self.raw_mask = mask
@@ -163,22 +160,17 @@ class day14(object):
 
 
   def write_many(self, addr, val):
-    clear_mask = 0
-    keep_mask = 0
-    for c in self.raw_mask:
-      clear_mask <<= 1
-      keep_mask <<= 1
-      if c == 'X':
-        clear_mask |= 1
-      else:
-        keep_mask |= 1
-    print('   keep_mask %9x %9x' % (keep_mask, clear_mask))
+    # Create mask to keep the non-floating address bits on
+    keep_mask = functools.reduce(
+        (lambda x, y: x << 1 | y),
+        [0 if c == 'X' else 1 for c in self.raw_mask])
+    print('   keep_mask %9x' % keep_mask)
 
-    # force that on
+    # Apply it
     base = (addr | self.mask1) & keep_mask
     print('   base      %9x' % base)
 
-    # get # of bits to iterate
+    # Find the X's and positions in the mask
     sz = 0
     bit = 1
     bits = []
@@ -187,17 +179,16 @@ class day14(object):
         sz += 1
         bits.append(bit)
       bit <<= 1
-
     print('sz', sz, bits, range, 1 << sz)
+
     for faddr in range(1 << sz):
-     print('   faddr', faddr)
      eaddr = base
      f = faddr
      for bit in bits:
        if f & 1 != 0:
          eaddr |= bit
        f >>= 1
-     print('     -> set @ %9x' % eaddr, eaddr)
+     # print('    %d -> set @ %9x %d' % (faddr, eaddr, eaddr))
      self.mem[eaddr] = val
 
 
@@ -230,5 +221,5 @@ mem[26] = 1
 
 
 if __name__ == '__main__':
-  main('input.txt', None, None)
+  main('input.txt', 6317049172545, 3434009980379)
   pass 
