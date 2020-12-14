@@ -13,7 +13,10 @@ def sample_test(s, expect, expect2=None):
   if expect != res:
     print('FAIL: expect', expect, 'got', res)
     assert expect == res
+
   if expect2:
+    puzz = day@N@()
+    puzz.load_str(s)
     res = puzz.part2()
     if expect2 != res:
       print('FAIL: expect', expect2, 'got', res)
@@ -28,6 +31,9 @@ def main(input, e1=None, e2=None):
   if e1 and  e1 != res:
     print('FAIL: expect', e1, 'got', res)
     assert e1 == res
+
+  puzz = day@N@()
+  puzz.load_file(input)
   res = puzz.part2()
   print('part2', res)
   if e2 and  e2 != res:
@@ -99,7 +105,9 @@ class day@N@(object):
 
 
 
-# sample_test("""   """, expect)
+sample_test("""
+
+""", None, None)
 
 
 
