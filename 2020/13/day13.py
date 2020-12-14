@@ -161,7 +161,29 @@ class day13(object):
           cyc[fi] = int(t / d_cycle)
           break
     # expect something like [1, 288, 32, 8, 29, 23, 19, 4, 13]
-    print(cyc)
+    print('cycles:', cyc)
+
+    """
+    # Build up the iteration jump accross all routes
+    cyc = [1] * len(foo)
+    d_cycle = foo[0][1]
+    t = d_cycle
+    delta = foo[0][0]
+    for fi in range(1, len(foo)):
+      # compute how many loops of previous cycles it takes to aling with me.
+      x = foo[fi]
+      t = d_cycle
+      while True:
+        t += d_cycle
+        if (t - delta + x[0]) % x[1] == 0:
+          cyc[fi] = int(t / d_cycle)
+          d_cycle = t
+          break
+    # expect something like [1, 288, 32, 8, 29, 23, 19, 4, 13]
+    print('cycles:', cyc)
+    print('d_cycle:', d_cycle)
+    print('== is the answer', foo[-1][1] * d_cycle)
+    """
 
     primes = set()
     for i in range(1, len(cyc)):
@@ -172,6 +194,7 @@ class day13(object):
           primes.add(cyc[i])
           primes.add(cyc[j])
     print('primes', primes)
+
     primes = set()
     for c in cyc:
       if is_prime(c):
@@ -180,16 +203,22 @@ class day13(object):
     lcm_cyc = lcm(cyc)
     print('lcm', lcm_cyc)
 
-    t = 0
+    # This always works, but it is slow. It is just the first period.
     d = cyc[0] * foo[0][1]
-    print('cyc * dcyc0', d)
+
+    # d = lcm_cyc
+    # d = d_cycle
+    # d = cyc[1] * foo[0][1]
+
+    print('skip (cyc * dcyc0)', d)
+
     if foo[0][1] == 787:
       # [1, 288, 32, 8, 29, 23, 19, 4, 13]
       d = foo[0][1] * 29 * 23 * 19 * 13
       d = foo[0][1] * reduce((lambda x, y: x*y), primes)
       # return
-    # d = lcm_cyc
 
+    t = 0
     n_loop = 0
     n_hits = 0
     while True:
