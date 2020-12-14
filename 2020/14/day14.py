@@ -50,14 +50,6 @@ def mask_val(word, mask0, mask1):
    return (word & ~mask0) | mask1
 
 
-def reverse(s):
-  ret = [''] * len(s)
-  j = len(ret) - 1
-  for c in s:
-    ret[j] = c
-    j -= 1
-  return ''.join(ret)
-
 def proc_mask(mask):
   m0 = 0
   m1 = 0
@@ -150,29 +142,32 @@ class day14(object):
 
 
   def write_many(self, addr, val):
-    # Create mask to keep the non-floating address bits on
-    keep_mask = functools.reduce(
-        (lambda x, y: x << 1 | y),
-        [0 if c == 'X' else 1 for c in self.raw_mask])
-    print('   keep_mask %9x' % keep_mask)
-
-    # Apply it
-    base = (addr | self.mask1) & keep_mask
-    print('   base      %9x' % base)
 
     # Find the X's and positions in the mask
-    sz = 0
-    bit = 1
-    bits = []
-    for c in reverse(self.raw_mask):
+    n_floating_bits = 0          # # of floating bits
+    bits = []       # set of bit values of the floating bits
+    keep_mask = 0   # mask to keep the non-floating address bits on
+    force_on_mask = 0
+    bit = 1 << 35
+    for c in self.raw_mask:
+      keep_mask <<= 1
+      force_on_mask <<= 1
       if c == 'X':
-        sz += 1
+        n_floating_bits += 1
         bits.append(bit)
-      bit <<= 1
-    print('sz', sz, bits, range, 1 << sz)
+      else:
+        keep_mask |= 1
+        if c == '1':
+          force_on_mask |= 1
+      bit >>= 1
 
-    for faddr in range(1 << sz):
-     eaddr = base
+    print('n_floating_bits', n_floating_bits, bits, range, 1 << n_floating_bits)
+    print('   force_on_mask:%9x, keep_mask: %9x' % (force_on_mask, keep_mask))
+
+    fixed_bits = (addr | force_on_mask) & keep_mask
+    print('   fixed_bits      %9x' % fixed_bits)
+    for faddr in range(1 << n_floating_bits):
+     eaddr = fixed_bits
      f = faddr
      for bit in bits:
        if f & 1 != 0:
