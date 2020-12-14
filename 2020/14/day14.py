@@ -46,16 +46,6 @@ def main(input, e1=None, e2=None):
     assert e2 == res
 
 
-class Foo(object):
-
-  def __init__(self):
-    pass
-
-
-  def __str__(self):
-    return str(self)
-
-
 def mask_val(word, mask0, mask1):
    return (word & ~mask0) | mask1
 
