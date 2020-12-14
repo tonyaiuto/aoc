@@ -20,6 +20,12 @@ def sample_test(s, expect, expect2=None):
       print('FAIL: expect', expect2, 'got', res)
       assert expect2 == res
 
+def run2(s):
+  puzz = day14()
+  puzz.mode = 2
+  puzz.load_str(s)
+  res = puzz.part2()
+
 
 def main(input, e1=None, e2=None):
   puzz = day14()
@@ -29,6 +35,10 @@ def main(input, e1=None, e2=None):
   if e1 and  e1 != res:
     print('FAIL: expect', e1, 'got', res)
     assert e1 == res
+
+  puzz = day14()
+  puzz.mode = 2
+  puzz.load_file(input)
   res = puzz.part2()
   print('part2', res)
   if e2 and  e2 != res:
@@ -91,6 +101,7 @@ class day14(object):
     self.mask = 0
     self.proc = intcode.Intcode()
     self.mem = {}
+    self.mode = 1
 
   def reset(self):
     pass
@@ -117,16 +128,19 @@ class day14(object):
       return
     if line.startswith('mask = '):
       mask = line[7:]
+      self.raw_mask = mask
       self.mask0, self.mask1, self.maskx = proc_mask(mask)
-      print('mask %s -> %012o, %012o, %012o' % (mask, self.mask0, self.mask1, self.maskx))
+      print('mask %s -> %09x, %09x, %09x' % (mask, self.mask0, self.mask1, self.maskx))
     elif line.startswith('mem['):
       addr = 0
       x = line[4:].replace('] = ', ',').split(',')
       addr = int(x[0])
       val = int(x[1])
-      print('  mem[%3d] <- %3d %6o %012o' % (addr, val, val, mask_val(val, self.mask0, self.mask1)))
-      self.mem[addr] = mask_val(val, self.mask0, self.mask1)
-      pass
+      print('  mem[%3d] <- %3d %6x %09x' % (addr, val, val, mask_val(val, self.mask0, self.mask1)))
+      if self.mode == 1:
+        self.mem[addr] = mask_val(val, self.mask0, self.mask1)
+      else:
+        self.write_many(addr, val)
     else:
       print('bad input', line)
       assert False
@@ -135,31 +149,69 @@ class day14(object):
     pass
 
 
-
   def part1(self):
     print('===== Start part 1')
     self.reset()
+    self.mode = 1
     sum = 0
     for loc, val in self.mem.items():
       sum += val
     self.result1 = sum
 
-
-
     print('part1', self.result1)
     return self.result1
 
 
+  def write_many(self, addr, val):
+    clear_mask = 0
+    keep_mask = 0
+    for c in self.raw_mask:
+      clear_mask <<= 1
+      keep_mask <<= 1
+      if c == 'X':
+        clear_mask |= 1
+      else:
+        keep_mask |= 1
+    print('   keep_mask %9x %9x' % (keep_mask, clear_mask))
+
+    # force that on
+    base = (addr | self.mask1) & keep_mask
+    print('   base      %9x' % base)
+
+    # get # of bits to iterate
+    sz = 0
+    bit = 1
+    bits = []
+    for c in reverse(self.raw_mask):
+      if c == 'X':
+        sz += 1
+        bits.append(bit)
+      bit <<= 1
+
+    print('sz', sz, bits, range, 1 << sz)
+    for faddr in range(1 << sz):
+     print('   faddr', faddr)
+     eaddr = base
+     f = faddr
+     for bit in bits:
+       if f & 1 != 0:
+         eaddr |= bit
+       f >>= 1
+     print('     -> set @ %9x' % eaddr, eaddr)
+     self.mem[eaddr] = val
+
 
   def part2(self):
     print('===== Start part 2')
-    self.reset()
-    self.result2 = None
-
+    #self.reset()
+    #self.mode = 2
+    sum = 0
+    for loc, val in self.mem.items():
+      sum += val
+    self.result2 = sum
 
     print('part2', self.result2)
     return self.result2
-
 
 
 sample_test("""
@@ -169,7 +221,14 @@ mem[7] = 101
 mem[8] = 0
 """, 165)
 
+run2("""
+mask = 000000000000000000000000000000X1001X
+mem[42] = 100
+mask = 00000000000000000000000000000000X0XX
+mem[26] = 1
+""")
 
 
 if __name__ == '__main__':
   main('input.txt', None, None)
+  pass 
