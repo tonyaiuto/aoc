@@ -77,8 +77,11 @@ class day@N@(object):
 
 
   def part1(self):
+    print('===== Start part 1')
     self.reset()
     self.result1 = None
+
+
 
     print('part1', self.result1)
     return self.result1
@@ -86,8 +89,10 @@ class day@N@(object):
 
 
   def part2(self):
+    print('===== Start part 2')
     self.reset()
     self.result2 = None
+
 
     print('part2', self.result2)
     return self.result2

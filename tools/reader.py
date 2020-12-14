@@ -1,11 +1,12 @@
 
 class Reader(object):
 
-  def __init__(self, by_group=False, strip_lines=True):
+  def __init__(self, by_group=False, strip_lines=True, verbose=True):
     self._nlines = 0
     self._ngroups = 0
     self._by_group = by_group
     self._strip_lines = strip_lines
+    self.verbose = verbose
     self.all = []
 
   @property
@@ -54,10 +55,17 @@ class StringReader(Reader):
     if group:
       self._ngroups += 1
       yield group
+    self._end_of_input()
 
   def load(self):
     for v in self.next():
       self.all.append(v)
+    self._end_of_input()
+    return self.all
+
+  def _end_of_input(self):
+    if self.verbose:
+      print('Reader: %d lines, %d groups' % (self.nlines, self.ngroups))
     return self.all
 
 
