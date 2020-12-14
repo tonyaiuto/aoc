@@ -1,11 +1,13 @@
 
 class Reader(object):
 
-  def __init__(self, by_group=False, strip_lines=True, verbose=True):
+  def __init__(self, by_group=False, strip_lines=True, skip_first_blank=True,
+               verbose=True):
     self._nlines = 0
     self._ngroups = 0
     self._by_group = by_group
     self._strip_lines = strip_lines
+    self._skip_first_blank = skip_first_blank
     self.verbose = verbose
     self.all = []
 
@@ -31,7 +33,7 @@ class StringReader(Reader):
 
   def __init__(self, inp, **kwargs):
     super(StringReader, self).__init__(**kwargs)
-    self.inp = inp
+    self.inp = inp.strip()
 
   def next(self):
     if not self._by_group:
