@@ -55,7 +55,7 @@ class N(object):
   def __repr__(self):
     return '%4d[turn:%d, diff:%d]' % (self.n, self.turn, self.diff)
 
-  
+
   def speak(self, turn):
     self.diff = turn - self.turn
     self.turn = turn
@@ -98,7 +98,7 @@ class day15(object):
     print(self.spoken)
 
 
-  def part1(self, limit=2020):
+  def part1_hash(self, limit=2020):
     print('===== Start part 1')
     self.reset()
     self.result1 = None
@@ -136,6 +136,49 @@ class day15(object):
     print('part1', self.result1)
     return self.result1
 
+
+  def part1(self, limit=2020):
+    print('===== Start part 1')
+
+    # index by number, not turn
+    spoken = [0] * limit
+    diff = [0] * limit
+
+    turn = 0
+    maxn = 0
+    for ns in self.all[0].split(','):
+      turn = turn + 1
+      cur_n = int(ns)
+      maxn = max(cur_n, maxn)
+      spoken[cur_n] = turn
+    print(spoken[0:maxn])
+    print(diff[0:maxn])
+
+    last = cur_n
+    while turn < limit:
+      if turn % 100000 == 0:
+        print('last spoke: turn %d = %d' % (turn, last))
+      to_speak = diff[last]
+      if to_speak <= 0:
+        # first time spoken
+        to_speak = 0
+        if turn < 20:
+          print('  -> first time spoken')
+
+      # speak
+      turn = turn + 1
+      last_turn_spoken = spoken[to_speak]
+      # first time spoken
+      if last_turn_spoken <= 0:
+        diff[to_speak] = 0
+      else:
+        diff[to_speak] = turn - last_turn_spoken
+      spoken[to_speak] = turn
+      last = to_speak
+
+    self.result1 = last
+    print('part1', self.result1)
+    return self.result1
 
 
   def part2(self):
