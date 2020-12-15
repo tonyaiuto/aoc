@@ -45,16 +45,15 @@ class N(object):
 
   def __init__(self, n, turn):
     self.n = int(n)
-    self.first = turn
     self.turn = turn
     self.diff = -1
 
 
   def __str__(self):
-    return '%4d[first:%d, turn:%d, diff:%d]' % (self.n, self.first, self.turn, self.diff)
+    return '%4d[turn:%d, diff:%d]' % (self.n, self.turn, self.diff)
 
   def __repr__(self):
-    return '%4d[first:%d, turn:%d, diff:%d]' % (self.n, self.first, self.turn, self.diff)
+    return '%4d[turn:%d, diff:%d]' % (self.n, self.turn, self.diff)
 
   
   def speak(self, turn):
@@ -111,10 +110,10 @@ class day15(object):
       if turn % 100000 == 0:
         print('last spoke: turn %d = %d' % (turn, last.n))
       if last.diff < 0:
-        if turn < 20:
-          print('  -> first time spoken')
         # first time spoken
         next_n = 0
+        if turn < 20:
+          print('  -> first time spoken')
       else:
         next_n = last.diff
         if next_n <= 0:
