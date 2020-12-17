@@ -1,6 +1,7 @@
 "AOC 2020: day 17"
 
 from collections import defaultdict
+import itertools
 import math
 
 from tools import reader
@@ -69,8 +70,8 @@ class Cube(object):
   def print(self):
     print('==== cycle %d, %d active' % (self.cycle, self.active))
     self.get_bounds()
-    self.printz(0) 
-   
+    self.printz(0)
+
   def printz(self, z):
     for y in range(self.min_y, self.max_y+1):
       l = ''
@@ -110,43 +111,45 @@ class Cube(object):
       w_range = [i for i in range(self.min_w-1, self.max_w+2)]
     else:
       w_range = [0]
-    for z in range(self.min_z-1, self.max_z+2):
-      for y in range(self.min_y-1, self.max_y+2):
-        for x in range(self.min_x-1, self.max_x+2):
-           for w in w_range:
-            is_active = (w,x,y,z) in self.state
-            tot = self.count_near(w, x, y, z)
-            if is_active:
-              #if z == 0:
-              #  print(w,x,y,z, 'active, #neigh', tot)
-              if tot == 2 or tot == 3:
-                ns.add((w,x,y,z))
-                active += 1
-            elif tot == 3:
-              #if z == 0:
-              #  print(w,x,y,z, 'inactive, #aeigh', tot)
-              ns.add((w,x,y,z))
-              active += 1
+    for z,y,x,w in itertools.product(
+        range(self.min_z-1, self.max_z+2),
+        range(self.min_y-1, self.max_y+2),
+        range(self.min_x-1, self.max_x+2),
+        w_range):
+      is_active = (w,x,y,z) in self.state
+      tot = self.count_near(w, x, y, z)
+      if is_active:
+        #if z == 0:
+        #  print(w,x,y,z, 'active, #neigh', tot)
+        if tot == 2 or tot == 3:
+          ns.add((w,x,y,z))
+          active += 1
+      elif tot == 3:
+        #if z == 0:
+        #  print(w,x,y,z, 'inactive, #aeigh', tot)
+        ns.add((w,x,y,z))
+        active += 1
     self.state = ns
     self.active = active
 
   def count_near(self, w, x, y, z):
-    tot = 0 
+    tot = 0
     if self.hyper:
       w_range = [w-1, w, w+1]
     else:
       w_range = [0]
-    for dz in [z-1, z, z+1]:
-      for dy in [y-1, y, y+1]:
-        for dx in [x-1, x, x+1]:
-          for dw in w_range:
-            if (dw, dx, dy, dz) != (w, x, y, z):
-              if (dw,dx,dy,dz) in self.state:
-                #if self.cycle < 2:
-                #  print(dw,dx,dy,dz, 'tot', tot)
-                tot += 1
-                if tot > 3:
-                  break
+    for dz,dy,dx,dw in itertools.product(
+        [z-1, z, z+1],
+        [y-1, y, y+1],
+        [x-1, x, x+1],
+        w_range):
+      if (dw, dx, dy, dz) != (w, x, y, z):
+        if (dw,dx,dy,dz) in self.state:
+          #if self.cycle < 2:
+          #  print(dw,dx,dy,dz, 'tot', tot)
+          tot += 1
+          if tot > 3:
+            break
     return tot
 
 
