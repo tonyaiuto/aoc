@@ -57,7 +57,8 @@ class Field(object):
     qp.Number('r2_high'),
     ])
 
-  def __init__(self):
+  def __init__(self, s):
+    Field.rule_parser.parse(self, s)
     self.col = -1
 
   def __str__(self):
@@ -68,10 +69,7 @@ class Field(object):
 
   @staticmethod
   def fromText(line):
-    x = line.split(':')
-    ret = Field()
-    Field.rule_parser.parse(ret, line)
-    return ret
+    return Field(line)
 
   def is_valid(self, n):
     if ((self.r1_low <= n and n <= self.r1_high)
