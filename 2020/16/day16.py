@@ -4,6 +4,7 @@ from collections import defaultdict
 import math
 
 from tools import reader
+from tools import qparser as qp
 
 
 def sample_test(s, expect, expect2=None):
@@ -44,12 +45,19 @@ def main(input, e1=None, e2=None):
 
 class Field(object):
 
-  def __init__(self, name, range1, range2):
-    self.name = name
-    self.r1_low = int(range1[0])
-    self.r1_high = int(range1[1])
-    self.r2_low = int(range2[0])
-    self.r2_high = int(range2[1])
+  rule_parser = qp.QParser([
+    qp.Text('name', allow_space=True),
+    qp.Literal(':'),
+    qp.Number('r1_low'),
+    qp.Literal('-'),
+    qp.Number('r1_high'),
+    qp.Literal('or'),
+    qp.Number('r2_low'),
+    qp.Literal('-'),
+    qp.Number('r2_high'),
+    ])
+
+  def __init__(self):
     self.col = -1
 
   def __str__(self):
@@ -61,12 +69,9 @@ class Field(object):
   @staticmethod
   def fromText(line):
     x = line.split(':')
-    name = x[0]
-    ranges = x[1].strip().split(' or ')
-    assert len(ranges) == 2
-    r1 = ranges[0].split('-')
-    r2 = ranges[1].split('-')
-    return Field(name, r1, r2)
+    ret = Field()
+    Field.rule_parser.parse(ret, line)
+    return ret
 
   def is_valid(self, n):
     if ((self.r1_low <= n and n <= self.r1_high)
