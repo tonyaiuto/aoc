@@ -2,6 +2,8 @@
 
 from collections import defaultdict
 
+from tools import qparser as qp
+
 class Bag(object):
 
   bags = {}
@@ -38,6 +40,18 @@ class Bag(object):
 
 class day7(object):
 
+  # wavy chartreuse bags contain 3 striped purple bags, 3 vibrant blue bags, 2 mirrored fuchsia bags, 2 muted indigo bags.
+  parser1 = qp.QParser([
+    qp.Text('name', allow_space=True),
+    qp.Literal('bags contain'),
+    qp.Text('rest', allow_space=True),])
+
+  parser2 = qp.QParser([
+    qp.Number('count'),
+    qp.Text('name', allow_space=True),
+    qp.Literal(['bag', 'bags']),
+    ])
+
   def __init__(self):
     pass
 
@@ -51,6 +65,9 @@ class day7(object):
 
 
   def parse(self, line):
+    #day7.parser1.parse(self, s)
+    #self.col = -1
+
     assert line.endswith('.')
     line = line[0:-1]
     assert line.find(' contains ') < 0
