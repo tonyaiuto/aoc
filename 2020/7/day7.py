@@ -41,16 +41,18 @@ class Bag(object):
 class day7(object):
 
   # wavy chartreuse bags contain 3 striped purple bags, 3 vibrant blue bags, 2 mirrored fuchsia bags, 2 muted indigo bags.
-  parser1 = qp.QParser([
-    qp.Text('name', allow_space=True),
-    qp.Literal('bags contain'),
-    qp.Text('rest', allow_space=True),])
+  container_p = qp.QParser([
+      qp.Text('c_name', allow_space=True),
+      qp.Literal('bags contain'),
+      qp.Text('rest', allow_space=True),
+      # qp.Literal('.'),
+  ])
 
-  parser2 = qp.QParser([
-    qp.Number('count'),
-    qp.Text('name', allow_space=True),
-    qp.Literal(['bag', 'bags']),
-    ])
+  bag_p = qp.QParser([
+      qp.Number('count'),
+      qp.Text('b_name', allow_space=True),
+      qp.Literal(['bag', 'bags']),
+  ])
 
   def __init__(self):
     pass
@@ -65,17 +67,15 @@ class day7(object):
 
 
   def parse(self, line):
-    #day7.parser1.parse(self, s)
-    #self.col = -1
 
     assert line.endswith('.')
     line = line[0:-1]
     assert line.find(' contains ') < 0
 
-    i_contain = line.find(' contain ')
-    assert  i_contain > 0
-    bag = Bag.find_bag(line[0:i_contain].split(' '))
-    rules = line[i_contain+9:].split(',')
+    day7.container_p.parse(self, line)
+    bag = Bag.find_bag(self.c_name.split(' '))
+    rules = self.rest.split(',')
+
     for r in rules:
       words = [w for w in r.split(' ') if w]
       if words[0] == 'no':
@@ -85,8 +85,8 @@ class day7(object):
       # print(words[0:-1])
       n = int(words[0])
       assert n > 0
-      has_bag = Bag.find_bag(words[1:-1])
-      bag.add_contents(n, has_bag)
+      contains_bag = Bag.find_bag(words[1:-1])
+      bag.add_contents(n, contains_bag)
 
   def part1(self):
     shiny_gold = Bag.find_bag(['shiny', 'gold'])
