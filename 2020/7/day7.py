@@ -86,7 +86,7 @@ class day7(object):
     walk_up(shiny_gold)
     part1 = len(visited)-1
     print('part1', part1)
-    assert part1 == 226
+    return part1
 
   def part2(self):
     shiny_gold = Bag.find_bag(['shiny', 'gold'])
@@ -105,16 +105,19 @@ class day7(object):
  
     part2 = walk_down(shiny_gold) - 1
     print('part2', part2)
-    assert part2 == 9569
+    return part2
 
 
-def main(input):
+def main(input, e1=None, e2=None):
   puzz = day7()
   puzz.load(input)
-  puzz.part1()
-  puzz.part2()
-
+  ret = puzz.part1()
+  if e1:
+    assert e1 == ret
+  ret = puzz.part2()
+  if e2:
+    assert e2 == ret
 
 
 if __name__ == '__main__':
-  main('input.txt')
+  main('input.txt', 226, 9569)
