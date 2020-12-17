@@ -27,20 +27,8 @@ train: 42-906 or 919-965
 type: 40-726 or 733-955
 """
 
-"""
-class Result(dict):
-  def __init__(self):
-    pass
 
-  def __setattr__(self, name, value):
-    pass
-
-  def __getattr__(self, name):
-        if name in self:
-            return self[name]
-        else:
-            raise AttributeError("No such attribute: " + name)
-"""
+_DEBUG = 0
 
 
 class _Dummy(object):
@@ -83,25 +71,38 @@ class Literal(FBase):
 
   def __init__(self, text, eat_leading_ws=True):
     super(Literal, self).__init__(name=text, eat_leading_ws=eat_leading_ws)
-    self.text = text
+    if isinstance(text, list):
+      self.texts = text
+    else:
+      self.texts = [text]
 
   def __str__(self):
-    return '<%s>' % self.text
+    return 'Literal(%s)' % '|'.join(self.texts)
 
   def initial(self):
-    return self.text[0]
+    ret = set()
+    for txt in self.texts:
+      ret.add(txt[0].strip())
+    return ''.join(list(ret))
 
   def assign(self, obj, value):
     pass
 
   def parse(self, s):
+    if _DEBUG > 1:
+      print(' %s ... parsing %s' % (self, s))
     pos = 0
     if self.eat_leading_ws:
       while pos < len(s) and s[pos] == ' ':
         pos += 1
-    if s[pos:].startswith(self.text):
-      return (self.text, pos+len(self.text))
-    raise Error('expected <%s>' % self.text, s)
+    for txt in self.texts:
+      if _DEBUG > 3:
+        print('  checking %s' % txt)
+      if s[pos:].startswith(txt):
+        if _DEBUG > 1:
+          print('  -> MATCH')
+        return (txt, pos+len(txt))
+    raise Error('expected <%s>' % '|'.join(self.texts), s)
 
 
 def check_literal():
@@ -206,7 +207,7 @@ class Text(FBase):
     self.eat_leading_ws = eat_leading_ws
     self.terminators = terminators
 
-  def parse(self, s):
+  def parse(self, s, next_field=None):
     pos = 0
     if self.eat_leading_ws:
       while pos < len(s) and s[pos] == ' ':
@@ -222,15 +223,23 @@ class Text(FBase):
         break
       v += c
       pos += 1
-
-    return (v, pos)
+      # Life is easier with a little look ahead
+      if next_field:
+        try:
+          x, p2 = next_field.parse(s[pos:])
+          if x and p2 > 0:
+            break
+        except:
+          pass
+    if _DEBUG > 0:
+      print(' %s: returning %s, rest at %d' % (self, v, pos))
+    return (v.strip(), pos)
 
 
 
 def check_text():
   foo = Text('foo')
   l1 = Literal(':')
-  foo.terminators = l1.initial()
   bar = Text('bar')
   low = Number('low')
   l2 = Literal('-')
@@ -239,7 +248,7 @@ def check_text():
   s = 'hello: test 42-55 or'
   pos = 0
 
-  v, nxt = foo.parse(s[pos:])
+  v, nxt = foo.parse(s[pos:], next_field=l1)
   pos += nxt
   assert v == 'hello'
 
@@ -266,20 +275,27 @@ class QParser(object):
   def __init__(self, fields):
     self.fields = fields
 
+    """
     for fi in range(len(self.fields)):
       if self.fields[fi].__class__ == Text:
         if fi + 1 < len(self.fields):
           next = self.fields[fi+1]
           self.fields[fi].terminators = next.initial()
+    """
 
   def parse(self, o, text):
     pos = 0
-    for fld in self.fields:
-      v, nxt = fld.parse(text[pos:])
+    for fi in range(len(self.fields)):
+      fld = self.fields[fi]
+      if fld.__class__ == Text:
+        next = None
+        if fi + 1 < len(self.fields):
+          next = self.fields[fi+1]
+        v, nxt = fld.parse(text[pos:], next_field=next)
+      else:
+        v, nxt = fld.parse(text[pos:])
       pos += nxt
       fld.assign(o, v)
-
-    pass
 
 
 def check_parser():
