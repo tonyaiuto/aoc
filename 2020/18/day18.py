@@ -46,17 +46,18 @@ class Eval(object):
   HACKY = 1
   CLASSIC = 2
 
-  ER  = 0xff
-  END = 0x01
-  S   = 0x02
-  R   = 0x04
-  RE  = R | END
+  ER    = 0xff
+  END   = 0x01
+  SHIFT = 0x02
+  S     = SHIFT
+  R     = 0x04
+  RE    = R | END
   names = {
     ER: 'ERROR',
-    R: 'R',
-    RE: 'RE',
-    S: 'S',
-    S|END: 'SE',
+    R: 'reduce',
+    RE: 'reduce+end',
+    S: 'shift',
+    SHIFT|END: 'SE',
   }
 
   trace = True
