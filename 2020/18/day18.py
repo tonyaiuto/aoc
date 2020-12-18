@@ -43,6 +43,8 @@ def main(input, e1=None, e2=None):
 
 class Eval(object):
 
+  trace = False
+
   def __init__(self):
     pass
 
@@ -69,61 +71,15 @@ class Eval(object):
         print('fail on ', s)
 
   @staticmethod
-  def eval(s):
-    stack = [None] * len(s)
-    top = 0
-
-    toks = [tok for tok in Eval.tokenize(s)]
-    itok = 0
-
-    def do_op(lhs, rhs):
-      nonlocal stack, top
-      if stack[top-1] == '+':
-        top -= 1
-        return lhs + rhs
-      elif stack[top-1] == '*':
-        top -= 1
-        return lhs * rhs
-      else:
-        print("WFT")
-
-    def seval(strt, lvl):
-      nonlocal stack, top
-      at = strt
-      acc = 0
-      while at < len(toks):
-        tok = toks[at]
-        at += 1
-        # print(' ' * lvl, 'tok', tok, 'acc', acc, 'stack', stack[0:top])
-
-        if tok == ')':
-          return acc, at
-
-        if tok == '(':
-          # acc=6, stack=+
-          v, nxt = seval(at, lvl+1)
-          if at == strt+1:
-            acc = v
-          else:
-            acc = do_op(acc, v)
-          at = nxt
-        elif tok in ('+', '*'):
-          stack[top] = tok
-          top += 1
-        elif tok.isdigit():
-          d = int(tok)
-          if at == strt+1:
-            acc = d
-          else:
-            acc = do_op(acc, d)
-        # print(' ' * lvl, '  >>> acc', acc, 'stack', stack[0:top])
-      return acc, at
-
-    v,_ = seval(0, 0)
-    return v
+  def eval1(s):
+    return Eval.eval_shift_reduce(s, prec={'(': 1, ')': 99, '+': 5, '*': 5})
 
   @staticmethod
   def eval2(s):
+    return Eval.eval_shift_reduce(s, prec={'(': 1, ')': 99, '+': 5, '*': 4})
+
+  @staticmethod
+  def eval_shift_reduce(s, prec):
     stack = [None] * len(s)
     vstack = [None] * len(s)
     top = 0
@@ -132,11 +88,8 @@ class Eval(object):
     toks = [tok for tok in Eval.tokenize(s)]
     itok = 0
 
-    prec = {'(': 1, '+': 5, '*': 4}
-
     def reduce():
       nonlocal stack, top, vtop
-      print('reduce')
       #if top < 2:
       #  return
       if stack[top-1] == '+':
@@ -149,36 +102,51 @@ class Eval(object):
         vtop -= 1
         top -= 1
         # print(' -> * top=', vstack[vtop-1])
+      elif stack[top-1] == '(':
+        top -= 1
+      elif stack[top-1] == ')':
+        top -= 1
+        if stack[top-1] != '(':
+          print('reduce () fail', vstack[0:vtop], 'stack', stack[0:top])
+          assert False
+        top -= 1
       else:
-        print("WTF", )
-        assert fail
-
+        print('reduce fail', vstack[0:vtop], 'stack', stack[0:top])
+        assert False
+      if Eval.trace:
+        print('  reduce ->', vstack[0:vtop], stack[0:top])
 
     # 1 + 2 * 3 + 4 * 5 + 6
 
     at = 0
+    if Eval.trace:
+      print(toks)
     while at < len(toks):
       tok = toks[at]
       at += 1
-      print('tok', tok, vstack[0:vtop], 'stack', stack[0:top])
-      if tok == ')':
-        while stack[top-1] != '(':
-          reduce()
-        top -= 1
+      if Eval.trace:
+        print('tok', tok, vstack[0:vtop], 'stack', stack[0:top])
+      if tok.isdigit():
+        vstack[vtop] = int(tok)
+        vtop += 1
       elif tok == '(':
         stack[top] = '('
         top += 1
-      elif tok in ('(', '+', '*'):
-        while top >= 1 and prec[tok] < prec[stack[top-1]]:
+      elif tok == ')':
+        while stack[top-1] != '(':
+          reduce()
+        top -= 1
+      else:
+        while top > 0 and prec[tok] <= prec[stack[top-1]]:
           reduce()
         stack[top] = tok
         top += 1
-      elif tok.isdigit():
-        vstack[vtop] = int(tok)
-        vtop += 1
-      print('  >>>', vstack[0:vtop], 'stack', stack[0:top])
+
+      if Eval.trace:
+        print('  >>>', vstack[0:vtop], 'stack', stack[0:top])
     while top > 0:
-      print('  done', vstack[0:vtop], 'stack', stack[0:top])
+      if Eval.trace:
+        print('  done', vstack[0:vtop], 'stack', stack[0:top])
       reduce()
 
     return vstack[0]
@@ -209,7 +177,7 @@ class day18(object):
     self.post_load()
 
   def do_line(self, line):
-    self.values.append(Eval.eval(line))
+    self.values.append(Eval.eval1(line))
     self.v2.append(Eval.eval2(line))
 
 
