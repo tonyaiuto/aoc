@@ -55,6 +55,7 @@ class Rule(object):
     self.all = None
     self.loops = False
     Rule.rules[number] = self
+    self.depth = 0
 
   def __str__(self):
     if self.c:
@@ -84,6 +85,8 @@ class Rule(object):
     def submatch(rule, msg, lvl):
       if Rule.trace1:
         print(' '*lvl, 'submatch', rule, msg)
+      if len(msg) == 0:
+        return False, 0
       if rule.c:
         if msg[0] == rule.c:
           if Rule.trace1:
@@ -116,44 +119,56 @@ class Rule(object):
 
   def match2(self, msg):
 
+    all_len = len(msg)
+    all_matched = False
+    max_depth = len(msg)
+    print(self)
+
     def submatch(rule, msg, lvl):
-      print(' '*lvl, 'submatch', rule, msg)
+      nonlocal all_len, max_depth
+      print(' '*lvl, 'submatch', rule.number, msg)
+      did_lens = set()
 
       if not rule.loops:
-        ret = []
+        #XX ret = []
         for s in rule.all:
-          # print(' '*lvl, 'check', s, msg)
+          print(' '*lvl, 'check', s, msg)
           if msg.startswith(s):
             if Rule.trace2:
               print(' '*lvl, 'matched', rule, s, msg)
-            ret.append(s)
-            return True, len(s)
-   
-        # Yield the rets
-
-        return False, 0
+            ls = len(s)
+            if ls not in did_lens:
+              did_lens.add(ls)
+              yield ls
+	    #XX ret.append(s)
+	    #XX return True, len(s)
+        return
 
       for subset in rule.subrules:
-        if Rule.trace2:
-          print(' '*lvl, 'check subset', subset)
-        l = 0
-        ok = True
-        for ri in subset:
-          ok, lm = submatch(Rule.rules[ri], msg[l:], lvl+1)
-          if not ok:
-            if Rule.trace2:
-              print(' '*lvl, '>>fail subset', subset)
-            break
-          l += lm
-        if ok:
-          print(' '*lvl, 'matched', subset, l, msg)
-          return True, l
-      return False, 0
+        l = match_set(subset, msg, lvl+1)
+        if l > 0:
+          yield l
+      return
 
-    ok, l = submatch(self, msg, 0)
-    print('FINAL2', ok, l, len(msg))
-    return l == len(msg)
-    #return ok
+    def match_set(rule_set, msg, lvl):
+      if len(rule_set) == 0:
+        yield 0
+
+      if Rule.trace2:
+          print(' '*lvl, 'match_subset', rule_set)
+      for len_sm in submatch(Rule.rules[rule_set[0]], msg, lvl+1):
+        if len(rule_set) > 1:
+          l = match_set(rule_set[1:], msg[len_sm:], lvl+1)
+          if l > 0:
+            return len_sm + l
+      return -1
+
+    for _ in submatch(self, msg, 0):
+      if all_matched:
+        print('FINAL2', all_matched)
+        return True
+    print('FINAL2 fail')
+    return False
 
 
   @staticmethod
@@ -168,6 +183,7 @@ class Rule(object):
     if self.c:
       self.loops = False
       self.all = [self.c]
+      self.min_len = 1
       return self.all
     
     all = []
@@ -190,7 +206,8 @@ class Rule(object):
 
       print(self, ' => ', all[0:5])
 
-    self.all = all
+    self.all = set(all)
+    self.min_len = min([len(x) for x in all])
     return all
 
 
@@ -221,6 +238,8 @@ class day19(object):
       print(r)
     self.start = Rule.rules[0]
     self.messages = self.all[1]
+    self.max_msg_len = max([len(m) for m in self.messages])
+
 
   def part1(self):
     print('===== Start part 1')
@@ -240,16 +259,38 @@ class day19(object):
     self.reset()
 
     Rule.precomp()
-    r = Rule.from_string('8: 42 | 42 8')
-    r.loops = True
-    r = Rule.from_string('11: 42 31 | 42 11 31')
-    r.loops = True
-    for i in range(1,20):
-      print(Rule.rules[i])
+    print('max_msg_len', self.max_msg_len)
+    print('min 42 len', Rule.rules[42].min_len)
+
+    # r = Rule.from_string('8: 42 | 42 8')
+    ranges = []
+    for i in range(1, 1+(self.max_msg_len // Rule.rules[42].min_len)):
+      ranges.append([42 for _ in range(i)])
+    print('ranges', ranges)
+    r8 = Rule.rules[8]
+    r8.subrules = ranges
+    r8.loops = True
+    print('rule8=', r8)
+
+    # r = Rule.from_string('11: 42 31 | 42 11 31')
+    r11 = Rule.rules[11]
+    ranges = []
+    for i in range(1, 1+(
+        self.max_msg_len // (Rule.rules[42].min_len+Rule.rules[31].min_len))):
+      ranges.append([42 for _ in range(i)] + [31 for _ in range(i)])
+    print('ranges', ranges)
+    r11.subrules = ranges
+    r11 = Rule.rules[11]
+    r11.loops = True
+
+    for i in range(0,50):
+      r = Rule.rules.get(i)
+      if r:
+        print(r)
 
     matches = 0
     for msg in self.messages:
-      if self.start.match2(msg):
+      if self.start.match1(msg):
         matches += 1
     self.result2 = matches
 
