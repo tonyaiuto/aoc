@@ -65,7 +65,6 @@ def revsig(sig):
       res |= 1
     sig >>= 1
   return res
-    
 
 assert revsig(0x321) == 0x213
 
@@ -363,7 +362,6 @@ class day20(object):
 
     # make image
     image = []
-
     for row in self.picture:
       for gr in range(1, 9):
         out = ''
@@ -371,12 +369,79 @@ class day20(object):
           out += tile.get_slice(gr, rot)
         image.append(out)
     print('=========== image:')
-    for r in image:
-      print(r)
+    for row in image:
+      print(row)
+      assert len(row) == self.size * 8
+
+    # convert to bitmask
+    int_image = [hsig(row) for row in image]
+    
+    monster = """                  # 
+#    ##    ##    ###
+ #  #  #  #  #  #   """.split('\n')
+    print('=========== monster:')
+    for row in monster:
+      print(row)
+      assert len(row) == 20
+    found, cnt = search_for(monster, int_image, self.size * 8)
+
+    mhflip = [x[::-1] for x in monster]
+    print('=========== mhflip:')
+    for row in mhflip:
+      print(row)
+      assert len(row) == 20
+    search_for(mhflip, int_image, self.size * 8)
+
+    for rot in range(3):
+      monstor = roti(monster)
+      search_for(monstor, int_image, self.size * 8)
+
+      mhflip = roti(mhflip)
+      search_for(mhflip, int_image, self.size * 8)
 
     print('part2', self.result2)
     return self.result2
 
+def roti(img):
+  ret = []
+  for out_row in range(len(img[0])):
+    ret.append(''.join([img[len(img)-1-c][out_row] for c in range(len(img))]))
+  # print(ret)
+  return ret
+
+
+def search_for(monster, image, i_width):
+  print('========= search for')
+  for r in monster:
+    print(r)
+
+  m_bits = [hsig(row) for row in monster]
+  print(m_bits)
+
+  if len(monster) == 3:
+    m_width = 20
+    m_mask = 0xfffff
+  else:
+    m_width = 3
+    m_mask = 0x3
+
+  def match_at(irow, shift):
+    for mrow in range(len(monster)):
+      iscan = image[irow+mrow]
+      if (iscan >> shift) & m_mask != m_bits[mrow]:
+        return False
+    return True
+
+  found = 0
+  for irow in range(len(image)-len(monster)+1):
+    shift = i_width - m_width
+    while shift > 0:
+      if match_at(irow, shift):
+        found += 1
+        print('found monster at', irow, shift)
+      shift -= 1
+  print('found', found)
+  return found, 0
 
 
 sample_test("""
