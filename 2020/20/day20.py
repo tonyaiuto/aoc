@@ -373,6 +373,21 @@ class day20(object):
       print(row)
       assert len(row) == self.size * 8
 
+    # count #
+    n_bits = sum([1 for c in row if c == '#' for row in image])
+    print('total bits', n_bits)
+
+    # Huh? The above counts too few bits.
+    n_bits = 0
+    for row in image:
+      n_bits += sum(1 for c in row if c == '#')
+    print('total bits', n_bits)
+
+    # and this works
+    n_bits = sum(sum([1 for c in row if c == '#']) for row in image)
+    print('total bits', n_bits)
+
+
     # convert to bitmask
     int_image = [hsig(row) for row in image]
     
@@ -383,21 +398,25 @@ class day20(object):
     for row in monster:
       print(row)
       assert len(row) == 20
-    found, cnt = search_for(monster, int_image, self.size * 8)
-
     mhflip = [x[::-1] for x in monster]
     print('=========== mhflip:')
     for row in mhflip:
       print(row)
       assert len(row) == 20
-    search_for(mhflip, int_image, self.size * 8)
+
 
     for rot in range(3):
+      found, cnt = search_for(monster, int_image, self.size * 8)
+      if found > 0:
+        break
       monstor = roti(monster)
-      search_for(monstor, int_image, self.size * 8)
 
+      found, cnt = search_for(mhflip, int_image, self.size * 8)
+      if found > 0:
+        break
       mhflip = roti(mhflip)
-      search_for(mhflip, int_image, self.size * 8)
+
+    self.result2 = n_bits - found * 15
 
     print('part2', self.result2)
     return self.result2
@@ -428,7 +447,7 @@ def search_for(monster, image, i_width):
   def match_at(irow, shift):
     for mrow in range(len(monster)):
       iscan = image[irow+mrow]
-      if (iscan >> shift) & m_mask != m_bits[mrow]:
+      if ((iscan >> shift) & m_bits[mrow]) != m_bits[mrow]:
         return False
     return True
 
@@ -599,7 +618,7 @@ By rotating, flipping, and rearranging them, you can find a square arrangement t
 
 
 if __name__ == '__main__':
-  main('input.txt', 29584525501199, None)
+  main('input.txt', 29584525501199, 1665)
   pass
 
 
