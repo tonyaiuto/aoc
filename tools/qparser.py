@@ -31,6 +31,7 @@ type: 40-726 or 733-955
 _DEBUG = 0
 
 
+
 class _Dummy(object):
 
   def __init__(self):
@@ -51,9 +52,25 @@ class FBase(object):
     self.name = name
     self.eat_leading_ws = eat_leading_ws
 
-
   def assign(self, obj, value):
     obj.__dict__[self.name] = value
+
+  def advance_to_start_pos(self, s):
+    pos = 0
+    if self.eat_leading_ws:
+      while pos < len(s) and s[pos] == ' ':
+        pos += 1
+    return pos
+
+  def check_look_ahead(self, s, next_field):
+    if next_field:
+      try:
+        x, p2 = next_field.parse(s[pos:])
+        if x and p2 > 0:
+          return True
+      except:
+        pass
+    return False
 
 
 def check_assignable():
@@ -77,7 +94,7 @@ class Literal(FBase):
       self.texts = [text]
 
   def __str__(self):
-    return 'Literal(%s)' % '|'.join(self.texts)
+    return 'Literal("%s")' % '|'.join(self.texts)
 
   def initial(self):
     ret = set()
@@ -91,10 +108,7 @@ class Literal(FBase):
   def parse(self, s):
     if _DEBUG > 1:
       print(' %s ... parsing %s' % (self, s))
-    pos = 0
-    if self.eat_leading_ws:
-      while pos < len(s) and s[pos] == ' ':
-        pos += 1
+    pos = self.advance_to_start_pos(s)
     for txt in self.texts:
       if _DEBUG > 3:
         print('  checking %s' % txt)
@@ -111,7 +125,7 @@ def check_literal():
     t, pos = a.parse('  foobar')
     assert t == 'foo'
     assert pos == 5
-  except:
+  except e:
     raise e 
 
   try:
@@ -126,12 +140,11 @@ def check_literal():
 
 class Number(FBase):
 
-  def __init__(self, name, base=10, len=0, eat_leading_ws=True):
+  def __init__(self, name=None, base=10, len=0, eat_leading_ws=True):
     super(Number, self).__init__(name=name, eat_leading_ws=eat_leading_ws)
     assert base in (8, 10, 16)
     self.base = base
     self.len = len
-    self.eat_leading_ws = eat_leading_ws
 
   def __str__(self):
     if self.base == 10:
@@ -145,14 +158,14 @@ class Number(FBase):
       return '0123456789'
     return '0123456789abcdef'
 
-  def parse(self, s):
-    pos = 0
-    if self.eat_leading_ws:
-      while pos < len(s) and s[pos] == ' ':
-        pos += 1
+  def parse(self, s, next_field=None):
+    pos = self.advance_to_start_pos(s)
     v = 0
     got = 0
     while pos < len(s):
+      if self.check_look_ahead(s[pos:], next_field):
+        break
+
       c = s[pos]
       oc = ord(c)
       idx = '0123456789abcdef'.find(c)
@@ -199,19 +212,15 @@ def check_number():
 
 class Text(FBase):
 
-  def __init__(self, name, pattern=None, allow_space=False, eat_leading_ws=True,
+  def __init__(self, name=None, pattern=None, allow_space=False, eat_leading_ws=True,
                terminators=None):
     super(Text, self).__init__(name=name, eat_leading_ws=eat_leading_ws)
     self.pattern = pattern
     self.allow_space = allow_space
-    self.eat_leading_ws = eat_leading_ws
     self.terminators = terminators
 
   def parse(self, s, next_field=None):
-    pos = 0
-    if self.eat_leading_ws:
-      while pos < len(s) and s[pos] == ' ':
-        pos += 1
+    pos = self.advance_to_start_pos(s)
 
     v = ''
     while pos < len(s):
@@ -270,24 +279,53 @@ def check_text():
   assert v == 55
 
 
+class List(FBase):
+
+  def __init__(self, name, subtype, allowed=None, delim=' ', eat_leading_ws=True,
+               terminators=None):
+    super(List, self).__init__(name=name, eat_leading_ws=eat_leading_ws)
+    self.delim = delim
+    self.subtype = subtype
+    self.subtype.terminators = delim
+    self.terminators = terminators
+
+  def parse(self, s, next_field=None):
+    pos = self.advance_to_start_pos(s)
+
+    v = []
+    while pos < len(s):
+      c = s[pos]
+      if self.terminators and c in self.terminators:
+        break
+      if c in self.delim:
+        pos += 1
+        continue
+      # Life is easier with a little look ahead
+      if next_field:
+        try:
+          x, p2 = next_field.parse(s[pos:])
+          # print(' > look ahead worked', x, p2)
+          if x and p2 > 0:
+            break
+        except:
+          pass
+      # print('subparse: txt=<%s>' % s[pos:], next_field)
+      cur, nxt = self.subtype.parse(s[pos:], next_field=next_field)
+      pos += nxt
+      v.append(cur)
+    return (v, pos)
+
+
 class QParser(object):
 
   def __init__(self, fields):
     self.fields = fields
 
-    """
-    for fi in range(len(self.fields)):
-      if self.fields[fi].__class__ == Text:
-        if fi + 1 < len(self.fields):
-          next = self.fields[fi+1]
-          self.fields[fi].terminators = next.initial()
-    """
-
   def parse(self, o, text):
     pos = 0
     for fi in range(len(self.fields)):
       fld = self.fields[fi]
-      if fld.__class__ == Text:
+      if fld.__class__ in (List, Text):
         next = None
         if fi + 1 < len(self.fields):
           next = self.fields[fi+1]
@@ -297,6 +335,39 @@ class QParser(object):
       pos += nxt
       fld.assign(o, v)
 
+
+def check_list():
+  p = QParser([
+    List('ingredients', Text(), delim=' '),
+    Literal('(contains '),
+    List('allerg', Text(), delim=','),
+    Literal(')'),
+    ])
+
+  o = _Dummy()
+  p.parse(o, 'mvkd kfcds sqjhc nhms (contains dairy, fish)')
+  assert o.ingredients == ['mvkd', 'kfcds', 'sqjhc', 'nhms']
+  assert o.allerg == ['dairy', 'fish']
+
+  p.parse(o, 'trh fvjkl sbzzf mxmxvkd (contains dairy)')
+  assert o.ingredients == ['trh', 'fvjkl', 'sbzzf', 'mxmxvkd']
+  assert o.allerg == ['dairy']
+
+  p = QParser([
+    Literal('player'),
+    Text(name='pname'),
+    Literal(':'),
+    List('v', Number(), delim=','),
+    ])
+
+  o = _Dummy()
+  p.parse(o, 'player 1: 4, 5, 7, 1, 2')
+  assert o.pname == '1'
+  assert o.v == [4, 5, 7, 1, 2]
+
+
+  # p.parse('sqjhc fvjkl (contains soy)')
+  # p.parse('sqjhc mxmxvkd sbzzf (contains fish)')
 
 def check_parser():
   p = QParser([
@@ -327,12 +398,12 @@ def check_parser():
   assert o.r2_high == 0x1ff
 
 
-
 def self_check():
   check_assignable()
   check_literal()
   check_number()
   check_text()
+  check_list()
   check_parser()
 
 
