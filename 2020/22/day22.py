@@ -1,7 +1,6 @@
 "AOC 2020: day 22"
 
 from collections import defaultdict
-import math
 
 from tools import reader
 
@@ -52,12 +51,14 @@ class Player(object):
       self.n = 10 * clone.n
       self.cards = clone.cards[0:ncards]
 
-    self.sig = 0
+  def get_sig(self):
+    ret = 0
     for c in self.cards:
-      self.sig = self.sig * 100 + c
+      ret = ret * 100 + c
+    return ret
     
   def __str__(self):
-    return str(self)
+    return 'player %d: %s' % (self.n, self.cards)
 
   def print(self):
     print('player %d: %s' % (self.n, self.cards))
@@ -70,7 +71,7 @@ class Player(object):
   def add(self, *cards):
     for c in cards:
       self.cards.append(c)
-    self.print()
+    # self.print()
 
   def has_lost(self):
     return len(self.cards) == 0
@@ -158,44 +159,61 @@ class day22(object):
     self.reset()
     self.result2 = None
 
-    sigs = set()
     done = False
-    game = 0
+    totgame = 0
+
+    def trace(*valist):
+      if False:
+        print(*valist)
 
     def do_game(p1, p2):
-      nonlocal game
-      game = game +1
-      print('game', game)
-      p1.print()
-      p2.print()
-      if (p1.sig, p2.sig) in sigs:
-        done = True
-        return p1
-      sigs.add((p1.sig, p2.sig))
-
+      nonlocal totgame
+      sigs = set()
+      totgame = totgame +1
+      game = totgame
       round = 0
       while True:
+        p1s = p1.get_sig()
+        p2s = p2.get_sig()
+        if (p1s, p2s) in sigs:
+          done = True
+          trace('-------- sig match', p1, p2s)
+          return 1
+        sigs.add((p1s, p2s))
+
         if p1.has_lost():
-          return p2
+          trace('=> winner of game', game, 'is player 2')
+          return 2
         elif p2.has_lost():
-          return p1
+          trace('=> winner of game', game, 'is player 1')
+          return 1
+
         round += 1
-        print('  round', round)
+        trace('\n-- round', round, 'game', game)
+        trace(p1)
+        trace(p2)
+
 
         d1 = p1.draw()
         d2 = p2.draw()
 
         if d1 <= len(p1.cards) and d2 <= len(p2.cards):
+          subgame = totgame + 1
+          trace('  play subgame...')
           winner = rcombat(p1, d1, p2, d2)
-          if winner == p1:
-             winner.add(d1, d2)
+          if winner == 1:
+             trace('=> winner game', subgame, 'is player 1')
+             p1.add(d1, d2)
           else:
-             winner.add(d2, d1)
+             trace('=> winner game', subgame, 'is player 2')
+             p2.add(d2, d1)
         else:
           if d1 > d2:
             p1.add(d1, d2)
+            trace('player 1 wins')
           elif d2 > d1:
             p2.add(d2, d1)
+            trace('player 2 wins')
 
 
     def rcombat(p1, d1, p2, d2):
@@ -239,4 +257,4 @@ Player 2:
 
 
 if __name__ == '__main__':
-  main('input.txt', None, None)
+  main('input.txt', 33694, 31835)
