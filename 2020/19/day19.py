@@ -127,44 +127,53 @@ class Rule(object):
     def submatch(rule, msg, lvl):
       nonlocal all_len, max_depth
       print(' '*lvl, 'submatch', rule.number, msg)
-      did_lens = set()
 
       if not rule.loops:
+        matched_lens = set()
         #XX ret = []
         for s in rule.all:
-          print(' '*lvl, 'check', s, msg)
+          ls = len(s)
+          if ls in matched_lens:
+            continue
+          # print(' '*lvl, 'check', s, msg)
           if msg.startswith(s):
             if Rule.trace2:
               print(' '*lvl, 'matched', rule, s, msg)
-            ls = len(s)
-            if ls not in did_lens:
-              did_lens.add(ls)
-              yield ls
+            assert ls not in matched_lens
+            matched_lens.add(ls)
+            yield ls
+
 	    #XX ret.append(s)
 	    #XX return True, len(s)
         return
 
       for subset in rule.subrules:
-        l = match_set(subset, msg, lvl+1)
-        if l > 0:
-          yield l
-      return
+        # print(' '*lvl, '== looping rule, trying subset', subset)
+        for l in match_set(subset, msg, lvl+1):
+          # print('submatch', subset, 'yielded', l)
+          if l >= all_len:
+            all_matched = True
+          if l > 0:
+            yield l
 
     def match_set(rule_set, msg, lvl):
-      if len(rule_set) == 0:
-        yield 0
+      assert len(rule_set) > 0
 
       if Rule.trace2:
-          print(' '*lvl, 'match_subset', rule_set)
+        print(' '*lvl, 'match_subset', rule_set)
       for len_sm in submatch(Rule.rules[rule_set[0]], msg, lvl+1):
         if len(rule_set) > 1:
-          l = match_set(rule_set[1:], msg[len_sm:], lvl+1)
-          if l > 0:
-            return len_sm + l
-      return -1
+          for l in match_set(rule_set[1:], msg[len_sm:], lvl+1):
+            # print('   > got len', len_sm + l)
+            yield len_sm + l
+        else:
+          yield len_sm
 
-    for _ in submatch(self, msg, 0):
-      if all_matched:
+
+    for l_got in submatch(self, msg, 0):
+      print('=========================== top level got', l_got)
+      if l_got == len(msg):
+        all_matched = True
         print('FINAL2', all_matched)
         return True
     print('FINAL2 fail')
@@ -194,11 +203,11 @@ class Rule(object):
         sr = Rule.rules[rul]
         foo = []
         for head in sr.subgen():
-          print(rul, '=>', [head+tail for tail in tails])
+          # print(rul, '=>', [head+tail for tail in tails])
           foo.extend([head+tail for tail in tails])
         tails = foo
         if rul in (8, 11):
-          print('===========================')
+          # print('===========================')
           self.loops = True
         else:
           self.loops = self.loops or sr.loops
@@ -270,6 +279,7 @@ class day19(object):
     r8 = Rule.rules[8]
     r8.subrules = ranges
     r8.loops = True
+    Rule.rules[8] = r8
     print('rule8=', r8)
 
     # r = Rule.from_string('11: 42 31 | 42 11 31')
@@ -282,6 +292,7 @@ class day19(object):
     r11.subrules = ranges
     r11 = Rule.rules[11]
     r11.loops = True
+    Rule.rules[11] = r11
 
     for i in range(0,50):
       r = Rule.rules.get(i)
@@ -290,7 +301,7 @@ class day19(object):
 
     matches = 0
     for msg in self.messages:
-      if self.start.match1(msg):
+      if self.start.match2(msg):
         matches += 1
     self.result2 = matches
 
@@ -366,5 +377,5 @@ aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba
 
 
 if __name__ == '__main__':
-  # main('input.txt', None, None)
+  main('input.txt', 165, 274)
   pass
