@@ -6,6 +6,13 @@ import math
 from tools import reader
 
 
+TRACE = 1
+
+def trace(level=0, depth=0, *args):
+  if level <= TRACE:
+    print(' '*depth, *args)
+
+
 def sample_test(s, expect, expect2=None):
   puzz = day@N@()
   puzz.load_str(s)
@@ -43,13 +50,16 @@ def main(input, e1=None, e2=None):
 
 class Foo(object):
 
+
   def __init__(self):
     pass
 
-
   def __str__(self):
-    return str(self)
+    return 'FOO'
 
+  @staticmethod
+  def fromString(s):
+    pass
 
 
 class day@N@(object):
@@ -57,19 +67,20 @@ class day@N@(object):
   def __init__(self):
     self.result1 = None
     self.result2 = None
+    self.by_group = False
     self.trace = True
 
   def reset(self):
     pass
 
   def load_file(self, file):
-    all = reader.FileReader(file).load()
+    all = reader.FileReader(file, by_group=self.by_group).load()
     for x in all:
       self.do_line(x)
     self.post_load()
 
   def load_str(self, s):
-    all = reader.StringReader(s).load()
+    all = reader.StringReader(s, by_group=self.by_group).load()
     for x in all:
       self.do_line(x)
     self.post_load()
@@ -83,7 +94,7 @@ class day@N@(object):
 
 
   def part1(self):
-    print('===== Start part 1')
+    trace('===== Start part 1')
     self.reset()
     self.result1 = None
 
@@ -95,7 +106,7 @@ class day@N@(object):
 
 
   def part2(self):
-    print('===== Start part 2')
+    trace('===== Start part 2')
     self.reset()
     self.result2 = None
 
@@ -113,3 +124,4 @@ sample_test("""
 
 if __name__ == '__main__':
   main('input.txt', None, None)
+  pass
