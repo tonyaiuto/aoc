@@ -6,6 +6,9 @@ import math
 from tools import reader
 
 dirs = ['e', 'se', 'sw', 'w', 'nw', 'ne']
+shifts = [(0, 1), (-1,1), (-1, 0),  (0,-1), (1, 0), (1,1), None, None,
+          (0, 1), (-1,0), (-1,-1),  (0,-1), (1,-1), (1,0), None, None]
+
 E = 0
 SE = 1
 SW = 2
@@ -48,28 +51,9 @@ def dirsplit(dir):
 def move(pos, dir):
   row = pos[0]
   c = pos[1]
-  if dir == E:
-    return (row, c+1)
-  if dir == W:
-    return (row, c-1)
 
-  if dir == SE:
-    row -= 1
-    if row % 2 == 0:
-      c += 1
-  elif dir == SW:
-    row -= 1
-    if row % 2 == 1:
-      c -= 1
-  elif dir == NE:
-    row += 1
-    if row % 2 == 0:
-      c += 1
-  elif dir == NW:
-    row += 1
-    if row % 2 == 1:
-      c -= 1
-  return (row, c)
+  shifts = (dir | (row & 1))
+  return (row+shifts[0], c+shifts[1])
 
 
 def check_move(dirs, dst):
@@ -195,7 +179,7 @@ class day24(object):
         self.blacks.remove(final_pos)
       else:
         self.blacks.add(final_pos)
-    
+
     self.result1 = len(self.blacks)
     print('part1', self.result1)
     return self.result1
@@ -206,10 +190,7 @@ class day24(object):
     trace('===== Start part 2')
     self.reset()
 
-    deltas = [(0,1), (-1,1), (-1, 0), (0, -1), (1, 0), (1,1)]
-
     def neighbors(pos):
-      # return [(pos[0]+dl[0],pos[1]+dl[1]) for dl in deltas]
       return [move(pos, d) for d in range(6)]
 
     def do_day():
@@ -240,7 +221,6 @@ class day24(object):
     self.result2 = len(self.blacks)
     print('part2', self.result2)
     return self.result2
-
 
 
 sample_test("""
