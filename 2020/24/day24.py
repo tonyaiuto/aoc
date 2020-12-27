@@ -5,7 +5,7 @@ import math
 
 from tools import reader
 
-dirs = ['e', 'se', 'sw', 'w', 'nw', 'ne']
+DIRNAMES = ['e', 'se', 'sw', 'w', 'nw', 'ne']
 shifts = [(0, 1), (-1,1), (-1, 0),  (0,-1), (1, 0), (1,1), None, None,
           (0, 1), (-1,0), (-1,-1),  (0,-1), (1,-1), (1,0), None, None]
 
@@ -17,7 +17,7 @@ NW = 4
 NE = 5
 
 def pdir(dir):
-  return ' '.join([dirs[i] for i in dir])
+  return ' '.join([DIRNAMES[i] for i in dir])
 
 def dirsplit(dir):
   i = 0
@@ -51,18 +51,17 @@ def dirsplit(dir):
 def move(pos, dir):
   row = pos[0]
   c = pos[1]
-
-  shifts = (dir | (row & 1))
-  return (row+shifts[0], c+shifts[1])
+  dl = shifts[(dir | (row & 1)<<3)]
+  return (row+dl[0], c+dl[1])
 
 
 def check_move(dirs, dst):
   path = dirsplit(dirs)
-  # print(pdir(path))
+  print('Check <%s> => %s ... => %s' % (dirs, pdir(path), dst))
   pos = (0,0)
   for m in path:
     pos = move(pos, m)
-    print(dirs[m], '=>', pos)
+    print('  ', m, DIRNAMES[m], '=>', pos)
   if pos != dst:
     print('expected', dst, 'got', pos)
     assert pos == dst
@@ -163,7 +162,7 @@ class day24(object):
     pos = (0,0)
     for m in path:
       pos = move(pos, m)
-      # print('   ', dirs[m], '=>', pos)
+      # print('   ', DIRNAMES[m], '=>', pos)
     return pos
 
 
@@ -216,7 +215,7 @@ class day24(object):
 
     for day in range(100):
       do_day()
-      print('Day %d: %s' % (day, len(self.blacks)))
+      # print('Day %d: %s' % (day, len(self.blacks)))
 
     self.result2 = len(self.blacks)
     print('part2', self.result2)
