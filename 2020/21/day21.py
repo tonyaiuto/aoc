@@ -47,18 +47,19 @@ class Food(object):
   count = 0
 
   rule_parser = qp.QParser([
-    qp.Text('raw_i', allow_space=True),
+    qp.List('ingredients', qp.Text(), delim=' '),
     qp.Literal('(contains '),
-    qp.Text('raw_a', allow_space=True),
+    qp.List('allerg', qp.Text(), delim=','),
     qp.Literal(')'),
     ])
+
 
   def __init__(self, s):
     Food.count = Food.count + 1
     self.n = Food.count
     Food.rule_parser.parse(self, s)
-    self.ingredients = set([i.strip() for i in self.raw_i.split(' ')])
-    self.allerg = set([i.strip() for i in self.raw_a.split(',')])
+    self.ingredients = set(self.ingredients)
+    self.allerg = set(self.allerg)
     self.col = -1
 
 

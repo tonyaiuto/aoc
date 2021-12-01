@@ -1,4 +1,4 @@
-"AOC 2020: day @N@"
+"AOC 2020: day 25"
 
 from collections import defaultdict
 import math
@@ -8,13 +8,15 @@ from tools import reader
 
 TRACE = 1
 
-def trace(level=0, depth=0, *args):
+
+def trace(*args, **kwargs):
+  level = kwargs.get('level', 99)
+  depth = kwargs.get('depth', 0)
   if level <= TRACE:
     print(' '*depth, *args)
 
-
 def sample_test(s, expect, expect2=None):
-  puzz = day@N@()
+  puzz = day25()
   puzz.load_str(s)
   res = puzz.part1()
   if expect != res:
@@ -22,7 +24,7 @@ def sample_test(s, expect, expect2=None):
     assert expect == res
 
   if expect2:
-    puzz = day@N@()
+    puzz = day25()
     puzz.load_str(s)
     res = puzz.part2()
     if expect2 != res:
@@ -31,7 +33,7 @@ def sample_test(s, expect, expect2=None):
 
 
 def main(input, e1=None, e2=None):
-  puzz = day@N@()
+  puzz = day25()
   puzz.load_file(input)
   res = puzz.part1()
   print('part1', res)
@@ -39,7 +41,7 @@ def main(input, e1=None, e2=None):
     print('FAIL: expect', e1, 'got', res)
     assert e1 == res
 
-  puzz = day@N@()
+  puzz = day25()
   puzz.load_file(input)
   res = puzz.part2()
   print('part2', res)
@@ -62,7 +64,7 @@ class Foo(object):
     pass
 
 
-class day@N@(object):
+class day25(object):
 
   def __init__(self):
     self.result1 = None
@@ -74,14 +76,14 @@ class day@N@(object):
     pass
 
   def load_file(self, file):
-    all = reader.FileReader(file, by_group=self.by_group).load()
-    for x in all:
+    self.all = reader.FileReader(file, by_group=self.by_group).load()
+    for x in self.all:
       self.do_line(x)
     self.post_load()
 
   def load_str(self, s):
-    all = reader.StringReader(s, by_group=self.by_group).load()
-    for x in all:
+    self.all = reader.StringReader(s, by_group=self.by_group).load()
+    for x in self.all:
       self.do_line(x)
     self.post_load()
 
@@ -89,16 +91,50 @@ class day@N@(object):
     pass
 
   def post_load(self):
-    pass
+    self.cardpub = int(self.all[0])
+    self.doorpub = int(self.all[1])
 
+  def handshake(self, sub, loop_size):
+    n = 1
+    for i in range(loop_size):
+      n *= sub
+      n = n % 20201227
+    return n
 
+  def pub2loop(self, pubkey):
+    print('pub2loop', pubkey)
+    loop = 0
+    n = 1
+    while True and loop <= 20201228:
+      loop += 1
+      if loop % 1000 == 0:
+        trace('loop', loop, 'n', n, level=0)
+      n = (n * 7) % 20201227
+      if pubkey == n:
+        print(' pub2loop', pubkey, '=>', loop)
+        return loop
+
+ 
 
   def part1(self):
     trace('===== Start part 1')
     self.reset()
-    self.result1 = None
 
+    cardpub = 5764801
+    doorpub = 17807724
+    cardloop = d.pub2loop(5764801)
+    doorloop = d.pub2loop(17807724)
 
+    assert 14897079 == self.handshake(doorpub, cardloop)
+
+    # 2634053600
+    cardloop = self.pub2loop(self.cardpub)
+    # cl = self.pub2loop(self.doorpub)
+
+    self.result1 = self.handshake(self.doorpub, cardloop)
+
+    # card 13135480
+    # door 8821721
 
     print('part1', self.result1)
     return self.result1
@@ -115,13 +151,18 @@ class day@N@(object):
     return self.result2
 
 
+d = day25()
+assert 8 == d.pub2loop(5764801)
+assert 11 == d.pub2loop(17807724)
 
-sample_test("""
 
-""", None, None)
+"""
+sample_test(5764801, 5764801, 
+"""
+
 
 
 
 if __name__ == '__main__':
-  main('input.txt', None, None)
+  main('input.txt', 8329514, None)
   pass
