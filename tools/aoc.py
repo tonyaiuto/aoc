@@ -73,7 +73,7 @@ class aoc(object):
     solver.load_str(s)
     res = solver.part1()
     if expect1 != res:
-      print('FAIL: expect1', expect1, 'got', res)
+      print('FAIL: %s.part1:' % tag, 'expect', expect1, 'got', res)
       assert expect1 == res
 
     if expect2:
@@ -81,6 +81,6 @@ class aoc(object):
       solver.load_str(s)
       res = solver.part2()
       if expect2 != res:
-        print('FAIL: expect2', expect2, 'got', res)
+        print('FAIL: %s.part2:' % tag, 'expect', expect2, 'got', res)
         assert expect2 == res
     print('PASS: %s' % (tag or cls.__class__.__name__))
