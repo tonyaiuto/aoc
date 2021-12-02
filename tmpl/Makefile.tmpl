@@ -1,0 +1,13 @@
+
+go:
+	python3 day@N2@.py
+
+
+watch:
+	../../tools/watch day@N2@.py make go
+
+
+get:
+	# mv $$HOME/Downloads/input.txt .
+	curl -H "Cookie: $$(cat $$HOME/.cookie_aoc)" https://adventofcode.com/@YEAR@/day/@N@/input >input.txt
+	chmod 444 input.txt
