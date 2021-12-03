@@ -64,15 +64,14 @@ class day03(aoc.aoc):
     self.reset()
 
     def splitbag(bag, bit, pick_most):
-      ones = 0
       ones_bag = []
       zeros_bag = []
       for val in bag:
         if val[bit] == '1':
-          ones += 1
           ones_bag.append(val)
         else:
           zeros_bag.append(val)
+      ones = len(ones_bag)
       half = (len(bag) + 1) // 2
       if pick_most:
         if ones >= half:
@@ -91,11 +90,42 @@ class day03(aoc.aoc):
       if len(cleft) > 1:
         cleft = splitbag(cleft, i, pick_most=False)
 
-    ogv = int(oleft[0], 2)
-    co2v = int(cleft[0], 2)
-    print('og', ogv)
-    print('co2', co2v)
-    return ogv * co2v
+    o = int(oleft[0], 2)
+    co2 = int(cleft[0], 2)
+    print('o', o)
+    print('co2', co2)
+    recursive_answer = self.part2_recursive()
+    if o * co2 == recursive_answer:
+      print('recursive solution matches:', recursive_answer)
+    else:
+      print('recursive solution is', recursive_answer, 'vs.', o * co2)
+    return o * co2
+
+  def part2_recursive(self):
+
+    def helper(bag, bit, pick_most):
+      if len(bag) == 1:
+        return bag
+      ones_bag = []
+      zeros_bag = []
+      for val in bag:
+        if val[bit] == '1':
+          ones_bag.append(val)
+        else:
+          zeros_bag.append(val)
+      ones = len(ones_bag)
+      half = (len(bag) + 1) // 2
+      if ones >= half:
+        return helper(ones_bag if pick_most else zeros_bag, bit+1, pick_most)
+      return helper(zeros_bag if pick_most else ones_bag, bit+1, pick_most)
+
+    oleft = helper(self.all, 0, pick_most=True)
+    co2left = helper(self.all, 0, pick_most=False)
+
+    o = int(oleft[0], 2)
+    co2 = int(co2left[0], 2)
+    return o * co2
+
 
 
 day03.sample_test("""
