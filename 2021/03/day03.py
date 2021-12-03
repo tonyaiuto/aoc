@@ -1,19 +1,8 @@
 "AOC 2021: day 03"
 
 from collections import defaultdict
-import math
 
 from tools import aoc
-
-
-class Foo(object):
-
-  def __init__(self):
-    pass
-
-  def __str__(self):
-    return str(self)
-
 
 
 class day03(aoc.aoc):
@@ -53,7 +42,6 @@ class day03(aoc.aoc):
     print(self.counts)
     pass
 
-
   def part1(self):
     print('===== Start part 1')
     self.reset()
@@ -71,54 +59,42 @@ class day03(aoc.aoc):
     # print(gamma)
     return gamma * epsilon
 
-
   def part2(self):
     print('===== Start part 2')
     self.reset()
 
-    cleft = self.all
+    def splitbag(bag, bit, pick_most):
+      ones = 0
+      ones_bag = []
+      zeros_bag = []
+      for val in bag:
+        if val[bit] == '1':
+          ones += 1
+          ones_bag.append(val)
+        else:
+          zeros_bag.append(val)
+      half = (len(bag) + 1) // 2
+      if pick_most:
+        if ones >= half:
+          return ones_bag
+        return zeros_bag
+      else:
+        if ones >= half:
+          return zeros_bag
+        return ones_bag
 
     oleft = self.all
     cleft = self.all
     for i in range(self.width):
-      ones = 0
-      onext = []
-      znext = []
-      for val in oleft:
-        if val[i] == '1':
-          ones += 1
-          onext.append(val)
-        else:
-          znext.append(val)
-      half = (len(oleft) + 1) // 2
-      if ones >= half:
-        oleft = onext
-      else:
-        oleft = znext
-      # print(oleft)
-
+      if len(oleft) > 1:
+        oleft = splitbag(oleft, i, pick_most=True)
       if len(cleft) > 1:
-        ones = 0
-        onext = []
-        znext = []
-        for val in cleft:
-          if val[i] == '1':
-            ones += 1
-            onext.append(val)
-          else:
-            znext.append(val)
-        half = (len(cleft) + 1) // 2
-        if ones >= half:
-          cleft = znext
-        else:
-          cleft = onext
-        # print(cleft)
+        cleft = splitbag(cleft, i, pick_most=False)
 
     ogv = int(oleft[0], 2)
     co2v = int(cleft[0], 2)
     print('og', ogv)
     print('co2', co2v)
-
     return ogv * co2v
 
 
