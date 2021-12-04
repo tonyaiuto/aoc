@@ -22,13 +22,15 @@ class aoc(object):
     pass
 
   def load_file(self, file):
-    self.all_input = reader.FileReader(file, **self.reader_params).load()
+    self.reader = reader.FileReader(file, **self.reader_params)
+    self.all_input = self.reader.load()
     for x in self.all_input:
       self.do_line(x)
     self.post_load()
 
   def load_str(self, s):
-    self.all_input = reader.StringReader(s, **self.reader_params).load()
+    self.reader = reader.StringReader(s, **self.reader_params)
+    self.all_input = self.reader.load()
     for x in self.all_input:
       self.do_line(x)
     self.post_load()
