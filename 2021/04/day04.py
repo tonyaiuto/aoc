@@ -6,7 +6,7 @@ import math
 from tools import aoc
 
 
-class Board(object):
+class Board1(object):
 
   def __init__(self, lines, number=None):
     self.number = number
@@ -31,13 +31,23 @@ class Board(object):
     return score
 
   def mark(self, n):
+    # returns True if the mark is a bingo
+    found = -1
     for row in range(5):
       for col in range(5):
         if self.rows[row][col] == n:
           self.rows[row][col] = 0
           #print('..... found', n, 'at', row, col)
           #self.print()
-          return True
+          if sum(self.rows[row]) == 0:
+            return True
+          found = col
+          break
+      if found >= 0:
+        for row in range(5):
+          if self.rows[row][found] != 0:
+            return False
+        return True
     return False
 
   def is_won(self):
@@ -53,6 +63,45 @@ class Board(object):
       if won:
         return True
     return False
+
+class Board(object):
+
+  def __init__(self, lines, number=None):
+    self.number = number
+    self.rows = []
+    for row in range(5):
+      self.rows.append([int(n) for n in lines[row].replace('  ', ' ').split()])
+    self.pos = {}
+    self.row_sum = [0] * 5
+    self.col_sum = [0] * 5
+    for row in range(5):
+      for col in range(5):
+        n = self.rows[row][col]
+        self.pos[n] = (row, col)
+        self.row_sum[row] += n
+        self.col_sum[col] += n
+
+  def __str__(self):
+    return str(self)
+
+  def print(self):
+    print('Board:', self.number)
+    for row in range(5):
+      print(' '.join(['%2d' % n for n in self.rows[row]]))
+
+  def score(self):
+    return (sum(self.row_sum) + sum(self.col_sum)) // 2
+
+  def mark(self, n):
+    # returns True if the mark is a bingo
+    rc = self.pos.get(n)
+    if not rc:
+      return False
+    row = rc[0]
+    col = rc[1]
+    self.row_sum[row] -= n
+    self.col_sum[col] -= n
+    return self.row_sum[row] == 0 or self.col_sum[col] == 0
 
 
 class day04(aoc.aoc):
@@ -98,13 +147,12 @@ class day04(aoc.aoc):
       i += 1
       # print('turn', i, 'n', t)
       for b in self.boards:
-        marked = b.mark(t)
-        if marked:
-          if b.is_won():
-            print('bingo')
-            b.print()
-            score = b.score()
-            return score * t
+        bingo = b.mark(t)
+        if bingo:
+          print('bingo')
+          b.print()
+          score = b.score()
+          return score * t
     return 0
 
 
@@ -120,13 +168,12 @@ class day04(aoc.aoc):
       for b in self.boards:
         if b.number in solved:
           continue
-        marked = b.mark(t)
-        if marked:
-          if b.is_won():
-            # print('bingo')
-            # b.print()
-            solved.append(b.number)
-            blast = b
+        bingo = b.mark(t)
+        if bingo:
+          # print('bingo')
+          # b.print()
+          solved.append(b.number)
+          blast = b
       if len(solved) == len(self.boards):
         score = blast.score() * t
         break
