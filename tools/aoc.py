@@ -100,7 +100,7 @@ class aoc(object):
       if expect2 != res:
         print('%s.part2: FAIL:' % tag, 'expect', expect2, 'got', res)
         assert expect2 == res
-    print('%s: PASS:' % tag)
+    print('%s: PASS' % tag)
 
 
 def visit_range(start: int, end: int) -> List[int]:
