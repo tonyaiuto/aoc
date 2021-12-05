@@ -10,7 +10,8 @@ class aoc(object):
   def __init__(self, reader_params={}):
     self.result1 = None
     self.result2 = None
-    self.trace = True
+    self.trace = False
+    self.trace_sample = False
     self.all_input = None
     self.reader_params = {
         'by_group': False,
@@ -82,6 +83,7 @@ class aoc(object):
   @classmethod
   def sample_test(cls, s, expect1=None, expect2=None, tag=None):
     solver = cls()
+    solver.trace_sample = True
     tag = tag or 'sample'
     solver.load_str(s)
     res = solver.part1()
@@ -91,6 +93,7 @@ class aoc(object):
 
     if expect2:
       solver = cls()
+      solver.trace_sample = True
       solver.load_str(s)
       res = solver.part2()
       if expect2 != res:
