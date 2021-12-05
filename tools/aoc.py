@@ -1,5 +1,7 @@
 """aoc core."""
 
+import time
+
 from tools import reader
 
 
@@ -50,20 +52,29 @@ class aoc(object):
   @classmethod
   def run_and_check(cls, input, expect1=None, expect2=None, tag=None):
     solver = cls()
-    solver.load_file(input)
     tag = tag or type(solver).__name__
+
+    start = time.perf_counter()
+    solver.load_file(input)
+    load_done = time.perf_counter()
     res = solver.part1()
+    part1_done = time.perf_counter()
     solver.result1 = res
-    print('part1', res)
+    print('part1:  %-15s     load: %.5fms, solve: %.5fms' % (
+        str(res), 1000*(load_done-start), 1000*(part1_done-load_done)))
     if expect1 and  expect1 != res:
       print('FAIL: %s.part1:' % tag, 'expect', expect1, 'got', res)
       assert expect1 == res
 
     solver = cls()
+    start = time.perf_counter()
     solver.load_file(input)
+    load_done = time.perf_counter()
     res = solver.part2()
+    part1_done = time.perf_counter()
     solver.result2 = res
-    print('part2', res)
+    print('part1:  %-15s     load: %.5fms, solve: %.5fms' % (
+        str(res), 1000*(load_done-start), 1000*(part1_done-load_done)))
     if expect2 and  expect2 != res:
       print('FAIL: %s.part2:' % tag, 'expect', expect2, 'got', res)
       assert expect2 == res
