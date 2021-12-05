@@ -85,11 +85,11 @@ class aoc(object):
   def sample_test(cls, s, expect1=None, expect2=None, tag=None):
     solver = cls()
     solver.trace_sample = True
-    tag = tag or 'sample'
+    tag = tag or (type(solver).__name__ + '.sample')
     solver.load_str(s)
     res = solver.part1()
     if expect1 != res:
-      print('FAIL: %s.part1:' % tag, 'expect', expect1, 'got', res)
+      print('%s.part1: FAIL:' % tag, 'expect', expect1, 'got', res)
       assert expect1 == res
 
     if expect2:
@@ -98,9 +98,9 @@ class aoc(object):
       solver.load_str(s)
       res = solver.part2()
       if expect2 != res:
-        print('FAIL: %s.part2:' % tag, 'expect', expect2, 'got', res)
+        print('%s.part2: FAIL:' % tag, 'expect', expect2, 'got', res)
         assert expect2 == res
-    print('PASS: %s' % (tag or cls.__class__.__name__))
+    print('%s: PASS:' % tag)
 
 
 def visit_range(start: int, end: int) -> List[int]:
