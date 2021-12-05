@@ -64,7 +64,7 @@ class Board1(object):
         return True
     return False
 
-class Board(object):
+class Board2(object):
 
   def __init__(self, lines, number=None):
     self.number = number
@@ -102,6 +102,9 @@ class Board(object):
     self.row_sum[row] -= n
     self.col_sum[col] -= n
     return self.row_sum[row] == 0 or self.col_sum[col] == 0
+
+
+Board = Board2
 
 
 class day04(aoc.aoc):
@@ -201,7 +204,6 @@ day04.sample_test("""
 22 11 13  6  5
  2  0 12  3  7
 """, expect1=4512, expect2=1924)
-
 
 if __name__ == '__main__':
   day04.run_and_check('input.txt', expect1=None, expect2=None)
