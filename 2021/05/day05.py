@@ -67,21 +67,13 @@ class day05(aoc.aoc):
 
   @staticmethod
   def fillx(grid, y, x1, x2):
-    x = min(x1, x2)
-    last = max(x1, x2)
-    # print('x', x, last, '@', y)
-    while x <= last:
+    for x in aoc.visit_range(x1, x2):
       grid[y][x] += 1
-      x += 1
 
   @staticmethod
   def filly(grid, x, y1, y2):
-    y = min(y1, y2)
-    last = max(y1, y2)
-    # print('y', y, last, '@', x)
-    while y <= last:
+    for y in aoc.visit_range(y1, y2):
       grid[y][x] += 1
-      y += 1
 
   def part1(self):
     print('===== Start part 1')
@@ -131,21 +123,12 @@ class day05(aoc.aoc):
 
   @staticmethod
   def filldiag(grid, v):
-    x = min(v.x1, v.x2)
-    last_x = max(v.x1, v.x2)
-    y = min(v.y1, v.y2)
-    last_y = max(v.y1, v.y2)
-    assert (last_x - x) == (last_y - y)
-
-    length = last_x - x + 1
+    assert abs(v.x2 - v.x1) == abs(v.y2 - v.y1)
+    length = abs(v.x2 - v.x1) + 1
     x = v.x1
-    xmove = 1
-    if v.x2 < v.x1:
-      xmove = -1
+    xmove = aoc.direction(v.x1, v.x2)
     y = v.y1
-    ymove = 1
-    if v.y2 < v.y1:
-      ymove = -1
+    ymove = aoc.direction(v.y1, v.y2)
     for i in range(length):
       grid[y][x] += 1
       x += xmove

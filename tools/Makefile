@@ -1,5 +1,8 @@
 
-all_tests:	elf_image_test memoized_test qparser_test reader_test
+all_tests:	aoc_test elf_image_test memoized_test qparser_test reader_test
+
+aoc_test:
+	PYTHONPATH=.. python3 aoc.py
 
 elf_image_test:
 	python3 elf_image.py

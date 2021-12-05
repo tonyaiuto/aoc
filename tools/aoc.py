@@ -1,6 +1,7 @@
 """aoc core."""
 
 import time
+from typing import List
 
 from tools import reader
 
@@ -100,3 +101,36 @@ class aoc(object):
         print('FAIL: %s.part2:' % tag, 'expect', expect2, 'got', res)
         assert expect2 == res
     print('PASS: %s' % (tag or cls.__class__.__name__))
+
+
+def visit_range(start: int, end: int) -> List[int]:
+  """Iterator that returns all integers from start to end, in order.
+
+  It might move backwards.
+  """
+  if start <= end:
+    while start != end+1:
+      yield start
+      start += 1
+  else:
+    while start != end-1:
+      yield start
+      start -= 1
+
+
+def direction(start: int, end: int) -> int:
+  return 1 if start <= end else -1
+
+
+def self_check():
+  # Test visit_range
+  assert [2, 3, 4] == [i for i in visit_range(2, 4)]
+  assert [4, 3, 2] == [i for i in visit_range(4, 2)]
+  assert 1 == direction(2, 2)
+  assert 1 == direction(2, 4)
+  assert -1 == direction(4, 2)
+
+
+if __name__ == '__main__':
+  self_check()
+  print('PASS:', __file__)
