@@ -9,8 +9,6 @@ import heapq
 import Queue
 import sys
 
-# from memoized import memoized
-
 _VERBOSE = 0
 _PART2 = False
 
@@ -375,7 +373,6 @@ def NarrowFrom(cave, x, y, step):
     else:
       dec_x = True
       y -= step
->>>>>>> 8109833465f62f818801c002fc7d50994ab1e2c9
 
 
 def part2_2(cave):
@@ -403,10 +400,7 @@ def part2_2(cave):
         else:
           break
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 8109833465f62f818801c002fc7d50994ab1e2c9
 def part2_1(cave):
   # x: 44229168-44229328 (160)
   # y: 43740050-43740180 (130)
@@ -569,11 +563,7 @@ if __name__ == '__main__':
     sys.exit(SelfTest(cave))
 
   if _PART2:
-<<<<<<< HEAD
     part2_quick(cave)
-
-=======
-    part2(cave)
+    # part2(cave)
   else:
     part1(cave)
->>>>>>> 8109833465f62f818801c002fc7d50994ab1e2c9
