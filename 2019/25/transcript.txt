@@ -1,0 +1,36 @@
+================
+=== Crew Quarters
+    The beds are all too small for you.
+    east -> Hull Breach
+=== Holodeck
+    Someone seems to have left it on the Giant Grid setting.
+    south -> Hull Breach
+=== Hull Breach
+    You got in through a hole in the floor here. To keep your ship from
+    also freezing, the hole has been sealed.
+    north -> Holodeck
+    south -> Passages
+    west -> Crew Quarters
+=== Observatory
+    There are a few telescopes; they're all bolted down, though.
+    north -> Stables
+    south -> Security Checkpoint
+=== Passages
+    They're a little twisty and starting to look all alike.
+    east -> Storage
+=== Pressure-Sensitive Floor
+    Analyzing...
+    east -> Security Checkpoint
+=== Security Checkpoint
+    In the next room, a pressure-sensitive floor will verify your
+    identity.
+    east -> Pressure-Sensitive Floor
+    north -> Observatory
+=== Stables
+    Reindeer-sized. They're all empty.
+    north -> Storage
+    south -> Observatory
+=== Storage
+    The boxes just contain more boxes.  Recursively.
+    south -> Stables
+    west -> Passages
