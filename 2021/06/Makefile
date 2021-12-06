@@ -1,10 +1,11 @@
 
 go:
 	python3 day06.py
+	@echo
 
 
 watch:
-	../../tools/watch day06.py make go
+	../../tools/watch day06.py make --no-print-directory go
 
 
 get:

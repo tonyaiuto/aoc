@@ -27,6 +27,9 @@ class day06(aoc.aoc):
     if self.trace_sample:
       print(self.state)
     self.nfish = len(self.state)
+    self.ages = defaultdict(int)
+    for x in self.state:
+      self.ages[x] += 1
 
   def gen1(self):
     nxt = []
@@ -40,12 +43,17 @@ class day06(aoc.aoc):
     self.state.extend(nxt)
 
   def part1(self):
-    print('===== Start part 1')
+    # print('===== Start part 1')
     for i in range(80):
       self.gen1()
       if self.trace_sample and i < 19:
         print(self.state)
     return len(self.state)
+
+  def part1_fast(self):
+    for i in range(80):
+      self.gen2()
+    return self.nfish
 
   def gen2(self):
     cur = self.ages
@@ -60,10 +68,7 @@ class day06(aoc.aoc):
         self.ages[age-1] += count
 
   def part2(self):
-    print('===== Start part 2')
-    self.ages = defaultdict(int)
-    for x in self.state:
-      self.ages[x] += 1
+    # print('===== Start part 2')
     for i in range(256):
       self.gen2()
     return self.nfish
@@ -76,3 +81,4 @@ day06.sample_test("""
 
 if __name__ == '__main__':
   day06.run_and_check('input.txt', expect1=389726, expect2=1743335992042)
+  day06.do(day06.part1_fast, 'input.txt', expect=389726)

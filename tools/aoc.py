@@ -105,6 +105,23 @@ class aoc(object):
         sys.exit(1)
     print('%s: PASS' % tag)
 
+  @classmethod
+  def do(solver_cls, func, input, expect=None, tag=None):
+    solver = solver_cls()
+    tag = tag or func.__name__
+
+    start = time.perf_counter()
+    solver.load_file(input)
+    load_done = time.perf_counter()
+    res = func(solver)
+    part1_done = time.perf_counter()
+    solver.result1 = res
+    print('%s:  %-15s     load: %.5fms, solve: %.5fms' % (
+        tag, str(res), 1000*(load_done-start), 1000*(part1_done-load_done)))
+    if expect and  expect != res:
+      print('%s: FAIL:' % tag, 'expect', expect, 'got', res)
+      sys.exit(1)
+
 
 def visit_range(start: int, end: int) -> List[int]:
   """Iterator that returns all integers from start to end, in order.
