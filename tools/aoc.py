@@ -1,5 +1,6 @@
 """aoc core."""
 
+import sys
 import time
 from typing import List
 
@@ -75,7 +76,7 @@ class aoc(object):
     res = solver.part2()
     part1_done = time.perf_counter()
     solver.result2 = res
-    print('part1:  %-15s     load: %.5fms, solve: %.5fms' % (
+    print('part2:  %-15s     load: %.5fms, solve: %.5fms' % (
         str(res), 1000*(load_done-start), 1000*(part1_done-load_done)))
     if expect2 and  expect2 != res:
       print('FAIL: %s.part2:' % tag, 'expect', expect2, 'got', res)
@@ -90,7 +91,8 @@ class aoc(object):
     res = solver.part1()
     if expect1 != res:
       print('%s.part1: FAIL:' % tag, 'expect', expect1, 'got', res)
-      assert expect1 == res
+      # assert expect1 == res
+      sys.exit(1)
 
     if expect2:
       solver = cls()
@@ -99,7 +101,8 @@ class aoc(object):
       res = solver.part2()
       if expect2 != res:
         print('%s.part2: FAIL:' % tag, 'expect', expect2, 'got', res)
-        assert expect2 == res
+        # assert expect2 == res
+        sys.exit(1)
     print('%s: PASS' % tag)
 
 
