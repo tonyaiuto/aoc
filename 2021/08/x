@@ -1,0 +1,307 @@
+python3 day08.py
+===== Start part 1
+===== Start part 2
+m1 might be ['a', 'b']
+m1 {'b', 'a'}
+m4 {'b', 'f', 'a', 'e'}
+m7 {'b', 'a', 'd'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'d'}
+left_l {'f', 'e'}
+m9 {'f', 'e', 'd', 'b', 'a'}
+m5 might be ['b', 'c', 'd', 'e', 'f']
+m2 might be ['a', 'c', 'd', 'f', 'g']
+m3 might be ['a', 'b', 'c', 'd', 'f']
+m0 might be ['a', 'b', 'c', 'd', 'e', 'f']
+m6 might be ['b', 'c', 'd', 'e', 'f', 'g']
+m0 might be ['a', 'b', 'c', 'd', 'e', 'g']
+ -> 0 {'d', 'b', 'a', 'c', 'g', 'e'}
+ -> 1 {'b', 'a'}
+ -> 2 {'f', 'd', 'g', 'a', 'c'}
+ -> 3 {'f', 'd', 'b', 'a', 'c'}
+ -> 4 {'b', 'f', 'a', 'e'}
+ -> 5 {'f', 'd', 'b', 'c', 'e'}
+ -> 6 {'f', 'd', 'b', 'c', 'g', 'e'}
+ -> 7 {'b', 'a', 'd'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'f', 'e', 'd', 'b', 'a'}
+got 5353
+day08.sample: PASS
+===== Start part 1
+===== Start part 2
+m1 might be ['b', 'e']
+m1 {'b', 'e'}
+m4 {'g', 'e', 'b', 'c'}
+m7 {'b', 'e', 'd'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'d'}
+left_l {'g', 'c'}
+m9 {'e', 'd', 'b', 'g', 'c'}
+m0 might be ['b', 'c', 'd', 'e', 'f', 'g']
+m6 might be ['a', 'c', 'd', 'e', 'f', 'g']
+m5 might be ['c', 'd', 'e', 'f', 'g']
+m0 might be ['a', 'b', 'd', 'e', 'f', 'g']
+m3 might be ['b', 'c', 'd', 'e', 'f']
+m2 might be ['a', 'b', 'c', 'd', 'f']
+ -> 0 {'f', 'd', 'b', 'a', 'g', 'e'}
+ -> 1 {'b', 'e'}
+ -> 2 {'f', 'd', 'b', 'a', 'c'}
+ -> 3 {'f', 'd', 'b', 'c', 'e'}
+ -> 4 {'g', 'e', 'b', 'c'}
+ -> 5 {'f', 'd', 'g', 'c', 'e'}
+ -> 6 {'f', 'd', 'a', 'c', 'g', 'e'}
+ -> 7 {'b', 'e', 'd'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'e', 'd', 'b', 'g', 'c'}
+got 834
+m1 might be ['c', 'g']
+m1 {'g', 'c'}
+m4 {'f', 'e', 'g', 'c'}
+m7 {'g', 'b', 'c'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'b'}
+left_l {'f', 'e'}
+m9 {'f', 'e', 'b', 'g', 'c'}
+m6 might be ['a', 'b', 'd', 'e', 'f', 'g']
+m3 might be ['b', 'c', 'd', 'e', 'g']
+m5 might be ['b', 'd', 'e', 'f', 'g']
+m0 might be ['a', 'b', 'c', 'd', 'f', 'g']
+m2 might be ['a', 'b', 'c', 'd', 'e']
+m0 might be ['b', 'c', 'd', 'e', 'f', 'g']
+ -> 0 {'f', 'd', 'b', 'c', 'g', 'e'}
+ -> 1 {'g', 'c'}
+ -> 2 {'d', 'b', 'a', 'c', 'e'}
+ -> 3 {'d', 'g', 'b', 'c', 'e'}
+ -> 4 {'f', 'e', 'g', 'c'}
+ -> 5 {'f', 'd', 'g', 'b', 'e'}
+ -> 6 {'f', 'd', 'b', 'a', 'g', 'e'}
+ -> 7 {'g', 'b', 'c'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'f', 'e', 'b', 'g', 'c'}
+got 781
+m1 might be ['c', 'g']
+m1 {'g', 'c'}
+m4 {'g', 'f', 'a', 'c'}
+m7 {'g', 'b', 'c'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'b'}
+left_l {'f', 'a'}
+m9 {'f', 'g', 'b', 'a', 'c'}
+m6 might be ['a', 'b', 'd', 'e', 'f', 'g']
+m2 might be ['a', 'b', 'c', 'd', 'e']
+m5 might be ['a', 'b', 'd', 'f', 'g']
+m0 might be ['a', 'b', 'c', 'd', 'f', 'g']
+m0 might be ['b', 'c', 'd', 'e', 'f', 'g']
+m3 might be ['a', 'b', 'c', 'd', 'g']
+ -> 0 {'f', 'd', 'b', 'c', 'g', 'e'}
+ -> 1 {'g', 'c'}
+ -> 2 {'d', 'b', 'a', 'c', 'e'}
+ -> 3 {'d', 'g', 'b', 'a', 'c'}
+ -> 4 {'g', 'f', 'a', 'c'}
+ -> 5 {'f', 'd', 'g', 'b', 'a'}
+ -> 6 {'f', 'd', 'b', 'a', 'g', 'e'}
+ -> 7 {'g', 'b', 'c'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'f', 'g', 'b', 'a', 'c'}
+got 117
+m1 might be ['b', 'c']
+m1 {'b', 'c'}
+m4 {'b', 'f', 'a', 'c'}
+m7 {'b', 'c', 'd'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'d'}
+left_l {'f', 'a'}
+m9 {'f', 'd', 'b', 'a', 'c'}
+m0 might be ['b', 'c', 'd', 'e', 'f', 'g']
+m0 might be ['a', 'b', 'c', 'd', 'e', 'f']
+m2 might be ['a', 'b', 'd', 'e', 'g']
+m5 might be ['a', 'c', 'd', 'e', 'f']
+m3 might be ['a', 'b', 'c', 'd', 'e']
+m6 might be ['a', 'c', 'd', 'e', 'f', 'g']
+ -> 0 {'f', 'd', 'b', 'a', 'c', 'e'}
+ -> 1 {'b', 'c'}
+ -> 2 {'d', 'g', 'b', 'a', 'e'}
+ -> 3 {'d', 'b', 'a', 'c', 'e'}
+ -> 4 {'b', 'f', 'a', 'c'}
+ -> 5 {'f', 'd', 'a', 'c', 'e'}
+ -> 6 {'f', 'd', 'a', 'c', 'g', 'e'}
+ -> 7 {'b', 'c', 'd'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'f', 'd', 'b', 'a', 'c'}
+got 361
+m1 might be ['f', 'g']
+m1 {'f', 'g'}
+m4 {'f', 'e', 'g', 'c'}
+m7 {'g', 'f', 'b'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'b'}
+left_l {'e', 'c'}
+m9 {'f', 'e', 'b', 'g', 'c'}
+m3 might be ['a', 'b', 'e', 'f', 'g']
+m2 might be ['a', 'b', 'd', 'e', 'f']
+m5 might be ['a', 'b', 'c', 'e', 'g']
+m0 might be ['a', 'b', 'c', 'e', 'f', 'g']
+m6 might be ['a', 'b', 'c', 'd', 'e', 'g']
+m0 might be ['a', 'b', 'c', 'd', 'f', 'g']
+ -> 0 {'f', 'd', 'b', 'a', 'c', 'g'}
+ -> 1 {'f', 'g'}
+ -> 2 {'f', 'd', 'b', 'a', 'e'}
+ -> 3 {'f', 'g', 'b', 'a', 'e'}
+ -> 4 {'f', 'e', 'g', 'c'}
+ -> 5 {'g', 'b', 'a', 'c', 'e'}
+ -> 6 {'d', 'b', 'a', 'c', 'g', 'e'}
+ -> 7 {'g', 'f', 'b'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'f', 'e', 'b', 'g', 'c'}
+got 4873
+m1 might be ['a', 'c']
+m1 {'a', 'c'}
+m4 {'b', 'e', 'a', 'c'}
+m7 {'f', 'a', 'c'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'f'}
+left_l {'b', 'e'}
+m9 {'f', 'e', 'b', 'a', 'c'}
+m5 might be ['a', 'b', 'e', 'f', 'g']
+m0 might be ['a', 'b', 'c', 'e', 'f', 'g']
+m0 might be ['a', 'c', 'd', 'e', 'f', 'g']
+m2 might be ['b', 'c', 'd', 'f', 'g']
+m6 might be ['a', 'b', 'd', 'e', 'f', 'g']
+m3 might be ['a', 'b', 'c', 'f', 'g']
+ -> 0 {'f', 'd', 'a', 'c', 'g', 'e'}
+ -> 1 {'a', 'c'}
+ -> 2 {'f', 'd', 'g', 'b', 'c'}
+ -> 3 {'f', 'g', 'b', 'a', 'c'}
+ -> 4 {'b', 'e', 'a', 'c'}
+ -> 5 {'f', 'g', 'b', 'a', 'e'}
+ -> 6 {'f', 'd', 'b', 'a', 'g', 'e'}
+ -> 7 {'f', 'a', 'c'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'f', 'e', 'b', 'a', 'c'}
+got 8418
+m1 might be ['f', 'g']
+m1 {'f', 'g'}
+m4 {'f', 'e', 'g', 'c'}
+m7 {'f', 'g', 'd'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'d'}
+left_l {'e', 'c'}
+m9 {'f', 'e', 'd', 'g', 'c'}
+m3 might be ['b', 'c', 'd', 'f', 'g']
+m0 might be ['a', 'b', 'd', 'e', 'f', 'g']
+m6 might be ['a', 'b', 'c', 'd', 'e', 'f']
+m5 might be ['b', 'c', 'd', 'e', 'f']
+m2 might be ['a', 'b', 'c', 'd', 'g']
+m0 might be ['b', 'c', 'd', 'e', 'f', 'g']
+ -> 0 {'f', 'd', 'b', 'c', 'g', 'e'}
+ -> 1 {'f', 'g'}
+ -> 2 {'d', 'g', 'b', 'a', 'c'}
+ -> 3 {'f', 'd', 'g', 'b', 'c'}
+ -> 4 {'f', 'e', 'g', 'c'}
+ -> 5 {'f', 'd', 'b', 'c', 'e'}
+ -> 6 {'f', 'd', 'b', 'a', 'c', 'e'}
+ -> 7 {'f', 'g', 'd'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'f', 'e', 'd', 'g', 'c'}
+got 4548
+m1 might be ['d', 'e']
+m1 {'e', 'd'}
+m4 {'f', 'b', 'e', 'd'}
+m7 {'e', 'c', 'd'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'c'}
+left_l {'f', 'b'}
+m9 {'f', 'e', 'd', 'b', 'c'}
+m0 might be ['b', 'c', 'd', 'e', 'f', 'g']
+m6 might be ['a', 'b', 'c', 'e', 'f', 'g']
+m5 might be ['b', 'c', 'e', 'f', 'g']
+m0 might be ['a', 'c', 'd', 'e', 'f', 'g']
+m2 might be ['a', 'b', 'c', 'd', 'g']
+m3 might be ['b', 'c', 'd', 'e', 'g']
+ -> 0 {'f', 'd', 'a', 'c', 'g', 'e'}
+ -> 1 {'e', 'd'}
+ -> 2 {'d', 'g', 'b', 'a', 'c'}
+ -> 3 {'d', 'g', 'b', 'c', 'e'}
+ -> 4 {'f', 'b', 'e', 'd'}
+ -> 5 {'f', 'g', 'b', 'c', 'e'}
+ -> 6 {'f', 'b', 'a', 'c', 'g', 'e'}
+ -> 7 {'e', 'c', 'd'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'f', 'e', 'd', 'b', 'c'}
+got 1625
+m1 might be ['c', 'g']
+m1 {'g', 'c'}
+m4 {'e', 'g', 'c', 'd'}
+m7 {'g', 'b', 'c'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'b'}
+left_l {'e', 'd'}
+m9 {'e', 'd', 'b', 'g', 'c'}
+m6 might be ['a', 'b', 'd', 'e', 'f', 'g']
+m0 might be ['b', 'c', 'd', 'e', 'f', 'g']
+m2 might be ['a', 'b', 'c', 'e', 'f']
+m0 might be ['a', 'b', 'c', 'd', 'f', 'g']
+m5 might be ['b', 'd', 'e', 'f', 'g']
+m3 might be ['b', 'c', 'e', 'f', 'g']
+ -> 0 {'f', 'd', 'b', 'a', 'c', 'g'}
+ -> 1 {'g', 'c'}
+ -> 2 {'f', 'b', 'a', 'c', 'e'}
+ -> 3 {'f', 'g', 'b', 'c', 'e'}
+ -> 4 {'e', 'g', 'c', 'd'}
+ -> 5 {'f', 'd', 'g', 'b', 'e'}
+ -> 6 {'f', 'd', 'b', 'a', 'g', 'e'}
+ -> 7 {'g', 'b', 'c'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'e', 'd', 'b', 'g', 'c'}
+got 8717
+m1 might be ['f', 'g']
+m1 {'f', 'g'}
+m4 {'g', 'f', 'a', 'e'}
+m7 {'f', 'g', 'c'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'c'}
+left_l {'a', 'e'}
+m9 {'f', 'g', 'e', 'a', 'c'}
+m3 might be ['a', 'b', 'c', 'f', 'g']
+m5 might be ['a', 'b', 'c', 'e', 'g']
+m6 might be ['a', 'b', 'c', 'd', 'e', 'g']
+m0 might be ['a', 'b', 'c', 'e', 'f', 'g']
+m2 might be ['a', 'b', 'c', 'd', 'f']
+m0 might be ['b', 'c', 'd', 'e', 'f', 'g']
+ -> 0 {'f', 'd', 'b', 'c', 'g', 'e'}
+ -> 1 {'f', 'g'}
+ -> 2 {'f', 'd', 'b', 'a', 'c'}
+ -> 3 {'f', 'g', 'b', 'a', 'c'}
+ -> 4 {'g', 'f', 'a', 'e'}
+ -> 5 {'g', 'b', 'a', 'c', 'e'}
+ -> 6 {'d', 'b', 'a', 'c', 'g', 'e'}
+ -> 7 {'f', 'g', 'c'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'f', 'g', 'e', 'a', 'c'}
+got 4315
+m1 might be ['a', 'b']
+m1 {'b', 'a'}
+m4 {'b', 'f', 'a', 'e'}
+m7 {'b', 'a', 'd'}
+m8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+top {'d'}
+left_l {'f', 'e'}
+m9 {'f', 'e', 'd', 'b', 'a'}
+m5 might be ['b', 'c', 'd', 'e', 'f']
+m2 might be ['a', 'c', 'd', 'f', 'g']
+m3 might be ['a', 'b', 'c', 'd', 'f']
+m0 might be ['a', 'b', 'c', 'd', 'e', 'f']
+m6 might be ['b', 'c', 'd', 'e', 'f', 'g']
+m0 might be ['a', 'b', 'c', 'd', 'e', 'g']
+ -> 0 {'d', 'b', 'a', 'c', 'g', 'e'}
+ -> 1 {'b', 'a'}
+ -> 2 {'f', 'd', 'g', 'a', 'c'}
+ -> 3 {'f', 'd', 'b', 'a', 'c'}
+ -> 4 {'b', 'f', 'a', 'e'}
+ -> 5 {'f', 'd', 'b', 'c', 'e'}
+ -> 6 {'f', 'd', 'b', 'c', 'g', 'e'}
+ -> 7 {'b', 'a', 'd'}
+ -> 8 {'f', 'd', 'b', 'a', 'c', 'g', 'e'}
+ -> 9 {'f', 'e', 'd', 'b', 'a'}
+got 5353
+day08.sample.part2: FAIL: expect 61229 got 39942
