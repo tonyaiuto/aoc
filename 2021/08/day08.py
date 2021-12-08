@@ -1,10 +1,6 @@
 "AOC 2021: day 08"
 
-from collections import defaultdict
-import math
-
 from tools import aoc
-
 
 len_to_digit = {
     2: 1,
@@ -37,30 +33,18 @@ class day08(aoc.aoc):
     self.e = []
     self.sigs = {}
 
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     signal, output = line.split('|')
-    e = E(signal, output)
-    self.e.append(e)
-    for s in e.signals:
-      key = ''.join(s)
-      if key not in self.sigs:
-        self.sigs[key] = s
-  
+    self.e.append(E(signal, output))
 
   def post_load(self):
     # called after all input is read
     pass
 
-
   def part1(self):
     print('===== Start part 1')
     self.reset()
-
     ret = 0
     for f in self.e:
       for d in f.displayed:
@@ -79,8 +63,6 @@ class day08(aoc.aoc):
       for sig in f.signals:
         l = len(sig)
         if l == 2:
-          if m[1] != set(sig):
-            print('m1 might be', sig)
           m[1] = set(sig)
         elif l == 4:
           m[4] = set(sig)
@@ -88,40 +70,41 @@ class day08(aoc.aoc):
           m[7] = set(sig)
         elif l == 7:
           m[8] = set(sig)
-      print('m1', m[1])
-      print('m4', m[4])
-      print('m7', m[7])
-      print('m8', m[8])
-      top = m[7] - m[1]
-      print('top', top)
 
+      top = m[7] - m[1]
       left_l = m[4] - m[7]
-      print('left_l', left_l)
+      if self.trace_sample:
+        print('m1', m[1])
+        print('m4', m[4])
+        print('m7', m[7])
+        print('m8', m[8])
+        print('top', top)
+        print('left_l', left_l)
 
       for sig in f.signals:
         l = len(sig)
         if l == 6:  # 0 or 6
           if contains_all_seg_of(sig, m[7]) and contains_all_seg_of(sig, left_l):
             m[9] = set(sig)
-            print('m9 might be', sig)
+            # print('m9 might be', sig)
           elif contains_all_seg_of(sig, m[1]):
             # must be 0
             m[0] = set(sig)
-            print('m0 might be', sig)
+            # print('m0 might be', sig)
           else:
             m[6] = set(sig)
-            print('m6 might be', sig)
+            # print('m6 might be', sig)
         elif l == 5:
           if contains_all_seg_of(sig, m[7]):
             m[3] = set(sig)
-            print('m3 might be', sig)
+            # print('m3 might be', sig)
           else:
             if contains_all_seg_of(sig, left_l):
               m[5] = set(sig)
-              print('m5 might be', sig)
+              # print('m5 might be', sig)
             else:
               m[2] = set(sig)
-              print('m2 might be', sig)
+              # print('m2 might be', sig)
 
       if self.trace_sample:
         for i in range(10):
@@ -129,7 +112,6 @@ class day08(aoc.aoc):
 
       value = 0
       for d in f.displayed:
-        # print('check', d)
         for i in range(10):
           if d == m[i]:
             value = value * 10 + i
@@ -144,31 +126,6 @@ def contains_all_seg_of(maybe, known):
       return False
   return True
 
-def contains_any_seg_of(maybe, known):
-  for seg in known:
-    if seg in maybe:
-      return True
-  return False
-
-"""
-  0:      1:      2:      3:      4:
- aaaa    ....    aaaa    aaaa    ....
-b    c  .    c  .    c  .    c  b    c
-b    c  .    c  .    c  .    c  b    c
- ....    ....    dddd    dddd    dddd
-e    f  .    f  e    .  .    f  .    f
-e    f  .    f  e    .  .    f  .    f
- gggg    ....    gggg    gggg    ....
-
-  5:      6:      7:      8:      9:
- aaaa    aaaa    aaaa    aaaa    aaaa
-b    .  b    .  .    c  b    c  b    c
-b    .  b    .  .    c  b    c  b    c
- dddd    dddd    ....    dddd    dddd
-.    f  e    f  .    f  e    f  .    f
-.    f  e    f  .    f  e    f  .    f
- gggg    gggg    ....    gggg    gggg
-"""
 
 day08.sample_test("""
 acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab | cdfeb fcadb cdfeb cdbaf
@@ -188,6 +145,6 @@ egadfb cdbfeg cegd fecab cgb gbdefca cg fgcdab egfdb bfceg | gbdfcae bgc cg cgb
 gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
 """, expect1=26, expect2=61229)
 
+
 if __name__ == '__main__':
-  day08.run_and_check('input.txt', expect1=None, expect2=None)
-  pass
+  day08.run_and_check('input.txt', expect1=264, expect2=1063760)
