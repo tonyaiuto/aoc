@@ -75,7 +75,6 @@ class day08(aoc.aoc):
         print('m1', m[1])
         print('m4', m[4])
         print('m7', m[7])
-        print('m8', m[8])
         print('left_l', left_l)
 
       # get all the things 
@@ -124,24 +123,23 @@ class day08(aoc.aoc):
     # Combine the second pass with the digit extractor
     print('===== Start part 2')
 
-    # print(self.sigs)
     ret = 0
     for f in self.e:
-      m = [0] * 10
       for sig in f.signals:
         l = len(sig)
         if l == 2:
-          m[1] = set(sig)
+          m1 = set(sig)
         elif l == 4:
-          m[4] = set(sig)
+          m4 = set(sig)
         elif l == 3:
-          m[7] = set(sig)
+          m7 = set(sig)
 
-      left_l = m[4] - m[7]
+      left_l = m4 - m7
+
       if self.trace_sample:
-        print('m1', m[1])
-        print('m4', m[4])
-        print('m7', m[7])
+        print('m1', m1)
+        print('m4', m4)
+        print('m7', m7)
         print('left_l', left_l)
 
       # get all the things 
@@ -157,17 +155,17 @@ class day08(aoc.aoc):
         elif ld == 7:
           digit = 8
         elif ld == 5:
-          if contains_all_seg_of(disp, m[7]):
+          if m7.issubset(disp):
             digit = 3
           else:
-            if contains_all_seg_of(disp, left_l):
+            if left_l.issubset(disp):
               digit = 5
             else:
               digit = 2
         elif ld == 6:
-          if contains_all_seg_of(disp, m[7]) and contains_all_seg_of(disp, left_l):
+          if m7.issubset(disp) and left_l.issubset(disp):
             digit = 9
-          elif contains_all_seg_of(disp, m[1]):
+          elif m1.issubset(disp):
             digit = 0
           else:
             digit = 6
