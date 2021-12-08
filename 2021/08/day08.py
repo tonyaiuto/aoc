@@ -54,7 +54,6 @@ class day08(aoc.aoc):
 
   def part2(self):
     print('===== Start part 2')
-    self.reset()
 
     # print(self.sigs)
     ret = 0
@@ -71,16 +70,15 @@ class day08(aoc.aoc):
         elif l == 7:
           m[8] = set(sig)
 
-      top = m[7] - m[1]
       left_l = m[4] - m[7]
       if self.trace_sample:
         print('m1', m[1])
         print('m4', m[4])
         print('m7', m[7])
         print('m8', m[8])
-        print('top', top)
         print('left_l', left_l)
 
+      # get all the things 
       for sig in f.signals:
         l = len(sig)
         if l == 6:  # 0 or 6
@@ -118,6 +116,70 @@ class day08(aoc.aoc):
       if self.trace_sample:
          print("got", value)
       ret += value
+
+    return ret
+
+
+  def part2_alt(self):
+    # Combine the second pass with the digit extractor
+    print('===== Start part 2')
+
+    # print(self.sigs)
+    ret = 0
+    for f in self.e:
+      m = [0] * 10
+      for sig in f.signals:
+        l = len(sig)
+        if l == 2:
+          m[1] = set(sig)
+        elif l == 4:
+          m[4] = set(sig)
+        elif l == 3:
+          m[7] = set(sig)
+
+      left_l = m[4] - m[7]
+      if self.trace_sample:
+        print('m1', m[1])
+        print('m4', m[4])
+        print('m7', m[7])
+        print('left_l', left_l)
+
+      # get all the things 
+      value = 0
+      for disp in f.displayed:
+        ld = len(disp)
+        if ld == 2:
+          digit = 1
+        elif ld == 4:
+          digit = 4
+        elif ld == 3:
+          digit = 7
+        elif ld == 7:
+          digit = 8
+        elif ld == 5:
+          if contains_all_seg_of(disp, m[7]):
+            digit = 3
+          else:
+            if contains_all_seg_of(disp, left_l):
+              digit = 5
+            else:
+              digit = 2
+        elif ld == 6:
+          if contains_all_seg_of(disp, m[7]) and contains_all_seg_of(disp, left_l):
+            digit = 9
+          elif contains_all_seg_of(disp, m[1]):
+            digit = 0
+          else:
+            digit = 6
+        else:
+          print('unmatched', disp)
+          assert False
+        value = value * 10 + digit
+
+      if self.trace_sample:
+         print("got", value)
+      ret += value
+
     return ret
 
 def contains_all_seg_of(maybe, known):
@@ -148,3 +210,4 @@ gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
 
 if __name__ == '__main__':
   day08.run_and_check('input.txt', expect1=264, expect2=1063760)
+  day08.do(day08.part2_alt, 'input.txt', expect=1063760)
