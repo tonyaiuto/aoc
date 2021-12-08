@@ -89,7 +89,7 @@ class aoc(object):
     tag = tag or (type(solver).__name__ + '.sample')
     solver.load_str(s)
     res = solver.part1()
-    if expect1 != res:
+    if expect1 is not None and expect1 != res:
       print('%s.part1: FAIL:' % tag, 'expect', expect1, 'got', res)
       # assert expect1 == res
       sys.exit(1)
