@@ -183,7 +183,7 @@ class day23(object):
     print('last', nxt[-3:])
 
     for i in range(10000000):
-      if i < 5 or (i % 100000 == 0):
+      if i < 5 or (i % 1000000 == 0):
         print('move %6d' % i, nxt[cur:cur+10])
       pick = nxt[cur]
       p2 = nxt[pick]
