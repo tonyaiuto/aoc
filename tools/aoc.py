@@ -24,7 +24,7 @@ class aoc(object):
     self.reader_params.update(reader_params)
 
   def reset(self):
-    pass
+    print('Reusing solver from part1')
 
   def load_file(self, file):
     self.reader = reader.FileReader(file, **self.reader_params)
@@ -53,7 +53,7 @@ class aoc(object):
     print('You must implement part1()')
 
   @classmethod
-  def run_and_check(cls, input, expect1=None, expect2=None, tag=None):
+  def run_and_check(cls, input, expect1=None, expect2=None, tag=None, recreate=False):
     solver = cls()
     tag = tag or type(solver).__name__
 
@@ -69,10 +69,14 @@ class aoc(object):
       print('FAIL: %s.part1:' % tag, 'expect', expect1, 'got', res)
       assert expect1 == res
 
-    solver = cls()
-    start = time.perf_counter()
-    solver.load_file(input)
-    load_done = time.perf_counter()
+    if recreate:
+      solver = cls()
+      start = time.perf_counter()
+      solver.load_file(input)
+      load_done = time.perf_counter()
+    else:
+      solver.reset()
+
     res = solver.part2()
     part1_done = time.perf_counter()
     solver.result2 = res
@@ -83,7 +87,7 @@ class aoc(object):
       assert expect2 == res
 
   @classmethod
-  def sample_test(cls, s, expect1=None, expect2=None, tag=None):
+  def sample_test(cls, s, expect1=None, expect2=None, tag=None, recreate=False):
     solver = cls()
     solver.trace_sample = True
     tag = tag or (type(solver).__name__ + '.sample')
@@ -95,9 +99,12 @@ class aoc(object):
       sys.exit(1)
 
     if expect2:
-      solver = cls()
-      solver.trace_sample = True
-      solver.load_str(s)
+      if recreate:
+        solver = cls()
+        solver.trace_sample = True
+        solver.load_str(s)
+      else:
+        solver.reset()
       res = solver.part2()
       if expect2 != res:
         print('%s.part2: FAIL:' % tag, 'expect', expect2, 'got', res)
