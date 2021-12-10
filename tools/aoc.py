@@ -60,14 +60,9 @@ class aoc(object):
     start = time.perf_counter()
     solver.load_file(input)
     load_done = time.perf_counter()
-    res = solver.part1()
-    part1_done = time.perf_counter()
-    solver.result1 = res
-    print('part1:  %-15s     load: %.5fms, solve: %.5fms' % (
-        str(res), 1000*(load_done-start), 1000*(part1_done-load_done)))
-    if expect1 and  expect1 != res:
-      print('FAIL: %s.part1:' % tag, 'expect', expect1, 'got', res)
-      assert expect1 == res
+    print('part1:  %-15s     load: %.5fms' % (' ', 1000*(load_done-start)))
+    solver.result1 = solver.run_func(
+        solver.part1, expect=expect1, tag=tag+'.part1')
 
     if recreate:
       solver = cls()
@@ -76,15 +71,18 @@ class aoc(object):
       load_done = time.perf_counter()
     else:
       solver.reset()
+    solver.result2 = solver.run_func(
+        solver.part2, expect=expect2, tag=tag+'.part2')
 
-    res = solver.part2()
-    part1_done = time.perf_counter()
-    solver.result2 = res
-    print('part2:  %-15s     load: %.5fms, solve: %.5fms' % (
-        str(res), 1000*(load_done-start), 1000*(part1_done-load_done)))
-    if expect2 and  expect2 != res:
-      print('FAIL: %s.part2:' % tag, 'expect', expect2, 'got', res)
-      assert expect2 == res
+  def run_func(self, func, expect=None, tag=None):
+    t_start = time.perf_counter()
+    res = func()
+    t_end = time.perf_counter()
+    print('%s:  %-15s   solve: %.5fms' % (tag, str(res), 1000*(t_end-t_start)))
+    if expect and  expect != res:
+      print('FAIL: %s:' % tag, 'expect', expect, 'got', res)
+      sys.exit(1)
+    return res
 
   @classmethod
   def sample_test(cls, s, expect1=None, expect2=None, tag=None, recreate=False):
@@ -93,23 +91,15 @@ class aoc(object):
     tag = tag or (type(solver).__name__ + '.sample')
     solver.load_str(s)
     res = solver.part1()
-    if expect1 is not None and expect1 != res:
-      print('%s.part1: FAIL:' % tag, 'expect', expect1, 'got', res)
-      # assert expect1 == res
-      sys.exit(1)
+    _ = solver.run_func(solver.part1, expect=expect1, tag=tag+'.part1')
 
-    if expect2:
-      if recreate:
-        solver = cls()
-        solver.trace_sample = True
-        solver.load_str(s)
-      else:
-        solver.reset()
-      res = solver.part2()
-      if expect2 != res:
-        print('%s.part2: FAIL:' % tag, 'expect', expect2, 'got', res)
-        # assert expect2 == res
-        sys.exit(1)
+    if recreate:
+      solver = cls()
+      solver.trace_sample = True
+      solver.load_str(s)
+    else:
+      solver.reset()
+    _ = solver.run_func(solver.part2, expect=expect2, tag=tag+'.part2')
     print('%s: PASS' % tag)
 
   @classmethod
