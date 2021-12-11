@@ -87,8 +87,8 @@ day09.sample_test("""
 9856789892
 8767896789
 9899965678
-""", expect1=15, expect2=1134)
+""", expect1=15, expect2=1134, recreate=False)
 
 
 if __name__ == '__main__':
-  day09.run_and_check('input.txt', expect1=603, expect2=786780)
+  day09.run_and_check('input.txt', expect1=603, expect2=786780, recreate=False)

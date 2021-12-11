@@ -53,7 +53,7 @@ class aoc(object):
     print('You must implement part1()')
 
   @classmethod
-  def run_and_check(cls, input, expect1=None, expect2=None, tag=None, recreate=False):
+  def run_and_check(cls, input, expect1=None, expect2=None, tag=None, recreate=True):
     solver = cls()
     tag = tag or type(solver).__name__
 
@@ -85,7 +85,7 @@ class aoc(object):
     return res
 
   @classmethod
-  def sample_test(cls, s, expect1=None, expect2=None, tag=None, recreate=False):
+  def sample_test(cls, s, expect1=None, expect2=None, tag=None, recreate=True):
     solver = cls()
     solver.trace_sample = True
     tag = tag or (type(solver).__name__ + '.sample')
