@@ -90,7 +90,6 @@ class aoc(object):
     solver.trace_sample = True
     tag = tag or (type(solver).__name__ + '.sample')
     solver.load_str(s)
-    res = solver.part1()
     _ = solver.run_func(solver.part1, expect=expect1, tag=tag+'.part1')
 
     if recreate:
