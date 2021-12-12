@@ -2,7 +2,6 @@
 "AOC 2021: day 12"
 
 from collections import defaultdict
-import copy
 
 from tools import aoc
 
@@ -80,11 +79,10 @@ class day12(aoc.aoc):
     print('===== Start part 2')
 
     start = self.caves['start']
-    self.n_paths = 0
     self.paths = set()
     for c in self.caves.values():
       if c.small and c.name != 'start':
-        visited = defaultdict(int)
+        visited = set()
         self.walk2(start, visited, c, False, 0, path=[start])
     return len(self.paths)
 
@@ -92,30 +90,22 @@ class day12(aoc.aoc):
     if cave.name == 'end':
       # print(','.join([c.name for c in path]))
       self.paths.add(','.join([c.name for c in path]))
-      self.n_paths += 1
       return
-    # print('  ' * depth, cave.name)
-    depth += 1
-    vc = visited[cave]
-    # print('  ' * depth, 'been visited', cave.name, vc)
-    if vc > 0:
-      if cave.name == 'start':
-        return
-      if cave.small and cave != allow:
-        return
-      if cave == allow:
+    if cave.small:
+      if cave in visited:
+        if cave != allow:
+          return
+        assert cave == allow
         if second_chance:
           return
-        second_chance = True
-        #if vc > 1:
-        #  return
-        # print('  ' * depth, 'giving second chance to ', cave.name)
-        
-    # print('  ' * depth, '> Visiting', cave.name)
-    visited[cave] += 1
+        second_chance = True 
+    visited.add(cave)
+    # print('  ' * depth, cave.name)
+    depth += 1
 
     for next_cave in cave.edges:
-       self.walk2(next_cave, copy.copy(visited), allow, second_chance, depth, path + [next_cave])
+       self.walk2(next_cave, set(visited), allow, second_chance, depth, path + [next_cave])
+
 
 day12.sample_test("""
 start-A
