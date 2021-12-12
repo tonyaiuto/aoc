@@ -50,7 +50,7 @@ class aoc(object):
     print('You must implement part1()')
 
   def part2(self):
-    print('You must implement part1()')
+    print('You must implement part2()')
 
   @classmethod
   def run_and_check(cls, input, expect1=None, expect2=None, tag=None, recreate=True):
@@ -82,6 +82,7 @@ class aoc(object):
     if expect and  expect != res:
       print('FAIL: %s:' % tag, 'expect', expect, 'got', res)
       sys.exit(1)
+    print('-----')
     return res
 
   @classmethod
