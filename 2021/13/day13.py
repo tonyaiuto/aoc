@@ -17,7 +17,7 @@ class day13(aoc.aoc):
             'verbose': False,
         })
     self.trace = True
-    self.dots = {}
+    self.dots = set()
     self.folds = []
     self.max_x = 0
     self.max_y = 0
@@ -39,7 +39,7 @@ class day13(aoc.aoc):
       y = int(y) 
       self.max_x = max(self.max_x, x)
       self.max_y = max(self.max_y, y)
-      self.dots[x, y] = 1
+      self.dots.add((x, y))
     else:
       raise Exception('bad input: ' + line)
 
@@ -48,18 +48,31 @@ class day13(aoc.aoc):
     if self.trace_sample:
       print(self.dots)
       print(self.folds)
-
-    self.grid = []
-    for y in range(self.max_y+1):
-      self.grid.append([' '] * (self.max_x+1))
-    for x, y in self.dots:
-      self.grid[y][x] = '#'
+    self.grid = self.dots_to_grid(self.dots)
     if self.trace_sample:
       self.pgrid()
 
+  @staticmethod
+  def dots_to_grid(dots):
+    max_x = 0
+    max_y = 0
+    for x, y in dots:
+      max_x = max(x, max_x)
+      max_y = max(y, max_y)
+    grid = []
+    for y in range(max_y+1):
+      grid.append([' '] * (max_x+1))
+    for x, y in dots:
+      grid[y][x] = '#'
+    return grid
+
   def pgrid(self):
     for row in self.grid:
-      segs = len(row) // 5
+      print(''.join(row))
+
+  def ptext(self):
+    for row in self.grid:
+      segs = (len(row) + 4) // 5
       print('   '.join([''.join(row[5*s:5*(s+1)]) for s in range(segs)]))
 
 
@@ -93,9 +106,8 @@ class day13(aoc.aoc):
       if self.trace_sample:
         self.pgrid()
 
-    self.pgrid()
+    self.ptext()
     return 0
-
 
   def foldx(self, where):
     if self.trace_sample:
@@ -136,6 +148,26 @@ class day13(aoc.aoc):
 
     self.grid = self.grid[0:left]
 
+  def do_fold(self, dir, where, dots):
+    if dir == 'x':
+      return set([(x, y) if x < where else (where*2-x, y) for x,y in dots])
+    else:
+      return set([(x, y) if y < where else (x, where*2-y) for x,y in dots])
+
+  def part1_v2(self):
+    f = self.folds[0]
+    dots = self.do_fold(f[0], f[1], self.dots)
+    return len(dots)
+
+  def part2_v2(self):
+    dots = self.dots
+    for dir, where in self.folds:
+      dots = self.do_fold(dir, where, dots)
+    self.grid = self.dots_to_grid(dots)
+    self.ptext()
+    return 0
+
+
 
 day13.sample_test("""
 6,10
@@ -164,3 +196,5 @@ fold along x=5
 
 if __name__ == '__main__':
   day13.run_and_check('input.txt', expect1=716, expect2=0, recreate=True)
+  day13.do(day13.part1_v2, 'input.txt', expect=716)
+  day13.do(day13.part2_v2, 'input.txt', expect=0)
