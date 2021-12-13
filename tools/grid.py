@@ -120,6 +120,21 @@ def check_neighbors():
    errs += check('neighbors8', [1, 2, 7, 12, 11, 10, 5, 0], neighbors8(grid, 1, 1))
    return errs
 
+
+def min_max(positions):
+  min_a = None
+  max_a = None
+  min_b = None
+  max_b = None
+  for a,b in positions:
+    min_a = min(min_a or a, a)
+    max_a = max(max_a or a, a)
+    min_b = min(min_b or b, b)
+    max_b = max(max_b or b, b)
+  return (min_a, max_a, min_b, max_b)
+   
+
+
 """"
 
 TODO

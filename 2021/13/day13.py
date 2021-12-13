@@ -4,6 +4,7 @@
 import copy
 
 from tools import aoc
+from tools import grid
 
 
 class day13(aoc.aoc):
@@ -54,17 +55,15 @@ class day13(aoc.aoc):
 
   @staticmethod
   def dots_to_grid(dots):
-    max_x = 0
-    max_y = 0
+    x_min, x_max, y_min, y_max = grid.min_max(dots)
+    assert x_min >= 0
+    assert y_min >= 0
+    ret = []
+    for y in range(y_max+1):
+      ret.append([' '] * (x_max+1))
     for x, y in dots:
-      max_x = max(x, max_x)
-      max_y = max(y, max_y)
-    grid = []
-    for y in range(max_y+1):
-      grid.append([' '] * (max_x+1))
-    for x, y in dots:
-      grid[y][x] = '#'
-    return grid
+      ret[y][x] = '#'
+    return ret
 
   def pgrid(self):
     for row in self.grid:
@@ -166,7 +165,6 @@ class day13(aoc.aoc):
     self.grid = self.dots_to_grid(dots)
     self.ptext()
     return 0
-
 
 
 day13.sample_test("""
