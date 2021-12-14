@@ -1,6 +1,4 @@
 
-n:	fort
-
 go:
 	python3 day13.py
 	@echo

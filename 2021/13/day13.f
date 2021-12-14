@@ -1,4 +1,4 @@
-
+C AOC 2021 Day 13
        program main
 
        integer x(0:1000), y(0:1000)
@@ -66,51 +66,20 @@ C      write(6, *) 'part1:', n_dots
        subroutine fold(x, y, n_dots, fold_dir, fold_pos)
          integer x(0:1), y(0:1), fold_pos
          character*1 fold_dir
-         integer top
-
-         top = fold_pos * 2
          if (fold_dir .eq. 'x') then
            do i = 0, n_dots-1
              if (x(i) .gt. fold_pos) then
-               x(i) = top - x(i)
+               x(i) = fold_pos*2 - x(i)
              end if
            end do
          else
            do i = 0, n_dots-1
              if (y(i) .gt. fold_pos) then
-               y(i) = top - y(i)
+               y(i) = fold_pos*2 - y(i)
              end if
            end do
          end if
-C        call reduce(x, y, n_dots)
 C        call print_dots(x, y, n_dots)
-       end
-
-
-       subroutine  reduce(x, y, n_dots)
-         integer x(0:1), y(0:1), n_dots, o_dots
-         integer keys(1000)
-         integer n_keys, key
-
-         o_dots = 0
-         n_keys = 0
-         do i_dot = 0, n_dots - 1
-           key = x(i_dot) * 10000 + y(i_dot)
-           do ki = 1, n_keys
-             if (keys(ki) .eq. key) then
-C              write(6, *) 'dup key', key
-               goto 20
-             end if
-           end do
-           n_keys = n_keys + 1
-           keys(n_keys) = key
-           o_dots = o_dots + 1
-20         continue
-           x(o_dots) = x(i_dot)
-           y(o_dots) = y(i_dot)
-C          write(6, *) 'keys', (keys(j), j=1,ki)
-         end do
-         n_dots = o_dots
        end
 
        subroutine part2(x, y, n_dots, fold_dir, fold_pos, n_folds)
@@ -121,8 +90,8 @@ C          write(6, *) 'keys', (keys(j), j=1,ki)
          do ifold = 1, n_folds
            call fold(x, y, n_dots, fold_dir(ifold), fold_pos(ifold))
          end do
-C        call print_dots(x, y, n_dots)
 
+C        Convert dots to image
          do j_row = 0, 7
            disp(j_row) = ' '
          end do
