@@ -123,5 +123,4 @@ CN -> C
 
 
 if __name__ == '__main__':
-  day14.run_and_check('input.txt', expect1=None, expect2=None)
-  pass
+  day14.run_and_check('input.txt', expect1=3697, expect2=4371307836157)
