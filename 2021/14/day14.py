@@ -14,16 +14,6 @@ def pairwise(s):
     prev = c
 
 
-class Foo(object):
-
-  def __init__(self):
-    pass
-
-  def __str__(self):
-    return str(self)
-
-
-
 class day14(aoc.aoc):
 
   def __init__(self):
@@ -36,26 +26,14 @@ class day14(aoc.aoc):
         })
     self.trace = True
 
-  def reset(self):
-    # for future use
-    pass
-
-  def do_line(self, line):
-    pass
-
   def post_load(self):
-    # called after all input is read
-
     self.template = self.all_input[0]
     self.rules = {}
     for line in self.all_input[1:]:
       if not line:
         continue
       f, _, t = line.split(' ')
-      if self.trace_sample:
-        print(f, '==>', t)
       self.rules[f] = t
-
 
   def part1(self):
     print('===== Start part 1')
@@ -63,19 +41,19 @@ class day14(aoc.aoc):
 
     x = self.template
     for i in range(10):
+      if self.trace_sample and i < 5:
+        print('Doing', x)
       x = self.do_gen(x)
 
-    # print(x)
-    print('expect 3073', len(x))
     counts = defaultdict(int)
     for c in x:
       counts[c] += 1
     tmp = []
     foo = sorted(counts.values())
+    print('Counts', foo)
     return foo[-1] - foo[0]
 
   def do_gen(self, polymer):
-    print('Doing', polymer)
     prev = polymer[0]
     out = []
     for c in polymer[1:]:
@@ -84,51 +62,42 @@ class day14(aoc.aoc):
       prev = c
       rep = self.rules.get(pair)
       if rep:
-        if self.trace_sample:
-          print('   ', pair, '->', rep)
         out.append(rep)
-      else:
-        if self.trace_sample:
-          print('   ', pair, 'not found')
     out.append(prev)
     return ''.join(out)
 
+
   def part2(self):
     print('===== Start part 2')
-    self.reset()
-    self.cycles = {}
 
-    counts = defaultdict(int)
+    self.letters = defaultdict(int)
     for c in self.template:
-      counts[c] += 1
-    foo = sorted(counts.values())
-   
-    x = self.template
-    for i in range(3):
-      x = self.do_gen(x)
+      self.letters[c] += 1
 
-    for r in self.rules:
-      self.find_cycle(r)
+    pair_counts = defaultdict(int)
+    for pair in pairwise(self.template):
+      pair_counts[pair] += 1
+    if self.trace_sample:
+      print(pair_counts)
+    for i in range(40):
+      pair_counts = self.do_gen2(pair_counts)
+      if self.trace_sample and i < 5:
+        print(pair_counts)
+        print(', '.join(['%s:%d' % (k, self.letters[k]) for k in sorted(self.letters)]))
 
-    return 42
+    foo = sorted(self.letters.values())
+    print('Counts', foo)
+    return foo[-1] - foo[0]
 
-  def find_cycle(self, r):
-    orig = r
-    tmp = r
-    loop_c = r[1]
-    print('Finding cycle in', r, '->', self.rules[r])
-    limit = len(self.rules)
-    for l in range(limit+1):
-      rep = self.rules[r]
-      r = r[0] + rep
-      tmp = r + tmp[1:]
-      if rep == loop_c:
-        break
-    if rep != loop_c:
-      print(' => NO LOOP')
-      return None
-    print(' =>', tmp, l + 1)
-    self.cycles[orig] = l + 1
+  def do_gen2(self, pair_counts):
+
+    ret = defaultdict(int)
+    for pair, count in pair_counts.items():
+      rep = self.rules[pair]
+      self.letters[rep] += count
+      ret[pair[0] + rep] += count
+      ret[rep + pair[1]] += count
+    return ret
 
 
 day14.sample_test("""
@@ -150,9 +119,9 @@ BB -> N
 BC -> B
 CC -> N
 CN -> C
-""", expect1=1588, expect2=None)
+""", expect1=1588, expect2=2188189693529)
 
 
 if __name__ == '__main__':
-  # day14.run_and_check('input.txt', expect1=None, expect2=None)
+  day14.run_and_check('input.txt', expect1=None, expect2=None)
   pass
