@@ -6,8 +6,6 @@ import copy
 import itertools
 
 from tools import aoc
-from tools import memoized
-
 
 
 class day15(aoc.aoc):
@@ -24,7 +22,7 @@ class day15(aoc.aoc):
 
   def reset(self):
     # for future use
-    pass
+    self.memo = {}
 
   def do_line(self, line):
     # called for each line of input
@@ -72,10 +70,13 @@ class day15(aoc.aoc):
         print("risk:", d, d, '=', risk)
     return min(self.least_risk_via(0, 1), self.least_risk_via(1, 0))
 
-  @memoized.memoized
   def least_risk_via(self, x, y):
-    
+    ret = self.memo.get((x,y))
+    if ret is not None:
+      return ret
+
     if (x,y) == self.end:
+      self.memo[(x,y)] = self.cells[self.end]
       return self.cells[self.end]
     r = []
     if x < self.width-1:
@@ -86,8 +87,9 @@ class day15(aoc.aoc):
     #  r.append(self.least_risk_via(x-1, y))
     #if y > 0:
     #  r.append(self.least_risk_via(x, y-1))
-    if self.trace_sample:
-      print('    r:', x, y, self.cells[(x,y)] + min(r))
+    #if self.trace_sample:
+    #  print('    r:', x, y, self.cells[(x,y)] + min(r))
+    self.memo[(x,y)] = self.cells[(x,y)] + min(r)
     return self.cells[(x,y)] + min(r)
 
   def walk1(self, x, y, visited, risk):
@@ -133,13 +135,15 @@ class day15(aoc.aoc):
       print('ybounds', (i-1)*h, i*h)
       for x, y in itertools.product(range(w), range((i-1)*h, i*h)):
         # print('5xy', x, y)
-        risk = self.cells[(x,y)] + i
+        risk = self.cells[(x,y)] + 1
         if risk > 9:
           risk -= 9
         pos = (x, y + h)
         self.cells[pos] = risk
         if self.trace_sample and (x == 0 or y == 0):
           print('5y', pos, risk)
+      last_row = (i+1)*h - 1
+      print(''.join([str(self.cells[(x,last_row)]) for x in range(w)]))
 
     self.width = w
     self.height = h * 5
@@ -148,10 +152,11 @@ class day15(aoc.aoc):
 
     for d in range(min(self.width, self.height)-1, 0, -1):
       risk = self.least_risk_via(d, d)
-      if self.trace_sample:
+      if self.trace_sample or d > 490:
         print("risk:", d, d, '=', risk)
-    return min(self.least_risk_via(0, 1), self.least_risk_via(1, 0))
 
+    print("PART 2 is LESS THAN 2789")
+    return min(self.least_risk_via(0, 1), self.least_risk_via(1, 0))
 
 day15.sample_test("""
 1163751742
@@ -169,3 +174,4 @@ day15.sample_test("""
 
 if __name__ == '__main__':
   day15.run_and_check('input.txt', expect1=423, expect2=None)
+  pass
