@@ -12,3 +12,8 @@ get:
 	# mv $$HOME/Downloads/input.txt .
 	curl -H "Cookie: $$(cat $$HOME/.cookie_aoc)" https://adventofcode.com/2021/day/14/input >input.txt
 	chmod 444 input.txt
+
+
+day14_f:	day14.f
+	f77 -o $@ day14.f
+	./day14_f
