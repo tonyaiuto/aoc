@@ -59,7 +59,7 @@ class Packet(object):
     self.version = to_n(bits, 3)
     self.id = to_n(bits[3:6], 3)
     self.ver_sum = self.version
-    # print('  ' * level, 'v/id/sum', self)
+    # print('===' * level, 'v/id', self.version, self.id)
     used = 6
     if self.id == 4:
       self.len_type = 4
@@ -81,7 +81,7 @@ class Packet(object):
       self.len = to_n(bits[used:], 15)
       used += 15
       if Packet.verbose:
-        print('  ' * level, 'LEN TYPE 0: used:', used)
+        print('  ' * level, 'Len type 0: to_eat:', self.len)
       done = used + self.len
       while used < done:
         p = Packet()
@@ -89,19 +89,19 @@ class Packet(object):
         used += p.load(bits[used:], level+1)
         self.process(p)
         if Packet.verbose:
-          print('  ' * level, '  0sub  packet', p)
+          print('  ' * level, '  sub  packet', p)
     else:
       self.np = to_n(bits[7:], 11)
       used += 11
       if Packet.verbose:
-        print('  ' * level, 'LEN TYPE 1', self.np, 'subpackets')
+        print('  ' * level, 'Len type 1', self.np, 'subpackets')
       for i in range(self.np):
         p = Packet()
         self.sub_packets.append(p)
         used += p.load(bits[used:], level+1)
         self.process(p)
         if Packet.verbose:
-          print('  ' * level, '  1sub packet', p)
+          print('  ' * level, '  sub packet', p)
 
     return used
 
