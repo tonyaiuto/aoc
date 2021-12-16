@@ -9,11 +9,6 @@ def to_bits(hex_s):
       yield int(c)
 
 
-def stream(bits):
-  for b in bits:
-    yield b
-
-
 def to_n(bits, nbits):
   ret = 0
   for b in bits:
@@ -29,56 +24,47 @@ class Packet(object):
   verbose = True
 
   def __init__(self):
+    self.len = 0
+    self.sub_packets = []
+    self.n = 0
     pass
 
   @staticmethod
   def munch(hex_s):
     if Packet.verbose:
       print('munch:', hex_s)
-    bits = [b for b in to_bits(hex_s)]
     bitstream = to_bits(hex_s)
     used = 0
     ret = []
-    while used < len(bits) - 7:
+    while used < len(hex_s) * 4 - 7:
       p = Packet()
       ret.append(p)
-      # u = p.load(bitstream)
-      u = p.load(bits[used:])
+      u = p.load(bitstream)
       # print('used', u, p)
       used += u
     return ret
 
   def load(self, bits, level=0):
-    #  0     1    2   3    4    5
-    # 1101.0010.1111.1110.0010.1000
-    # VVVT.TTAA.AAAB.BBBB.CCCC.C
-    self.len = 0
-    self.sub_packets = []
-    self.n = 0
-
     self.version = to_n(bits, 3)
-    self.id = to_n(bits[3:6], 3)
+    self.id = to_n(bits, 3)
+    used = 6
     self.ver_sum = self.version
     # print('===' * level, 'v/id', self.version, self.id)
-    used = 6
     if self.id == 4:
       self.len_type = 4
     else:
-      self.len_type = to_n(bits[used:used+1], 1)
+      self.len_type = to_n(bits, 1)
       used += 1
-
-    if self.id == 1:
-      self.n = 1
 
     if self.len_type == 4:
       more = 1
       while more:
-        tmp = to_n(bits[used:], 5)
+        tmp = to_n(bits, 5)
         used += 5
         self.n = self.n << 4 | tmp & 0x0f
         more = tmp & 0x10
     elif self.len_type == 0:
-      self.len = to_n(bits[used:], 15)
+      self.len = to_n(bits, 15)
       used += 15
       if Packet.verbose:
         print('  ' * level, 'Len type 0: to_eat:', self.len)
@@ -86,19 +72,19 @@ class Packet(object):
       while used < done:
         p = Packet()
         self.sub_packets.append(p)
-        used += p.load(bits[used:], level+1)
+        used += p.load(bits, level+1)
         self.process(p)
         if Packet.verbose:
           print('  ' * level, '  sub  packet', p)
     else:
-      self.np = to_n(bits[7:], 11)
+      self.np = to_n(bits, 11)
       used += 11
       if Packet.verbose:
         print('  ' * level, 'Len type 1', self.np, 'subpackets')
       for i in range(self.np):
         p = Packet()
         self.sub_packets.append(p)
-        used += p.load(bits[used:], level+1)
+        used += p.load(bits, level+1)
         self.process(p)
         if Packet.verbose:
           print('  ' * level, '  sub packet', p)
@@ -111,7 +97,8 @@ class Packet(object):
     if self.id == 0:
       self.n += p.n
     elif self.id == 1:
-      # print('==== product', self.n, p.n)
+      if len(self.sub_packets) == 1:
+        self.n = 1
       self.n *= p.n
     elif self.id == 2:
       if len(self.sub_packets) == 1:
@@ -168,9 +155,11 @@ class day16(aoc.aoc):
     packets = Packet.munch(self.all_input[0])
     return packets[0].n
 
-_ = Packet.munch('D2FE28')
-_ = Packet.munch('EE00D40C823060')
-_ = Packet.munch('38006F45291200')
+p = Packet.munch('D2FE28')
+assert 2021 == p[0].n
+p = Packet.munch('38006F45291200')
+p = Packet.munch('EE00D40C823060')
+assert 3 == p[0].np
 
 Packet.verbose = False
 day16.sample_test('D2FE28', expect1=6, expect2=None)
