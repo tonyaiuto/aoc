@@ -9,10 +9,18 @@ def to_bits(hex_s):
       yield int(c)
 
 
-def to_n(bits):
+def stream(bits):
+  for b in bits:
+    yield b
+
+
+def to_n(bits, nbits):
   ret = 0
   for b in bits:
     ret = (ret << 1) | b
+    nbits -= 1
+    if nbits <= 0:
+      break
   return ret
 
 
@@ -28,11 +36,13 @@ class Packet(object):
     if Packet.verbose:
       print('munch:', hex_s)
     bits = [b for b in to_bits(hex_s)]
+    bitstream = to_bits(hex_s)
     used = 0
     ret = []
     while used < len(bits) - 7:
       p = Packet()
       ret.append(p)
+      # u = p.load(bitstream)
       u = p.load(bits[used:])
       # print('used', u, p)
       used += u
@@ -46,25 +56,29 @@ class Packet(object):
     self.sub_packets = []
     self.n = 0
 
-    self.version = to_n(bits[0:3])
-    self.id = to_n(bits[3:6])
+    self.version = to_n(bits, 3)
+    self.id = to_n(bits[3:6], 3)
     self.ver_sum = self.version
     # print('  ' * level, 'v/id/sum', self)
     used = 6
-    self.len_type = bits[6]
+    if self.id == 4:
+      self.len_type = 4
+    else:
+      self.len_type = to_n(bits[used:used+1], 1)
+      used += 1
 
     if self.id == 1:
       self.n = 1
 
-    if self.id == 4:
+    if self.len_type == 4:
       more = 1
       while more:
-        more = bits[used]
-        self.n = self.n << 4 | to_n(bits[used+1:used+5])
+        tmp = to_n(bits[used:], 5)
         used += 5
+        self.n = self.n << 4 | tmp & 0x0f
+        more = tmp & 0x10
     elif self.len_type == 0:
-      used += 1
-      self.len = to_n(bits[7:(7+15)])
+      self.len = to_n(bits[used:], 15)
       used += 15
       if Packet.verbose:
         print('  ' * level, 'LEN TYPE 0: used:', used)
@@ -77,8 +91,7 @@ class Packet(object):
         if Packet.verbose:
           print('  ' * level, '  0sub  packet', p)
     else:
-      used += 1
-      self.np = to_n(bits[7:(7+11)])
+      self.np = to_n(bits[7:], 11)
       used += 11
       if Packet.verbose:
         print('  ' * level, 'LEN TYPE 1', self.np, 'subpackets')
@@ -91,6 +104,7 @@ class Packet(object):
           print('  ' * level, '  1sub packet', p)
 
     return used
+
 
   def process(self, p):
     self.ver_sum += p.ver_sum
