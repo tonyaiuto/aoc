@@ -9,13 +9,10 @@ declare -A lcount
 
 declare -A rules
 tmp=$(mktemp)
-# Believe it or not  rules[$pair]=$rep does not quite work.
-( sed -n -e '/->/s/ ->//p' input.txt | while read pair rep ; do
-echo rules[$pair]=$rep
-done
-) >$tmp
+# Believe it or not, doing rules[$pair]=$rep in a loop here does not quite work.
+sed -n -e '/->/s/^\(.*\) -> \(.*\)$/rules[\1]=\2/p' input.txt >$tmp
 source $tmp
-rm -f $tmp
+/bin/rm -f $tmp
 
 # echo ${rules[@]}
 
