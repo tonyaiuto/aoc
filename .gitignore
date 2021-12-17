@@ -4,6 +4,7 @@ sample.cur
 *.gv
 *_f
 out_*.png
+/third_party
 /2019/*/intcode.py
 /2019/18/map.py
 /2019/*/tools
