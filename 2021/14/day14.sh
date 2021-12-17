@@ -8,13 +8,15 @@ echo "Starting day at $(date)"
 declare -A lcount
 
 declare -A rules
-tmp=$(mktemp)
-# Believe it or not, doing rules[$pair]=$rep in a loop here does not quite work.
-sed -n -e '/->/s/^\(.*\) -> \(.*\)$/rules[\1]=\2/p' input.txt >$tmp
-source $tmp
-/bin/rm -f $tmp
+# Believe it or not, doing
+#    ... | while read pair rep ; do rules[$pair]=$rep ; done
+# does not work for some reason. It sets rules in loop local context
+for r in $(sed -n -e '/->/s/^\(.*\) -> \(.*\)$/\1=\2/p' input.txt) ; do
+  set $(echo $r | sed -e 's/=/ /')
+  rules["$1"]="$2"
+done
 
-# echo ${rules[@]}
+# echo RULES: ${rules[@]}
 
 inc_letter() {
   if [[ -z "${lcount[$1]}" ]] ; then
