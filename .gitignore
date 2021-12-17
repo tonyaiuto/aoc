@@ -2,6 +2,7 @@ sample.cur
 *.o
 *.pyc
 *.gv
+*_f
 out_*.png
 /2019/*/intcode.py
 /2019/18/map.py
