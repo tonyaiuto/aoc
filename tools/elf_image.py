@@ -88,6 +88,14 @@ class ElfImage(object):
       start += self.width
 
   def toPng(self, out_file, scale=10, legend=None):
+    im = self.to_image(scale=scale, legend=legend)
+    im.save(out_file)
+
+  def display(self, scale=10, legend=None):
+    im = self.to_image(scale=scale, legend=legend)
+    im.show()
+
+  def to_image(self, scale=10, legend=None):
     image_height = self.height*scale
     if legend:
       image_height += 20
@@ -119,7 +127,7 @@ class ElfImage(object):
     if legend:
       xy = (0, self.height*scale)
       draw.text(xy, text=legend, fill=0)
-    im.save(out_file)
+    return im
 
 
 def self_check():
@@ -159,8 +167,24 @@ def self_check():
   i.print(out=got)
   assert expected == got.getvalue()
 
+def vis_test():
+  i = ElfImage(3, 2)
+  i.parse('123456789012')
+  # print(i.image)
+  assert i.image == [1, 8, 3, 4, 5, 6]
+
+  points = {(0,0): 'C'}
+  points.update({(1,1): 1})
+  points.update({(-1,1): '-'})
+  points.update({pos: 1 for pos in [(-5, i) for i in range(-4, 4)]})
+  points.update({pos: 1 for pos in [(i, 2) for i in range(-6, 4)]})
+  i = ElfImage.fromPoints(points)
+  i.display()
+
+
 self_check()
 
 if __name__ == '__main__':
   self_check()
+  # vis_test()
   print('PASS:', __file__)
