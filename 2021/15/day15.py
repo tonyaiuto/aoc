@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 "AOC 2021: day 15"
 
-from collections import defaultdict
 import copy
+import heapq
 import itertools
 
 from tools import aoc
+from tools import grid
 
 
 class day15(aoc.aoc):
@@ -71,6 +72,7 @@ class day15(aoc.aoc):
     return min(self.least_risk_via(0, 1), self.least_risk_via(1, 0))
 
   def least_risk_via(self, x, y):
+    """This only works by luck."""
     ret = self.memo.get((x,y))
     if ret is not None:
       return ret
@@ -83,12 +85,6 @@ class day15(aoc.aoc):
       r.append(self.least_risk_via(x+1, y))
     if y < self.height-1:
       r.append(self.least_risk_via(x, y+1))
-    #if x > 0:
-    #  r.append(self.least_risk_via(x-1, y))
-    #if y > 0:
-    #  r.append(self.least_risk_via(x, y-1))
-    #if self.trace_sample:
-    #  print('    r:', x, y, self.cells[(x,y)] + min(r))
     self.memo[(x,y)] = self.cells[(x,y)] + min(r)
     return self.cells[(x,y)] + min(r)
 
@@ -150,13 +146,41 @@ class day15(aoc.aoc):
     pos = (0, 0)
     self.end = (self.width-1, self.height-1)
 
-    for d in range(min(self.width, self.height)-1, 0, -1):
-      risk = self.least_risk_via(d, d)
-      if self.trace_sample or d > 490:
-        print("risk:", d, d, '=', risk)
+    # use Dijkstra, right from wikipedia
 
-    print("PART 2 is LESS THAN 2789")
-    return min(self.least_risk_via(0, 1), self.least_risk_via(1, 0))
+    visited = set()
+    risk = {}
+    unvisited = set()
+    max_risk = 9 * (self.width + 1) * (self.height + 1)
+    for x in range(self.width):
+      for y in range(self.height):
+        risk[(x,y)] = max_risk
+        unvisited.add((x,y))
+    start = (0, 0)
+    risk[start] = 0
+
+    n_cells = self.width * self.height
+    queue = []
+    heapq.heappush(queue, (0, start))
+    cur_node = start
+    while len(unvisited) > 0 and cur_node != self.end:
+      while cur_node in visited:
+        _, cur_node = heapq.heappop(queue)
+
+      if len(unvisited) % 1000 == 0:
+        print('=========', len(unvisited), 'left')
+      risk_so_far = risk[cur_node]
+      for pos in grid.coords4(cur_node[0], cur_node[1], n_rows=self.height, n_cols=self.width):
+        if pos in visited:
+          continue
+        # print(' visit:', pos)
+        risk[pos] = min(risk[pos], risk_so_far + self.cells[pos])
+        heapq.heappush(queue, (risk[pos], pos))
+      visited.add(cur_node)
+      unvisited.remove(cur_node)
+
+    return risk[self.end]
+
 
 day15.sample_test("""
 1163751742
@@ -173,5 +197,5 @@ day15.sample_test("""
 
 
 if __name__ == '__main__':
-  day15.run_and_check('input.txt', expect1=423, expect2=None)
+  day15.run_and_check('input.txt', expect1=423, expect2=2778)
   pass
