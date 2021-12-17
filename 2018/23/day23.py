@@ -5,8 +5,6 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
-import heapq
-import Queue
 import sys
 
 _VERBOSE = 0
@@ -458,6 +456,8 @@ def part1(cave):
     if max_r.dist(b) <= max_r.radius:
       n_close += 1
   print('%d bots are in range' % n_close)
+  return n_close
+
 
 def SelfTest(cave):
   bots = []
@@ -562,8 +562,13 @@ if __name__ == '__main__':
   if tests:
     sys.exit(SelfTest(cave))
 
+  got = part1(cave)
+  if 297 == got:
+    print('PASS: part1')
+  else:
+    print('FAIL: part1, expected 297 got', got)
+    sys.exit(1)
+
   if _PART2:
     part2_quick(cave)
     # part2(cave)
-  else:
-    part1(cave)
