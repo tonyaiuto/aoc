@@ -6,6 +6,17 @@ from typing import List
 
 from tools import reader
 
+def run_func(func, expect=None, tag=None):
+  t_start = time.perf_counter()
+  res = func()
+  t_end = time.perf_counter()
+  print('%s:  %-15s   solve: %.5fms' % (tag, str(res), 1000*(t_end-t_start)))
+  if expect and  expect != res:
+    print('FAIL: %s:' % tag, 'expect', expect, 'got', res)
+    sys.exit(1)
+  print('-----')
+  return res
+
 
 class aoc(object):
 
@@ -61,7 +72,7 @@ class aoc(object):
     solver.load_file(input)
     load_done = time.perf_counter()
     print('part1:  %-15s     load: %.5fms' % (' ', 1000*(load_done-start)))
-    solver.result1 = solver.run_func(
+    solver.result1 = run_func(
         solver.part1, expect=expect1, tag=tag+'.part1')
 
     if recreate:
@@ -71,19 +82,8 @@ class aoc(object):
       load_done = time.perf_counter()
     else:
       solver.reset()
-    solver.result2 = solver.run_func(
+    solver.result2 = run_func(
         solver.part2, expect=expect2, tag=tag+'.part2')
-
-  def run_func(self, func, expect=None, tag=None):
-    t_start = time.perf_counter()
-    res = func()
-    t_end = time.perf_counter()
-    print('%s:  %-15s   solve: %.5fms' % (tag, str(res), 1000*(t_end-t_start)))
-    if expect and  expect != res:
-      print('FAIL: %s:' % tag, 'expect', expect, 'got', res)
-      sys.exit(1)
-    print('-----')
-    return res
 
   @classmethod
   def sample_test(cls, s, expect1=None, expect2=None, tag=None, recreate=True):
@@ -91,7 +91,7 @@ class aoc(object):
     solver.trace_sample = True
     tag = tag or (type(solver).__name__ + '.sample')
     solver.load_str(s)
-    _ = solver.run_func(solver.part1, expect=expect1, tag=tag+'.part1')
+    _ = run_func(solver.part1, expect=expect1, tag=tag+'.part1')
 
     if recreate:
       solver = cls()
@@ -99,7 +99,7 @@ class aoc(object):
       solver.load_str(s)
     else:
       solver.reset()
-    _ = solver.run_func(solver.part2, expect=expect2, tag=tag+'.part2')
+    _ = run_func(solver.part2, expect=expect2, tag=tag+'.part2')
     print('%s: PASS' % tag)
 
   @classmethod

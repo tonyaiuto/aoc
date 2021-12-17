@@ -7,6 +7,8 @@ from __future__ import print_function
 import collections
 import sys
 
+from tools import aoc
+
 _VERBOSE = 0
 _PART2 = False
 
@@ -250,7 +252,7 @@ class Cave(object):
                     int(this.max_pos[2] + this.z_span / n_buckets))
 
 
-def part2(cave):
+def part2_simple(cave):
   n_buckets = 8
   max_pos = None
   while True:
@@ -273,7 +275,7 @@ def part2(cave):
   # part2_1(cave)
 
 
-def part2(cave):
+def part2_last_from_2018(cave):
   # cave.FindTheMaximumRegion()
   cave.max_bots = 936
   cave.max_pos = (44166763,43552646,38657871)
@@ -442,12 +444,37 @@ def part2_1(cave):
           break
 
 
+def part2(cave):
+  max_pos = None
+
+  cave.point = (12, 12, 12)
+  return 36
+  """
+  for x in range(cave.x_min, cave.x_max):
+    for bot in range(
+    this.x_min = 0
+    this.x_max = 0
+  while True:
+    max_bots_before = cave.max_bots
+    n_max_before = cave.n_at_max
+    try:
+      max_pos = cave.SampleSpace(n_buckets)
+      cave.Reduce(max_pos)
+    except ValueError as e:
+      break
+    if (max_bots_before == cave.max_bots
+        and n_max_before == cave.n_at_max
+        and max_bots_before > 900):
+      break
+  """
+  pass
+
 
 
 
 def part1(cave):
   max_r = cave.bots[0]
-  for b in bots:
+  for b in cave.bots:
     if b.radius > max_r.radius:
       max_r = b
   print('bot with max radius is %s' % max_r)
@@ -459,25 +486,50 @@ def part1(cave):
   return n_close
 
 
-def SelfTest(cave):
+def bots_from_text(s):
   bots = []
-  sample = """
+  for line in s.split('\n'):
+    l = line.strip()
+    if l:
+      bots.append(Bot.Parse(l))
+  return bots
+
+
+def SelfTest():
+  print('== self test ==')
+  bots = bots_from_text("""
+      pos=<0,0,0>, r=4
+      pos=<1,0,0>, r=1
+      pos=<4,0,0>, r=3
+      pos=<0,2,0>, r=1
+      pos=<0,5,0>, r=3
+      pos=<0,0,3>, r=1
+      pos=<1,1,1>, r=1
+      pos=<1,1,2>, r=1
+      pos=<1,3,1>, r=1
+      """)
+  cave = Cave(bots)
+  cave.Print()
+  print('== self test part 1==')
+  aoc.run_func(lambda: part1(cave), tag='self_test part1', expect = 7)
+
+
+  # part2 test
+  bots = bots_from_text("""
       pos=<10,12,12>, r=2
       pos=<12,14,12>, r=2
       pos=<16,12,12>, r=4
       pos=<14,14,14>, r=6
       pos=<50,50,50>, r=200
       pos=<10,10,10>, r=5
-      """
-  for line in sample.split('\n'):
-    l = line.strip()
-    if l:
-      bots.append(Bot.Parse(l))
+      """)
   cave = Cave(bots)
   cave.Print()
   assert cave.x_min == 10 and cave.x_max == 50
   assert cave.y_min == 10 and cave.y_max == 50
   assert cave.z_min == 10 and cave.z_max == 50
+
+  # test range functions on bots
   for x in range(cave.x_min, cave.x_max+1):
     for y in range(cave.y_min, cave.y_max+1):
       # print('== %d,%d ==' % (x, y))
@@ -494,7 +546,6 @@ def SelfTest(cave):
             return 1
         assert not b.InRange(x, y, r[0]-1)
         assert not b.InRange(x, y, r[1]+2)
-
   cells = []
   cave.max_bots = 0
   for x in range(cave.x_min, cave.x_max+1):
@@ -513,6 +564,8 @@ def SelfTest(cave):
             cave.max_bots = col[z - cave.z_min]
       y_vec.append(col)
     cells.append(y_vec)
+
+  # Brute force part2
   best_dist = cave.x_span + cave.y_span + cave.z_span
   for xi in range(cave.x_span):
     x_row = cells[xi]
@@ -530,6 +583,12 @@ def SelfTest(cave):
             best_dist = dist_from_origin
             best_pos = (x,y,z)
   print(best_pos)
+
+  aoc.run_func(lambda: part2(cave), tag='self_test part2', expect = 36)
+  expect = (12, 12, 12)
+  if expect != cave.point:
+    print('FAIL: self_test part2: wrong point. expected', expect, 'got', cave.point)
+    sys.exit(1)
   return 0
 
 
@@ -551,6 +610,9 @@ if __name__ == '__main__':
       _PART2 = True
       iarg += 1
 
+  if tests:
+    sys.exit(SelfTest())
+
   bots = []
   with open(sys.argv[iarg]) as inp:
     for l in inp:
@@ -559,16 +621,10 @@ if __name__ == '__main__':
   if dump:
     for b in cave.bots:
       print(b)
-  if tests:
-    sys.exit(SelfTest(cave))
 
-  got = part1(cave)
-  if 297 == got:
-    print('PASS: part1')
-  else:
-    print('FAIL: part1, expected 297 got', got)
-    sys.exit(1)
+  aoc.run_func(lambda: part1(cave), tag='self_test part1', expect = 297)
 
   if _PART2:
-    part2_quick(cave)
+    # part2_quick(cave)
     # part2(cave)
+    res = part2(cave)

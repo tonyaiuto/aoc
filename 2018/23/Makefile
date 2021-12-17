@@ -1,10 +1,18 @@
 
-p2:
+
+go:
+	echo ; date
+	python day23.py -t input.txt
 	python day23.py -2 input.txt
 	# python day23.py -2 input.txt | tee part2.out
 	# too high: 126751959
 	# too high: 126751889
 	# wrong: 126624512
+
+
+watch:
+	../../tools/watch day23.py make --no-print-directory go
+
 
 part1:
 	python day23.py input.txt
