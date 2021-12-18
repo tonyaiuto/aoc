@@ -5,6 +5,8 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import copy
+import heapq
 import sys
 
 from tools import aoc
@@ -24,15 +26,18 @@ def cluster_step(low, high, n_buckets):
 
 class Bot(object):
 
-  def __init__(this, x, y, z, radius):
-    this.x = x
-    this.y = y
-    this.z = z
-    this.radius = radius
-    this.mouth = (0,0)
+  def __init__(self, x, y, z, radius):
+    self.x = x
+    self.y = y
+    self.z = z
+    self.radius = radius
+    self.mouth = (0,0)
 
-  def __str__(this):
-    return 'pos=<%d,%d,%d>, r=%d' % (this.x, this.y, this.z, this.radius)
+  def __str__(self):
+    return 'pos=<%d,%d,%d>, r=%d' % (self.x, self.y, self.z, self.radius)
+
+  def __repr__(self):
+    return str(self)
 
   @staticmethod
   def Parse(l):
@@ -45,23 +50,23 @@ class Bot(object):
     radius = int(l[r_pos+2:])
     return Bot(coords[0], coords[1], coords[2], radius)
 
-  def dist(this, b):
-    return abs(b.x - this.x) + abs(b.y - this.y) + abs(b.z - this.z) 
+  def dist(self, b):
+    return abs(b.x - self.x) + abs(b.y - self.y) + abs(b.z - self.z)
 
-  def InRange(this, x, y, z):
-    return (abs(x - this.x) + abs(y - this.y) + abs(z - this.z)) <= this.radius
+  def InRange(self, x, y, z):
+    return (abs(x - self.x) + abs(y - self.y) + abs(z - self.z)) <= self.radius
 
-  def ZRange(this, x, y):
+  def ZRange(self, x, y):
     # returns range of z cells in range for an x, y coord
-    xy_dist = abs(x - this.x) + abs(y - this.y)
-    # inrange = xy_dist + abs(z - this.z)) < this.radius
-    # inrange = abs(this.z - z)) < (this.radius - xy_dist)
-    # inrange = this.z - Z < (this.radius - xy_dist)
-    #       or  this.z + Z < (this.radius - xy_dist)
-    delta = this.radius - xy_dist
+    xy_dist = abs(x - self.x) + abs(y - self.y)
+    # inrange = xy_dist + abs(z - self.z)) < self.radius
+    # inrange = abs(self.z - z)) < (self.radius - xy_dist)
+    # inrange = self.z - Z < (self.radius - xy_dist)
+    #       or  self.z + Z < (self.radius - xy_dist)
+    delta = self.radius - xy_dist
     if delta < 0:
       return None
-    return (this.z - delta, this.z + delta)
+    return (self.z - delta, self.z + delta)
 
 
 class Cave(object):
@@ -160,7 +165,7 @@ class Cave(object):
     if max_bots < this.max_bots:
       raise ValueError('max cell reduced from previous of %d' % this.max_bots)
     if max_bots > this.max_bots:
-      this.max_bots = max_bots 
+      this.max_bots = max_bots
     this.n_at_max = 0
     for layer in cells:
       for row in layer:
@@ -321,7 +326,7 @@ def NarrowFrom(cave, x, y, step):
   stale_count = 0
   while x > 0 and y > 0 and stale_count < 10:
     print('NarrowFrom @ %d,%d, zspan=%d' % (x, y, cave.z_span))
-    col = [0] * (cave.z_span + 1) 
+    col = [0] * (cave.z_span + 1)
     n_fails = 0
     for b in cave.bots:
       r = b.ZRange(x, y)
@@ -407,7 +412,7 @@ def part2_1(cave):
   # z: 38782806-38782906 (100)
   #cave.x_min -= 200
   #cave.y_min -= 300
-  #cave.y_max -= 10 
+  #cave.y_max -= 10
   #cave.z_min -= 500
 
   cave.Print()
@@ -443,12 +448,166 @@ def part2_1(cave):
         else:
           break
 
+class Range(object):
+
+   def __init__(self, pos, radius):
+     self.low = pos - radius
+     self.high = pos + radius
+     self.nbots = 1
+
+   def __str__(self):
+     return '%d-%d(%d)' % (self.low, self.high, self.nbots)
+
+   def __lt__(self, o):
+     return self.low < o.low
+
+   def intersect(self, r):
+     return ((self.low <= r.low and r.low <= self.high) or
+             (self.low <= r.high and r.high <= self.high) or
+             (r.low <= self.low and self.low <= r.high) or
+             (r.low <= self.high and self.high <= r.high) 
+             )
+
+   def combine(self, r):
+     #  self:       sss
+     #        1: rrr         ->  r, self
+     #        2: rrrr        ->  r'(1), self(+1), self(short)
+     #        3: rrrrrr      ->  r'(1), self(+1)
+     #        4: rrrrrrrrr   ->  r'(1), self(+1), r''(1)
+     obots = self.nbots + r.nbots
+     if r.low < self.low:
+        ret = [r, self]
+        if r.high < self.low:  # case 1
+          return ret
+        rh = r.high                # clip r
+        r.high = self.low - 1
+        if rh < self.high:          # case 2, split s
+          s2 = copy.copy(self)
+          s2.low = self.high + 1
+          # print("     ===> case2, made", s2)
+          ret.append(s2)
+        elif rh > self.high:   # case 4, clip r
+          r2 = copy.copy(r)
+          r2.low = self.high + 1
+          r2.high = rh
+          ret.append(r2)
+          # print("     ===> case4, made", r2)
+        self.nbots = obots
+        return ret
+
+     #  self:       sss
+     #        5:    rrr      ->  self'(+1)
+     #        6:    r        ->  r1, self'(+1)
+     #        7:    rrrr     ->  self(+1), r'
+     if r.low == self.low:
+       self.nbots = obots
+       if r.high == self.high:   # case 5
+         return [self]
+       if r.high < self.high:    # case 6 (s+ | r)
+         if r.high == 15:
+           self.low = r.high + 1
+           print(' ==== change self to', self, 'r=', r)
+           return [r, self]
+       r.low = self.high + 1  # case 7
+       return [self, r]
+
+     #  self:      ssss
+     #        8:    rr       ->  self(short), r1'(+1), self'(short)
+     #        9:     rr      ->  self(short), r1'(+1)
+     #       10:      rr     ->  self(short), r1'(+1), r1''short)
+     if r.low <= self.high:
+       old_s_high = self.high
+       self.high = r.low - 1
+       ret = [self, r]
+       if r.high < old_s_high:    # case 8, split s
+         r.nbots = obots
+         s2 = copy.copy(self)
+         s2.low = r.high + 1
+         s2.high = old_s_high
+         ret.append(s2)
+       elif r.high == old_s_high: #  case 9
+         r.nbots = obots
+       else:                      # case 10
+         r2 = copy.copy(r)
+         r2.low = old_s_high + 1
+         r.high = old_s_high
+         r.nbots = obots
+         ret.append(r2)
+       return ret
+     print("HELP", self, r)
+     sys.exit(1)
+
+class Spans(object):
+  def __init__(self):
+    self.spans = None
+
+  def add(self, r):
+    if not self.spans:
+      self.spans = [r]
+      return
+    done = []
+    nxt = 0
+    retry = None
+    while r and nxt < len(self.spans):
+      s = self.spans[nxt]
+      if s.low > r.high:
+        # print('    break at', s)
+        break
+      nxt += 1
+      # print('    check', s)
+      if s.intersect(r):
+        what = s.combine(r)
+        # print('      split:', [str(x) for x in what])
+        done.extend(what[0:-1])
+        r = what[-1]
+        # print('  re-add', r)
+    if r:
+      done.append(r)
+    self.spans = done + self.spans[nxt:]
 
 def part2(cave):
+  print('--- start part 2')
   max_pos = None
 
-  cave.point = (12, 12, 12)
-  return 36
+  sx = Spans()
+  i = 100
+  for b in cave.bots:
+    if i % 100 == 0:
+      print(' === loop ', i)
+    r = Range(b.x, b.radius)
+    if _VERBOSE:
+      print('add:', r)
+    sx.add(r)
+    if _VERBOSE:
+      print('    =>', [str(r) for r in sx.spans])
+  sy = Spans()
+  for b in cave.bots:
+    sy.add(Range(b.y, b.radius))
+  sz = Spans()
+  for b in cave.bots:
+    sz.add(Range(b.z, b.radius))
+
+  print('y   =>', [str(r) for r in sy.spans])
+  print('z   =>', [str(r) for r in sz.spans])
+  m = 0
+  for r in sx.spans:
+    if r.nbots > m:
+      m = r.nbots
+      x = r.low
+  m = 0
+  for r in sy.spans:
+    if r.nbots > m:
+      m = r.nbots
+      y = r.low
+  m = 0
+  for r in sz.spans:
+    if r.nbots > m:
+      m = r.nbots
+      z = r.low
+  cave.point = (x, y, z)
+  print('point', cave.point)
+  return x + y + z
+
   """
   for x in range(cave.x_min, cave.x_max):
     for bot in range(
@@ -582,13 +741,16 @@ def SelfTest():
           if dist_from_origin < best_dist:
             best_dist = dist_from_origin
             best_pos = (x,y,z)
-  print(best_pos)
+  # print(best_pos)
 
+  global _VERBOSE
+  _VERBOSE = 1
   aoc.run_func(lambda: part2(cave), tag='self_test part2', expect = 36)
   expect = (12, 12, 12)
   if expect != cave.point:
     print('FAIL: self_test part2: wrong point. expected', expect, 'got', cave.point)
     sys.exit(1)
+  _VERBOSE = 0
   return 0
 
 
