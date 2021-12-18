@@ -7,6 +7,9 @@ import sys
 from tools import aoc
 
 
+VERBOSE = True
+
+
 class inpstream(object):
 
   def __init__(self, s):
@@ -196,15 +199,17 @@ class SN(object):
   def check_split(self, level):
     if self.is_number:
       if self.n >= 10:
+        if VERBOSE:
+          print('    => split', self)
         self.l = SN(parent=self, n=(self.n // 2))
         self.r = SN(parent=self, n=(self.n - (self.n // 2)))
         self.n = 0
         return True
       return False
 
-    if self.l.check_explode(level + 1):
+    if self.l.check_split(level + 1):
       return True
-    if self.r.check_explode(level + 1):
+    if self.r.check_split(level + 1):
       return True
     return False
 
@@ -238,27 +243,48 @@ class day18(aoc.aoc):
 
   def post_load(self):
     # called after all input is read
-
-    if len(self.exprs) == 1:
-      self.sum = self.exprs[0]
-      return
+    return
  
-    cur = SN(None)
-    cur.l = self.exprs[0]
-    for e in self.exprs[1:]:
-      if cur.r:
-        outer = SN(None)
-        outer.l = cur
-        cur.parent = outer
-        cur = outer
-      cur.r = e
+  def combine(self, exprs):
 
-    self.sum = cur
-    print(self.sum)
+    if len(exprs) == 1:
+      return exprs[0]
+
+    root = SN(parent=None)
+    root.l = exprs[0]
+    root.l.parent = root
+    root.r = exprs[1]
+    root.r.parent = root
+    if self.trace_sample:
+      print('======= reduce initial root from:', root)
+    stop = root.reduce()
+    if self.trace_sample:
+      print('=======                       to:', root)
+
+    if stop:
+      sys.exit(0)
+
+    for e in exprs[2:]:
+      outer = SN(parent=None)
+      outer.l = root
+      outer.r = e
+      root.parent = outer
+      root = outer
+      if self.trace_sample:
+        print('======= reduce root from:', root)
+      root.reduce()
+      if self.trace_sample:
+        print('=======               to:', root)
+    return root
+
 
   def part1(self):
     print('===== Start part 1')
     self.reset()
+
+    root = self.combine(self.exprs)
+    self.sum = root
+    print('Final:', self.sum)
 
     return self.sum.magnitude()
 
@@ -279,20 +305,18 @@ def check_reduce(s, expect, one_loop=False):
     else:
       print('FAIL:', s, '=>', got, 'expected', expect)
       sys.exit(1)
-  
 
-day18.sample_test("""[[1,2],[[3,4],5]]""", expect1=143, expect2=None)
-day18.sample_test("""[[[[0,7],4],[[7,8],[6,0]]],[8,1]]""", expect1=1384)
-day18.sample_test("""[[[[1,1],[2,2]],[3,3]],[4,4]]""", expect1=445)
-day18.sample_test("""[[[[3,0],[5,3]],[4,4]],[5,5]]""", expect1=791)
-day18.sample_test("""[[[[5,0],[7,4]],[5,5]],[6,6]]""", expect1=1137)
-day18.sample_test("""[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]""", expect1=3488)
-day18.sample_test("""
-[1,1]
-[2,2]
-[3,3]
-[4,4]
-""", expect1=445)
+def check_combine(s, expect, one_loop=False):
+    e = SN.parse(s)
+    e.reduce(one_loop=one_loop)
+    got = str(e)
+    if expect == got:
+      print('PASS:', s, '=>', expect)
+    else:
+      print('FAIL:', s, '=>', got, 'expected', expect)
+      sys.exit(1)
+  
+  
 
 check_reduce("[[[[[9,8],1],2],3],4]", expect="[[[[0,9],2],3],4]")
 check_reduce("[7,[6,[5,[4,[3,2]]]]]", expect="[7,[6,[5,[7,0]]]]")
@@ -301,9 +325,37 @@ check_reduce("[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]", expect="[[3,[2,[8,0]]],[9,
 check_reduce("[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]", expect="[[3,[2,[8,0]]],[9,[5,[7,0]]]]")
 check_reduce("[[[[[4,3],4],4],[7,[[8,4],9]]],[1,1]]", expect="[[[[0,7],4],[[7,8],[6,0]]],[8,1]]")
 
+day18.sample_test("""[[1,2],[[3,4],5]]""", expect1=143, expect2=None)
+day18.sample_test("""[[[[0,7],4],[[7,8],[6,0]]],[8,1]]""", expect1=1384)
+day18.sample_test("""[[[[1,1],[2,2]],[3,3]],[4,4]]""", expect1=445)
+day18.sample_test("""[[[[3,0],[5,3]],[4,4]],[5,5]]""", expect1=791)
+day18.sample_test("""[[[[5,0],[7,4]],[5,5]],[6,6]]""", expect1=1137)
+day18.sample_test("""[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]""", expect1=3488)
+
 day18.sample_test("""
-[[[0,[5,8]],[[1,7],[9,6]]],[[4,[1,2]],[[1,4],2]]]
+[1,1]
+[2,2]
+[3,3]
+[4,4]
 """, expect1=445)
+
+day18.sample_test("""
+[[[0,[4,5]],[0,0]],[[[4,5],[2,6]],[9,5]]]
+[7,[[[3,7],[4,3]],[[6,3],[8,8]]]]
+""", expect1=2736)
+
+day18.sample_test("""
+[[[0,[4,5]],[0,0]],[[[4,5],[2,6]],[9,5]]]
+[7,[[[3,7],[4,3]],[[6,3],[8,8]]]]
+[[2,[[0,8],[3,4]]],[[[6,7],1],[7,[1,6]]]]
+[[[[2,4],7],[6,[0,5]]],[[[6,8],[2,8]],[[2,1],[4,5]]]]
+[7,[5,[[3,8],[1,4]]]]
+[[2,[2,2]],[8,[8,1]]]
+[2,9]
+[1,[[[9,3],9],[[9,0],[0,7]]]]
+[[[5,[7,4]],7],1]
+[[[[4,2],2],6],[8,7]]
+""", expect1=129)
 
 day18.sample_test("""
 [[[0,[5,8]],[[1,7],[9,6]]],[[4,[1,2]],[[1,4],2]]]
@@ -318,6 +370,9 @@ day18.sample_test("""
 [[[[5,2],5],[8,[3,7]]],[[5,[7,5]],[4,4]]]
 """, expect1=4140)
 
+VERBOSE = False
 
 if __name__ == '__main__':
-  day18.run_and_check('input.txt', expect1=None, expect2=None)
+  # 55091746 too high
+  # day18.run_and_check('input.txt', expect1=None, expect2=None)
+  pass
