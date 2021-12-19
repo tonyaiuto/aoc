@@ -2,12 +2,13 @@
 "AOC 2021: day 18"
 
 from collections import defaultdict
+import copy
 import sys
 
 from tools import aoc
 
 
-VERBOSE = True
+VERBOSE = 1
 
 
 class inpstream(object):
@@ -119,17 +120,21 @@ class SN(object):
       return
 
     if level == 4:
-      print('explode me', self, 'in', self.parent)
+      if VERBOSE > 1:
+        print('explode me', self, 'in', self.parent)
       assert self.l.is_number
       assert self.r.is_number
       self.add_to_the_left(self.l.n)
-      print('     => add left', self.parent.parent.parent)
+      if VERBOSE > 1:
+        print('     => add left', self.parent.parent.parent)
       self.add_to_the_right(self.r.n)
-      print('     => add right', self.parent.parent.parent)
+      if VERBOSE > 1:
+        print('     => add right', self.parent.parent.parent)
       self.l = None
       self.r = None
       self.n = 0
-      print('     => final', self.parent.parent.parent)
+      if VERBOSE > 1:
+        print('     => final', self.parent.parent.parent)
       return True
 
     if self.l.check_explode(level+1):
@@ -199,7 +204,7 @@ class SN(object):
   def check_split(self, level):
     if self.is_number:
       if self.n >= 10:
-        if VERBOSE:
+        if VERBOSE > 1:
           print('    => split', self)
         self.l = SN(parent=self, n=(self.n // 2))
         self.r = SN(parent=self, n=(self.n - (self.n // 2)))
@@ -239,7 +244,6 @@ class day18(aoc.aoc):
       print(e)
     e.reduce()
     self.exprs.append(e)
-    pass
 
   def post_load(self):
     # called after all input is read
@@ -251,7 +255,8 @@ class day18(aoc.aoc):
 
     root = combine(self.exprs, verbose=self.trace_sample)
     self.sum = root
-    print('Final:', self.sum)
+    if self.trace_sample:
+      print('Final:', self.sum)
 
     return self.sum.magnitude()
 
@@ -259,6 +264,58 @@ class day18(aoc.aoc):
   def part2(self):
     print('===== Start part 2')
     self.reset()
+
+    ret = 0
+    for i in range(len(self.exprs)):
+      e1 = copy.deepcopy(self.exprs[i])
+      # e1.reduce()
+      for j in range(i+1, len(self.exprs)):
+        e2 = copy.deepcopy(self.exprs[j])
+        # e2.reduce()
+
+        #if str(e2).startswith('[[2,[[7,7'):
+        #  print('%-20.20s + %-20.20s => =============' % (str(e2), str(e1)))
+
+        root = SN(parent=None)
+        root.l = e1
+        e1.parent = root
+        root.r = e2
+        e1.parent = root
+        root.reduce()
+        mag = root.magnitude()
+        ret = max(ret, mag)
+        print('%-20.20s + %-20.20s => %d' % (str(e1), str(e2), mag))
+
+        e1 = copy.deepcopy(self.exprs[i])
+        e1.reduce()
+        e2 = copy.deepcopy(self.exprs[j])
+        e2.reduce()
+        root.l = e2
+        root.r = e1
+        root.reduce()
+        mag = root.magnitude()
+        ret = max(ret, mag)
+        print('%-20.20s + %-20.20s => %d' % (str(e2), str(e1), mag))
+
+    return ret
+
+def combine(exprs, verbose=False):
+
+  if len(exprs) == 1:
+    return exprs[0]
+
+  root = SN(parent=None)
+  root.l = exprs[0]
+  root.l.parent = root
+  root.r = exprs[1]
+  root.r.parent = root
+  if verbose:
+    root = combine(self.exprs, verbose=self.trace_sample)
+    self.sum = root
+    if self.trace_sample:
+      print('Final:', self.sum)
+
+    return self.sum.magnitude()
 
     return 42
 
@@ -298,6 +355,7 @@ def combine(exprs, verbose=False):
 
 
 def check_reduce(s, expect, one_loop=False):
+  s = s.strip()
   e = SN.parse(s)
   e.reduce(one_loop=one_loop)
   got = str(e)
@@ -308,6 +366,7 @@ def check_reduce(s, expect, one_loop=False):
     sys.exit(1)
 
 def check_combine(s, expect, one_loop=False):
+  s = s.strip()
   exprs = []
   for line in s.split('\n'):
     if line:
@@ -427,11 +486,11 @@ day18.sample_test("""
 [[9,3],[[9,9],[6,[4,9]]]]
 [[2,[[7,7],7]],[[5,8],[[9,3],[0,2]]]]
 [[[[5,2],5],[8,[3,7]]],[[5,[7,5]],[4,4]]]
-""", expect1=4140)
+""", expect1=4140, expect2=3993)
 
 VERBOSE = False
 
 if __name__ == '__main__':
   # 55091746 too high
-  day18.run_and_check('input.txt', expect1=None, expect2=None)
+  day18.run_and_check('input.txt', expect1=4088, expect2=None)
   pass
