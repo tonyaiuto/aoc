@@ -245,44 +245,11 @@ class day18(aoc.aoc):
     # called after all input is read
     return
  
-  def combine(self, exprs):
-
-    if len(exprs) == 1:
-      return exprs[0]
-
-    root = SN(parent=None)
-    root.l = exprs[0]
-    root.l.parent = root
-    root.r = exprs[1]
-    root.r.parent = root
-    if self.trace_sample:
-      print('======= reduce initial root from:', root)
-    stop = root.reduce()
-    if self.trace_sample:
-      print('=======                       to:', root)
-
-    if stop:
-      sys.exit(0)
-
-    for e in exprs[2:]:
-      outer = SN(parent=None)
-      outer.l = root
-      outer.r = e
-      root.parent = outer
-      root = outer
-      if self.trace_sample:
-        print('======= reduce root from:', root)
-      root.reduce()
-      if self.trace_sample:
-        print('=======               to:', root)
-    return root
-
-
   def part1(self):
     print('===== Start part 1')
     self.reset()
 
-    root = self.combine(self.exprs)
+    root = combine(self.exprs, verbose=self.trace_sample)
     self.sum = root
     print('Final:', self.sum)
 
@@ -295,26 +262,66 @@ class day18(aoc.aoc):
 
     return 42
 
+def combine(exprs, verbose=False):
+
+  if len(exprs) == 1:
+    return exprs[0]
+
+  root = SN(parent=None)
+  root.l = exprs[0]
+  root.l.parent = root
+  root.r = exprs[1]
+  root.r.parent = root
+  if verbose:
+    print('======= reduce initial root from:', root)
+  stop = root.reduce()
+  if verbose:
+    print('=======                       to:', root)
+
+  if stop:
+    sys.exit(0)
+
+  for e in exprs[2:]:
+    outer = SN(parent=None)
+    outer.l = root
+    outer.r = e
+    e.parent = outer
+    root.parent = outer
+    root = outer
+    if verbose:
+      print('======= reduce root from:', root)
+    root.reduce()
+    if verbose:
+      print('=======               to:', root)
+  return root
+
+
 
 def check_reduce(s, expect, one_loop=False):
-    e = SN.parse(s)
-    e.reduce(one_loop=one_loop)
-    got = str(e)
-    if expect == got:
-      print('PASS:', s, '=>', expect)
-    else:
-      print('FAIL:', s, '=>', got, 'expected', expect)
-      sys.exit(1)
+  e = SN.parse(s)
+  e.reduce(one_loop=one_loop)
+  got = str(e)
+  if expect == got:
+    print('PASS:', s, '=>', expect)
+  else:
+    print('FAIL:', s, '=>', got, 'expected', expect)
+    sys.exit(1)
 
 def check_combine(s, expect, one_loop=False):
-    e = SN.parse(s)
-    e.reduce(one_loop=one_loop)
-    got = str(e)
-    if expect == got:
-      print('PASS:', s, '=>', expect)
-    else:
-      print('FAIL:', s, '=>', got, 'expected', expect)
-      sys.exit(1)
+  exprs = []
+  for line in s.split('\n'):
+    if line:
+      e = SN.parse(line.strip())
+      e.reduce()
+      exprs.append(e)
+
+  root = combine(exprs)
+  got = str(root)
+  if expect == got:
+    print('PASS:', s, '=>', expect)
+  else:
+    print('FAIL:', s, '    got', got, '\nexpected', expect)
+    sys.exit(1)
   
   
 
@@ -339,10 +346,62 @@ day18.sample_test("""
 [4,4]
 """, expect1=445)
 
-day18.sample_test("""
+check_combine("""
 [[[0,[4,5]],[0,0]],[[[4,5],[2,6]],[9,5]]]
 [7,[[[3,7],[4,3]],[[6,3],[8,8]]]]
-""", expect1=2736)
+""", expect="[[[[4,0],[5,4]],[[7,7],[6,0]]],[[8,[7,7]],[[7,9],[5,0]]]]")
+
+check_combine("""
+[[[[4,0],[5,4]],[[7,7],[6,0]]],[[8,[7,7]],[[7,9],[5,0]]]]
+[[2,[[0,8],[3,4]]],[[[6,7],1],[7,[1,6]]]]
+""", expect="[[[[6,7],[6,7]],[[7,7],[0,7]]],[[[8,7],[7,7]],[[8,8],[8,0]]]]")
+
+check_combine("""
+[[[0,[4,5]],[0,0]],[[[4,5],[2,6]],[9,5]]]
+[7,[[[3,7],[4,3]],[[6,3],[8,8]]]]
+[[2,[[0,8],[3,4]]],[[[6,7],1],[7,[1,6]]]]
+""", expect="[[[[6,7],[6,7]],[[7,7],[0,7]]],[[[8,7],[7,7]],[[8,8],[8,0]]]]")
+
+check_combine("""
+[[[[6,7],[6,7]],[[7,7],[0,7]]],[[[8,7],[7,7]],[[8,8],[8,0]]]]
+[[[[2,4],7],[6,[0,5]]],[[[6,8],[2,8]],[[2,1],[4,5]]]]
+""", expect="[[[[7,0],[7,7]],[[7,7],[7,8]]],[[[7,7],[8,8]],[[7,7],[8,7]]]]")
+
+check_combine("""
+[[[[7,0],[7,7]],[[7,7],[7,8]]],[[[7,7],[8,8]],[[7,7],[8,7]]]]
+[7,[5,[[3,8],[1,4]]]]
+""", expect="[[[[7,7],[7,8]],[[9,5],[8,7]]],[[[6,8],[0,8]],[[9,9],[9,0]]]]")
+
+check_combine("""
+[[[[7,7],[7,8]],[[9,5],[8,7]]],[[[6,8],[0,8]],[[9,9],[9,0]]]]
+[[2,[2,2]],[8,[8,1]]]
+""", expect="[[[[6,6],[6,6]],[[6,0],[6,7]]],[[[7,7],[8,9]],[8,[8,1]]]]")
+
+check_combine("""
+[[[[6,6],[6,6]],[[6,0],[6,7]]],[[[7,7],[8,9]],[8,[8,1]]]]
+[2,9]
+""", expect="[[[[6,6],[7,7]],[[0,7],[7,7]]],[[[5,5],[5,6]],9]]")
+
+check_combine("""
+[[[[6,6],[6,6]],[[6,0],[6,7]]],[[[7,7],[8,9]],[8,[8,1]]]]
+[2,9]
+""", expect="[[[[6,6],[7,7]],[[0,7],[7,7]]],[[[5,5],[5,6]],9]]")
+
+check_combine("""
+[[[[6,6],[7,7]],[[0,7],[7,7]]],[[[5,5],[5,6]],9]]
+[1,[[[9,3],9],[[9,0],[0,7]]]]
+""", expect="[[[[7,8],[6,7]],[[6,8],[0,8]]],[[[7,7],[5,0]],[[5,5],[5,6]]]]")
+
+check_combine("""
+[[[[7,8],[6,7]],[[6,8],[0,8]]],[[[7,7],[5,0]],[[5,5],[5,6]]]]
+[[[5,[7,4]],7],1]
+""", expect="[[[[7,7],[7,7]],[[8,7],[8,7]]],[[[7,0],[7,7]],9]]")
+
+check_combine("""
+[[[[7,7],[7,7]],[[8,7],[8,7]]],[[[7,0],[7,7]],9]]
+[[[[4,2],2],6],[8,7]]
+""", expect="[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]")
+
 
 day18.sample_test("""
 [[[0,[4,5]],[0,0]],[[[4,5],[2,6]],[9,5]]]
@@ -355,7 +414,7 @@ day18.sample_test("""
 [1,[[[9,3],9],[[9,0],[0,7]]]]
 [[[5,[7,4]],7],1]
 [[[[4,2],2],6],[8,7]]
-""", expect1=129)
+""", expect1=3488)
 
 day18.sample_test("""
 [[[0,[5,8]],[[1,7],[9,6]]],[[4,[1,2]],[[1,4],2]]]
@@ -374,5 +433,5 @@ VERBOSE = False
 
 if __name__ == '__main__':
   # 55091746 too high
-  # day18.run_and_check('input.txt', expect1=None, expect2=None)
+  day18.run_and_check('input.txt', expect1=None, expect2=None)
   pass
