@@ -260,42 +260,34 @@ class day18(aoc.aoc):
 
     return self.sum.magnitude()
 
-
   def part2(self):
     print('===== Start part 2')
     self.reset()
 
     ret = 0
     for i in range(len(self.exprs)):
-      e1 = copy.deepcopy(self.exprs[i])
-      # e1.reduce()
       for j in range(i+1, len(self.exprs)):
-        e2 = copy.deepcopy(self.exprs[j])
-        # e2.reduce()
+
+        exprs = [
+            copy.deepcopy(self.exprs[i]),
+            copy.deepcopy(self.exprs[j]),
+        ]
+        root = combine(exprs, verbose=self.trace_sample)
+        mag = root.magnitude()
+        ret = max(ret, mag)
+        # print('%-20.20s + %-20.20s => %d' % (str(e1), str(e2), mag))
 
         #if str(e2).startswith('[[2,[[7,7'):
         #  print('%-20.20s + %-20.20s => =============' % (str(e2), str(e1)))
 
-        root = SN(parent=None)
-        root.l = e1
-        e1.parent = root
-        root.r = e2
-        e1.parent = root
-        root.reduce()
+        exprs = [
+            copy.deepcopy(self.exprs[j]),
+            copy.deepcopy(self.exprs[i]),
+        ]
+        root = combine(exprs, verbose=self.trace_sample)
         mag = root.magnitude()
         ret = max(ret, mag)
-        print('%-20.20s + %-20.20s => %d' % (str(e1), str(e2), mag))
-
-        e1 = copy.deepcopy(self.exprs[i])
-        e1.reduce()
-        e2 = copy.deepcopy(self.exprs[j])
-        e2.reduce()
-        root.l = e2
-        root.r = e1
-        root.reduce()
-        mag = root.magnitude()
-        ret = max(ret, mag)
-        print('%-20.20s + %-20.20s => %d' % (str(e2), str(e1), mag))
+        # print('%-20.20s + %-20.20s => %d' % (str(e2), str(e1), mag))
 
     return ret
 
@@ -475,6 +467,12 @@ day18.sample_test("""
 [[[[4,2],2],6],[8,7]]
 """, expect1=3488)
 
+
+day18.sample_test("""
+[[2,[[7,7],7]],[[5,8],[[9,3],[0,2]]]]
+[[[0,[5,8]],[[1,7],[9,6]]],[[4,[1,2]],[[1,4],2]]]
+""", expect1=3993)
+
 day18.sample_test("""
 [[[0,[5,8]],[[1,7],[9,6]]],[[4,[1,2]],[[1,4],2]]]
 [[[5,[2,8]],4],[5,[[9,9],0]]]
@@ -487,6 +485,7 @@ day18.sample_test("""
 [[2,[[7,7],7]],[[5,8],[[9,3],[0,2]]]]
 [[[[5,2],5],[8,[3,7]]],[[5,[7,5]],[4,4]]]
 """, expect1=4140, expect2=3993)
+
 
 VERBOSE = False
 
