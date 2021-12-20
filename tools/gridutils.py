@@ -134,6 +134,60 @@ def min_max(positions):
   return (min_a, max_a, min_b, max_b)
    
 
+class Grid(object):
+
+  def __init__(self, base_x=0, base_y=0, default_cell=' ', in_map=None):
+    self.base_x = base_x
+    self.base_y = base_y
+    self.default_cell = default_cell
+    self.in_map = in_map
+
+    self.points = {}
+    self.min_x = self.base_x
+    self.max_x = 0
+    self.min_y = self.base_y
+    self.max_y = 0
+    self.n_rows = 0
+
+  def add_row(self, row):
+    for i, c in enumerate(row):
+      if self.in_map:
+        c = self.in_map.get(c) or c
+      self.points[(self.base_x + i, self.base_y + self.n_rows)] = c
+    self.n_rows += 1
+    self.max_x = max(self.max_x, self.base_x + len(row) - 1) 
+    self.max_y += 1
+
+  @property
+  def width(self):
+    return self.max_x - self.min_x
+
+  @property
+  def height(self):
+    return self.max_y - self.min_y
+
+  def get(self, x, y):
+     return self.points.get((x, y), self.default_cell)
+
+  def set(self, x, y, value):
+    self.min_x = min(self.min_x, x)
+    self.max_x = max(self.max_x, x)
+    self.min_y = min(self.min_y, y)
+    self.max_y = max(self.max_y, y)
+    self.points[(x, y)] = value
+ 
+  def coords(self):
+    for y in range(self.min_y, self.max_y+1):
+      for x in range(self.min_x, self.max_x+1):
+        yield (x, y)
+
+    
+  def print(self, margin=1):
+    for y in range(self.min_y-margin, self.max_y+margin+1):
+      print(''.join([self.points.get((x, y), self.default_cell)
+                     for x in range(self.min_x-margin, self.max_x+margin+1)]))
+
+
 
 """"
 
@@ -164,6 +218,7 @@ def self_check():
   n_errs = 0
   n_errs += check_neighbors()
   return n_errs
+
 
 
 if __name__ == '__main__':
