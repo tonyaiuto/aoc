@@ -86,17 +86,23 @@ class aoc(object):
         solver.part2, expect=expect2, tag=tag+'.part2')
 
   @classmethod
-  def sample_test(cls, s, expect1=None, expect2=None, tag=None, recreate=True):
+  def sample_test(cls, input, expect1=None, expect2=None, tag=None, recreate=True, is_file=False):
     solver = cls()
     solver.trace_sample = True
     tag = tag or (type(solver).__name__ + '.sample')
-    solver.load_str(s)
+    if is_file:
+      solver.load_file(input)
+    else:
+      solver.load_str(input)
     _ = run_func(solver.part1, expect=expect1, tag=tag+'.part1')
 
     if recreate:
       solver = cls()
       solver.trace_sample = True
-      solver.load_str(s)
+      if is_file:
+        solver.load_file(input)
+      else:
+        solver.load_str(input)
     else:
       solver.reset()
     _ = run_func(solver.part2, expect=expect2, tag=tag+'.part2')
