@@ -60,11 +60,11 @@ def coords8(r, c, span=1, n_rows=0, n_cols=0):
   return [(r+d_r, c+d_c)
           for d_r, d_c in deltas8(r, c, span=span, n_rows=n_rows, n_cols=n_cols)]
 
-def neighbors4(grid, r, c, span=1, n_rows=0, n_cols=0):
-  return [grid[r][c] for r,c in coords4(r, c, span=span, n_rows=n_rows, n_cols=n_cols)]
+def neighbors4(agrid, r, c, span=1, n_rows=0, n_cols=0):
+  return [agrid[r][c] for r,c in coords4(r, c, span=span, n_rows=n_rows, n_cols=n_cols)]
 
-def neighbors8(grid, r, c, span=1, n_rows=0, n_cols=0):
-  return [grid[r][c] for r,c in coords8(r, c, span=span, n_rows=n_rows, n_cols=n_cols)]
+def neighbors8(agrid, r, c, span=1, n_rows=0, n_cols=0):
+  return [agrid[r][c] for r,c in coords8(r, c, span=span, n_rows=n_rows, n_cols=n_cols)]
 
 
 def check_neighbors():

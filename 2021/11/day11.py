@@ -5,7 +5,7 @@ from collections import defaultdict
 import math
 
 from tools import aoc
-from tools import grid
+from tools import gridutils
 
 
 class day11(aoc.aoc):
@@ -54,7 +54,7 @@ class day11(aoc.aoc):
       #if self.trace_sample:
       #  print('to flash', toflash)
       for row, col in toflash:
-        to_inc = grid.coords8(row, col, n_rows=self.nrows, n_cols=self.ncols)
+        to_inc = gridutils.coords8(row, col, n_rows=self.nrows, n_cols=self.ncols)
         #if self.trace_sample and row < 2:
         #  print("Flashed", row, col, 'must inc', to_inc)
         for r, c in to_inc:

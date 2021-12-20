@@ -4,7 +4,7 @@
 import copy
 
 from tools import aoc
-from tools import grid
+from tools import gridutils
 
 
 class day13(aoc.aoc):
@@ -55,7 +55,7 @@ class day13(aoc.aoc):
 
   @staticmethod
   def dots_to_grid(dots):
-    x_min, x_max, y_min, y_max = grid.min_max(dots)
+    x_min, x_max, y_min, y_max = gridutils.min_max(dots)
     assert x_min >= 0
     assert y_min >= 0
     ret = []

@@ -6,7 +6,7 @@ import heapq
 import itertools
 
 from tools import aoc
-from tools import grid
+from tools import gridutils
 
 
 class day15(aoc.aoc):
@@ -170,7 +170,7 @@ class day15(aoc.aoc):
       if len(unvisited) % 1000 == 0:
         print('=========', len(unvisited), 'left')
       risk_so_far = risk[cur_node]
-      for pos in grid.coords4(cur_node[0], cur_node[1], n_rows=self.height, n_cols=self.width):
+      for pos in gridutils.coords4(cur_node[0], cur_node[1], n_rows=self.height, n_cols=self.width):
         if pos in visited:
           continue
         # print(' visit:', pos)
