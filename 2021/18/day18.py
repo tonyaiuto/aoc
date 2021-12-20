@@ -491,5 +491,5 @@ VERBOSE = False
 
 if __name__ == '__main__':
   # 55091746 too high
-  day18.run_and_check('input.txt', expect1=4088, expect2=None)
+  day18.run_and_check('input.txt', expect1=4088, expect2=4536)
   pass
