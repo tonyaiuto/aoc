@@ -85,14 +85,14 @@ class day20(aoc.aoc):
       self.my -= 1
       self.xx += 1
       self.xy += 1
-      self.cycle()
-      if True or self.trace_sample:
+      self.cycle(i)
+      if self.trace_sample:
         print('after cycle', i)
         self.print_grid()
 
     return count_pixels(self.image, skip=5)
 
-  def cycle(self):
+  def cycle(self, cycle_number):
     i = self.image
     edge_grow = 3
     ni = gridutils.Grid(default_cell='0')
@@ -108,11 +108,46 @@ class day20(aoc.aoc):
         index = int(b, 2)
         # print(' index', x, y, index)
         ni.set(x, y, self.alg[index])
+
+    # clear the damm edge
+    # clear = '0' if cycle_number % 2 == 0 else '1'
+    clear = ni.get(ni.min_x+2, ni.min_y+2)
+    for y in range(ni.min_y, ni.min_y+5):
+      for x in range(ni.min_x, ni.max_x):
+        ni.set(x, y, clear)
+    for y in range(ni.min_y+5, ni.max_y-5):
+      for x in range(ni.min_x, ni.min_x+5):
+        ni.set(x, y, clear)
+      for x in range(ni.max_x-5, ni.max_x):
+        ni.set(x, y, clear)
+    for y in range(ni.max_y-5, ni.max_y):
+      for x in range(ni.min_x, ni.max_x):
+        ni.set(x, y, clear)
+
     self.image = ni
+
 
   def part2(self):
     print('===== Start part 2')
     self.reset()
+
+    self.mx = self.image.min_x - 12
+    self.my = self.image.min_y - 12
+    self.xx = self.image.max_x + 13
+    self.xy = self.image.max_y + 13
+
+    for i in range(50):
+      self.mx -= 1
+      self.my -= 1
+      self.xx += 1
+      self.xy += 1
+      self.cycle(i)
+      if self.trace_sample:
+        print('after cycle', i)
+        self.print_grid()
+
+    return count_pixels(self.image, skip=5)
+
 
     return 42
 
@@ -145,4 +180,4 @@ if __name__ == '__main__':
   # Not: 5414, 5274
   # 5286 is too high
   # 5698 is too high
-  day20.run_and_check('input.txt', expect1=None, expect2=None)
+  day20.run_and_check('input.txt', expect1=5179, expect2=16112)
