@@ -17,6 +17,9 @@ roll_probs = {
     9: 1,
 }
 
+pow27 = [27 ** n for n in range(25)]
+what_pow_27 = {pow27[n]:n for n in range(25)}
+# print(pow27)
 
 class Player(object):
 
@@ -100,23 +103,31 @@ class day21(aoc.aoc):
     self.reset()
 
     p1_wins = 0
+    p2_wins = 0
     p_p2u(self.p1.pos_to_universes)
-    for i in range(3):
-      self.turn2(self.p1)
-      self.split(self.p2, 27)
+    p_p2s(self.p1.pos_to_scores)
+    for i in range(6):
+      print('== player 1 turn')
       p_p2u(self.p1.pos_to_universes)
       p_p2s(self.p1.pos_to_scores)
-      p1_wins = n_winning_universes(self.p1)
-      if p1_wins:
-        break
+      self.turn2(self.p1, self.p2)
+      print(   '== after turn')
+      p_p2u(self.p1.pos_to_universes)
+      p_p2s(self.p1.pos_to_scores)
+      wins = n_winning_universes(self.p1, clip=True)
+      if wins:
+        p1_wins += wins
 
-      self.turn2(self.p2)
-      self.split(self.p1, 27)
-      p2_wins = n_winning_universes(self.p2)
-      if p2_wins:
-        break
+      print('== player 2 turn')
+      self.turn2(self.p2, self.p1)
+      p_p2s(self.p1.pos_to_scores)
+      wins = n_winning_universes(self.p2, clip=True)
+      if wins:
+        p2_wins += wins
 
-    if p1_wins:
+    assert i < 6
+
+    if p1_wins > p2_wins:
       return p1_wins
     return p2_wins
 
@@ -128,65 +139,70 @@ class day21(aoc.aoc):
         scores[score] *= times
 
 
-  def turn2(self, player):
+  def turn2(self, player, other):
 
+    self.split(player)
+    self.split(other)
     # XX p_to_u = copy.deepcopy(player.pos_to_universes)
     p_to_u = defaultdict(int)
+
+    p_to_s = copy.deepcopy(player.pos_to_scores)
     p_to_s = {}
     for i in range(1, 11):
       p_to_s[i] = defaultdict(int)
       # p_to_s[i] = [0] * 30
-    p_to_s = copy.deepcopy(player.pos_to_scores)
 
     for o_pos in player.pos_to_universes:
       for r in range(3, 10):
-        times = roll_probs[r]
+        roll_times = roll_probs[r]
         n_pos = (o_pos - 1 + r) % 10 + 1
-        n_univ = times * player.pos_to_universes[o_pos]
+        n_univ = roll_times * player.pos_to_universes[o_pos]
         # print('  npos', n_pos, 'nuniv', n_univ)
         p_to_u[n_pos] += n_univ
 
+        """
+	If I was on pos N with and old score of S in U universes,
+        and I am moving to position n_pos, roll_times times
+        with a new score of score + n_pos
+        then p2s[n_pos][new score] increases by U * roll_times
         # for each old position, how many different scores got us there
-        for score, count in player.pos_to_scores[o_pos].items():
+        """
+        for score, n_univ in player.pos_to_scores[o_pos].items():
           # new score for the people at pos o_pos with prev_score score
           n_score = score + n_pos
-          p_to_s[n_pos][n_score] += count + n_univ
+          p_to_s[n_pos][n_score] += n_univ * roll_times
 
     player.pos_to_universes = p_to_u
     player.pos_to_scores = p_to_s
 
-    tot = 0
+    p_u_tot = sum(p_to_u.values())
+    p_s_tot = 0
     for p, scores in player.pos_to_scores.items():
-      tot += sum([scores[s] for s in scores])
-    print('sum pos/scores', tot)
+      p_s_tot += sum([scores[s] for s in scores])
+    print('p_u_tot', p_u_tot, 'p_s_tot', p_s_tot, '== 27 ^', what_pow_27.get(p_u_tot))
 
 
 
 def p_p2u(p_to_u):
   print('positions', ',   '.join(['%2d: %d' % (p, p_to_u[p]) for p in sorted(p_to_u)]))
   tot = sum(p_to_u.values())
-  n = 1
-  for i in range(6):
-    if n == tot:
-      print('   n_univ = 27 ^', i)
-      break
-    if n > tot:
-      print('FAIL:   n_univ >= 27 ^', i, tot)
-      break
-    n *= 27
-
+  print('  n_univ = 27 ^', what_pow_27[tot])
 
 def p_p2s(p_to_s):
   for p in sorted(p_to_s):
-    print('  scores@', p, ', '.join(['%2d:5%d' % (s, p_to_s[p][s]) for s in sorted(p_to_s[p])]))
+    scores = p_to_s[p]
+    print('  scores@', p, ':', ', '.join(['%2d:%5d' % (s, scores[s]) for s in sorted(scores)]))
 
 
-def n_winning_universes(player):
+def n_winning_universes(player, clip=False):
   tot = 0
   for p, scores in player.pos_to_scores.items():
-    for score, n in scores.items():
+    for score in scores:
       if score >= 21:
-        tot += n
+        tot += scores[score]
+        if clip:
+          # The clip is tricky
+          scores[score] = 0
   return tot
 
 def roll(dice):
