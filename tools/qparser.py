@@ -43,7 +43,7 @@ class Error(Exception):
   def __init__(self, message, text):
     self.message = message
     self.text = text
-  
+
 
 
 class FBase(object):
@@ -126,7 +126,7 @@ def check_literal():
     assert t == 'foo'
     assert pos == 5
   except e:
-    raise e 
+    raise e
 
   try:
     a = Literal('foo', eat_leading_ws=False)
@@ -162,6 +162,12 @@ class Number(FBase):
     pos = self.advance_to_start_pos(s)
     v = 0
     got = 0
+    if s[pos] == '-':
+      neg = True
+      pos += 1
+    else:
+      neg = False
+
     while pos < len(s):
       if self.check_look_ahead(s[pos:], next_field):
         break
@@ -180,6 +186,8 @@ class Number(FBase):
       # print(v, c, idx)
       v = v * self.base + idx
 
+    if neg:
+      v = -v
     return (v, pos)
 
 
