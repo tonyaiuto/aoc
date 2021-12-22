@@ -2,9 +2,13 @@
 "AOC 2021: day @N2@"
 
 from collections import defaultdict
+import copy
+import heapq
+import itertools
 import math
 
 from tools import aoc
+from tools import gridutils
 
 
 class Foo(object):
