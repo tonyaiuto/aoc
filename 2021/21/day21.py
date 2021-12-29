@@ -33,6 +33,7 @@ class Player(object):
       self.pos_to_scores[i] = defaultdict(int)
       #X self.pos_to_scores[i] = [0] * 30
     self.pos_to_scores[start][0] = 1
+    self.won = 0
 
   def __str__(self):
     return 'player %d: space %d, score %d' % (self.player, self.pos, self.score)
@@ -127,6 +128,10 @@ class day21(aoc.aoc):
 
     assert i < 6
 
+    if self.p1.won > self.p2.won:
+      return self.p1.won
+    return self.p2.won
+
     if p1_wins > p2_wins:
       return p1_wins
     return p2_wins
@@ -141,22 +146,27 @@ class day21(aoc.aoc):
 
   def turn2(self, player, other):
 
-    self.split(player)
-    self.split(other)
+    # self.split(player)
+    # self.split(other)
     # XX p_to_u = copy.deepcopy(player.pos_to_universes)
     p_to_u = defaultdict(int)
 
+    # position to #univ at that score
     p_to_s = copy.deepcopy(player.pos_to_scores)
     p_to_s = {}
     for i in range(1, 11):
       p_to_s[i] = defaultdict(int)
       # p_to_s[i] = [0] * 30
 
-    for o_pos in player.pos_to_universes:
-      for r in range(3, 10):
-        roll_times = roll_probs[r]
-        n_pos = (o_pos - 1 + r) % 10 + 1
+    still_playing = set()
+    for roll in range(3, 10):
+      roll_times = roll_probs[roll]
+
+      for o_pos in player.pos_to_universes:
+        n_pos = (o_pos - 1 + roll) % 10 + 1
+
         n_univ = roll_times * player.pos_to_universes[o_pos]
+
         # print('  npos', n_pos, 'nuniv', n_univ)
         p_to_u[n_pos] += n_univ
 
@@ -170,10 +180,21 @@ class day21(aoc.aoc):
         for score, n_univ in player.pos_to_scores[o_pos].items():
           # new score for the people at pos o_pos with prev_score score
           n_score = score + n_pos
-          p_to_s[n_pos][n_score] += n_univ * roll_times
+          if n_score >= 21:
+            player.won += n_univ * roll_times
+            # print('   => won', n_univ * roll_times)
+            # p_to_s[n_pos][n_score] = 0
+          else:
+            p_to_s[n_pos][n_score] = n_univ
+            still_playing.add(roll)
 
     player.pos_to_universes = p_to_u
     player.pos_to_scores = p_to_s
+
+    sp = sum([roll_probs[roll] for roll in still_playing])
+    assert sp <= 27
+    self.split(player, times=sp)
+    self.split(other, times=sp)
 
     p_u_tot = sum(p_to_u.values())
     p_s_tot = 0
@@ -186,7 +207,7 @@ class day21(aoc.aoc):
 def p_p2u(p_to_u):
   print('positions', ',   '.join(['%2d: %d' % (p, p_to_u[p]) for p in sorted(p_to_u)]))
   tot = sum(p_to_u.values())
-  print('  n_univ = 27 ^', what_pow_27[tot])
+  print('  n_univ = 27 ^', what_pow_27.get(tot) or 'na')
 
 def p_p2s(p_to_s):
   for p in sorted(p_to_s):
@@ -232,7 +253,7 @@ check_roll(99, 103, 2)
 day21.sample_test("""
 4,8
 """, expect1=739785, expect2=444356092776315)
-
+#                            44999274953475450
 
 if __name__ == '__main__':
   day21.run_and_check('input.txt', expect1=None, expect2=None)
