@@ -2,6 +2,7 @@
 "AOC 2021: day 22"
 
 from collections import defaultdict
+from collections import deque
 import copy
 import heapq
 import itertools
@@ -16,7 +17,7 @@ from tools import qparser
 class Cube(object):
 
   def __init__(self, n=-1, x_low=0, x_high=0, y_low=0, y_high=0, z_low=0, z_high=0):
-    self.on_off = 'off'
+    self.on_off = 'on'
     self.n = n
     self.x_low = x_low
     self.x_high = x_high
@@ -80,7 +81,8 @@ class Cube(object):
     #    other...
     #  NC
     if self.x_low < other.x_low:
-      nc = Cube(x_low=reduced.x_low, x_high=other.x_low-1,
+      nc = Cube(n=self.n * 100 + 1,
+                x_low=reduced.x_low, x_high=other.x_low-1,
                 y_low=reduced.y_low, y_high=reduced.y_high,
                 z_low=reduced.z_low, z_high=reduced.z_high)
       reduced.x_low = other.x_low
@@ -89,39 +91,50 @@ class Cube(object):
     #  ..other..
     #         NC
     if self.x_high > other.x_high:
-      nc = Cube(x_low=other.x_high+1, x_high=reduced.x_high,
+      nc = Cube(n=self.n * 100 + 1,
+                x_low=other.x_high+1, x_high=reduced.x_high,
                 y_low=reduced.y_low, y_high=reduced.y_high,
                 z_low=reduced.z_low, z_high=reduced.z_high)
       reduced.x_high = other.x_high
       ret.append(nc)
     if self.y_low < other.y_low:
-      nc = Cube(x_low=reduced.x_low, x_high=reduced.x_high,
+      nc = Cube(n=self.n * 100 + 2,
+                x_low=reduced.x_low, x_high=reduced.x_high,
                 y_low=reduced.y_low, y_high=other.y_low-1,
                 z_low=reduced.z_low, z_high=reduced.z_high)
       reduced.y_low = other.y_low
       ret.append(nc)
     if self.y_high > other.y_high:
-      nc = Cube(x_low=reduced.x_low, x_high=reduced.x_high,
+      nc = Cube(n=self.n * 100 + 3,
+                x_low=reduced.x_low, x_high=reduced.x_high,
                 y_low=other.y_high+1, y_high=reduced.y_high,
                 z_low=reduced.z_low, z_high=reduced.z_high)
       reduced.y_high = other.y_high
       ret.append(nc)
     if self.z_low < other.z_low:
-      nc = Cube(x_low=reduced.x_low, x_high=reduced.x_high,
+      nc = Cube(n=self.n * 100 + 4,
+                x_low=reduced.x_low, x_high=reduced.x_high,
                 y_low=reduced.y_low, y_high=reduced.y_high,
                 z_low=reduced.z_low, z_high=other.z_low-1)
       reduced.z_low = other.z_low
       ret.append(nc)
     if self.z_high > other.z_high:
-      nc = Cube(x_low=reduced.x_low, x_high=reduced.x_high,
+      nc = Cube(n=self.n * 100 + 5,
+                x_low=reduced.x_low, x_high=reduced.x_high,
                 y_low=reduced.y_low, y_high=reduced.y_high,
                 z_low=other.z_high+1, z_high=reduced.z_high)
       reduced.z_high = other.z_high
       ret.append(nc)
 
+    # we should be left with the overlap
     reduced.validate()
+    assert reduced.volume == other.volume
+    # The sum of the remaining volumes + overlap should be self.
     nv = sum([c.volume for c in ret])
-    assert nv + reduced.volume == self.volume, 'FOO'
+    assert nv + other.volume == self.volume
+
+    for c in ret:
+      assert c.volume > 0
     return ret
 
 
@@ -169,7 +182,8 @@ class day22(aoc.aoc):
     cube = Cube(n=len(self.cubes))
     self.parser.parse(cube, line)
     cube.validate()
-    print(cube)
+    if self.trace_sample:
+      print(cube)
     self.cubes.append(cube)
 
   def post_load(self):
@@ -199,64 +213,68 @@ class day22(aoc.aoc):
 
     tot_on = 0
     turned_on = []
-    turned_off = []
-    on_overlaps = []
-    for c in self.cubes:
-      if c.on:
+    ic = 0
+    subcubes = deque()
+    while True:
+      # print('===', len(subcubes), 'subcubes,', len(turned_on), 'turned on')
+      if len(subcubes) > 0:
+        c = subcubes.popleft()
+      else:
+        if ic >= len(self.cubes):
+          break
+        #if ic >= 5:
+        #  break
+        c = self.cubes[ic]
+        ic += 1
+      if self.trace_sample:
         print('--', c.n, ':', c, 'volume:', c.volume)
+      if c.on:
         new_on = c.volume
-        n_over = []
+        had_overlap = False
         for other in turned_on:
           overlap = c.intersect(other)
           if overlap:
             assert other.on
-            print('  overlap %d,%d: reducing %d by %d' % (
-                c.n, other.n, new_on, overlap.volume))
+            had_overlap = True
+            if self.trace_sample:
+              print('  overlap %d,%d: reducing %d by %d' % (
+                  c.n, other.n, new_on, overlap.volume),
+                  'tot:', tot_on)
+            if c.volume == overlap.volume:
+              if self.trace_sample:
+                print('    ==>Consumed ******')
+              break
 
-            r = c.chopout(overlap)
             new_on -= overlap.volume
-            n_over.append(overlap)
-            if overlap.volume >= c.volume:
-              print('  ', c, 'is containtained in', other)
-              new_on = -1
-              break
-            if new_on <= 0:
-              print('  ', c, 'is consumed')
-              break
-        for other in turned_off:
-          overlap = c.intersect(other)
-          if overlap:
-            assert not other.on
-            print('  overlap off region %d,%d: reducing %d by %d' % (
-                c.n, other.n, new_on, overlap.volume))
-          
-
-        if new_on > 0:
+            new_cubes = c.chopout(overlap)
+            if self.trace_sample:
+              print('    split to %d subcubes' % len(new_cubes))
+            if len(new_cubes) > 0:
+              subcubes.extend(new_cubes)
+            break
+        if not had_overlap:
           tot_on += new_on
           turned_on.append(c)
-          on_overlaps.extend(n_over)
       else:
         new_off = 0
+        new_on = []
         for other in turned_on:
           overlap = c.intersect(other)
           if overlap:
             assert other.on
             new_off += overlap.volume
-            turned_off.append(overlap)
-
-            # off_overlaps.append(overlap)
-
-        for oo in overlaps(c, on_overlaps):
-          new_off -= oo.volume
-
-        #for oo in overlaps(c, turned_off):
-        #  new_off -= oo.volume
-
-
+            new_cubes = other.chopout(overlap)
+            if self.trace_sample:
+              print('    OFF split to %d subcubes' % len(new_cubes))
+            new_on.extend(new_cubes)
+          else:
+            new_on.append(other)
         if new_off > 0:
           tot_on -= new_off
-          turned_off.append(c)
-    return tot_on
+        turned_on = new_on
+
+    return sum([c.volume for c in turned_on])
+    # return tot_on
 
 
 def overlaps(c, cubes):
@@ -363,15 +381,9 @@ off x=-70369..-16548,y=22648..78696,z=-1892..86821
 on x=-53470..21291,y=-120233..-33476,z=-44150..38147
 off x=-93533..-4276,y=-16170..68771,z=-104985..-24507
 """, expect1=474140, expect2=2758514936282235)
-#                            13384162962341495
-#                            2520680994726215
-#                            4138427008945247
-#                            4629186521757653
-#                            3833378129870011
-#                            668816323008700
 
 if __name__ == '__main__':
-  day22.run_and_check('input.txt', expect1=581108, expect2=None)
+  day22.run_and_check('input.txt', expect1=581108, expect2=1325473814582641)
   pass
 
 # 58348137614586
