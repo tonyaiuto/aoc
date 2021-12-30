@@ -33,7 +33,6 @@ class Player(object):
     self.pos_to_scores[start][0] = 1
     self.won = 0
     self.h = {0: (self.pos, 0)}
-    self.path2rolls = defaultdict(list))
 
   def __str__(self):
     return 'player %d: space %d, score %d' % (self.player, self.pos, self.score)
@@ -43,10 +42,7 @@ class Player(object):
     self.score += self.pos
 
   def would_win(self, rolls, odd):
-    prev = rolls // 10
-    cur_roll = rolls - prev * 10
-    self.path2rolls[prev]
-
+    return False
     roll_i = [int(c) for c in str(rolls)]
     prev = 0
     for r in roll_i[0 if odd else 1:-1:2]:
@@ -57,20 +53,12 @@ class Player(object):
 
     pos = (pos - 1 + cur_roll) % 10 + 1
     score += pos
-
     self.h[prev*10+cur_roll] = (pos, score)
     # print("h", prev*10+cur_roll, '=', pos, score)
     if score >= 21:
        return True
     return False
 
-    """XXX
-    rolls_i = [int(c) for c in str(rolls)]
-    for roll in rolls_i:
-       if score >= 21:
-         return True
-    return False
-    """
 
 class day21(aoc.aoc):
 
@@ -154,7 +142,6 @@ class day21(aoc.aoc):
     for rolls, n_univ in self.rolls2u.items():
       if player.would_win(rolls, odd):
         player.won += n_univ
-        # to_drop.append(rolls)
         n_wins += 1
       else:
         keep[rolls] = n_univ
@@ -323,6 +310,7 @@ day21.sample_test("""
 #                            44999274953475450
 #                            50207674102141821327
 #                            708329200200264
+#                            822385675458
 
 
 if __name__ == '__main__':
