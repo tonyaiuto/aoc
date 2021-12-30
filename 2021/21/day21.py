@@ -19,6 +19,7 @@ roll_probs = {
 
 pow27 = [27 ** n for n in range(25)]
 what_pow_27 = {27 ** n:n for n in range(25)}
+what_pow_7 = {7 ** n:n for n in range(25)}
 # print(pow27)
 
 class Player(object):
@@ -34,6 +35,7 @@ class Player(object):
     self.pos_to_scores[start][0] = 1
     self.won = 0
     self.h = {0: (self.pos, 0)}
+    self.wins = 0
 
   def __str__(self):
     return 'player %d: space %d, score %d' % (self.player, self.pos, self.score)
@@ -146,13 +148,13 @@ class day21(aoc.aoc):
         _ = self.p1.would_win(roll, roll)
     print('= after setup', 'player 1, n_rolls:', len(self.rolls2u))
 
-    for i in range(20):
+    for i in range(5):
       self.playerturn(self.p2)
-      print('= after round', i, 'player 2, n_rolls:', len(self.rolls2u))
+      self.pstate(i, self.p2)
       if len(self.rolls2u) == 0:
         break
       self.playerturn(self.p1)
-      print('= after round', i, 'player 1, n_rolls:', len(self.rolls2u))
+      self.pstate(i, self.p1)
       # self.pr2u()
       if len(self.rolls2u) == 0:
         break
@@ -161,6 +163,15 @@ class day21(aoc.aoc):
       return self.p1.won
     return self.p2.won
 
+  def pstate(self, round, player):
+      n_u = len(self.rolls2u)
+      tot_win = self.p1.wins + self.p2.wins
+      p7 = what_pow_7.get(n_u + tot_win) or '?'
+      print(', '.join([
+        '= after round %d' % round,
+        'player %d' % player.player,
+        'n_rolls:%d' % n_u,
+        'rolls+wins:%d = 7^%s' % (n_u+tot_win, p7)]))
 
   def playerturn(self, player):
     nxt = {}
@@ -185,6 +196,7 @@ class day21(aoc.aoc):
         else:
           nxt[n_rolls] = new_n_univ
     self.rolls2u = nxt
+    player.wins += n_wins
     if n_wins:
       print(' -> player', player.player, 'won:', n_wins, 'tot:', player.won)
 
