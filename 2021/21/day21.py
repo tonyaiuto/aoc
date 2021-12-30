@@ -139,23 +139,16 @@ class day21(aoc.aoc):
     self.rolls2u = {}
     self.forp = {}
 
-    # First turn initializes things
-    if len(self.rolls2u) == 0:
-      for roll in range(3, 10):
-        self.rolls2u[roll] = roll_probs[roll]
-        # print('init forp', roll)
-        self.forp[roll] = (roll, 0)
-        _ = self.p1.would_win(roll, roll)
-    print('= after setup', 'player 1, n_rolls:', len(self.rolls2u))
-
+    self.rolls2u[0] = 1
+    self.forp[0] = (0, 0)
     for i in range(5):
-      self.playerturn(self.p2)
-      self.pstate(i, self.p2)
+      self.playerturn(self.p1)
+      # self.pr2u()
+      self.pstate(i, self.p1)
       if len(self.rolls2u) == 0:
         break
-      self.playerturn(self.p1)
-      self.pstate(i, self.p1)
-      # self.pr2u()
+      self.playerturn(self.p2)
+      self.pstate(i, self.p2)
       if len(self.rolls2u) == 0:
         break
 
@@ -184,17 +177,18 @@ class day21(aoc.aoc):
         n_rolls = rolls * 10 + roll 
         # print('nrolls', n_rolls)
         if player.odd:
-          self.forp[n_rolls] = (p1*10+roll, p2)
-          hist = p1*10+roll
+          p1 = p1*10+roll
+          hist = p1
         else:
-          self.forp[n_rolls] = (p1, p2*10+roll)
-          hist = p2*10+roll
+          p2 = p2*10+roll
+          hist = p2
         # print('   -> forp', n_rolls, self.forp[n_rolls])
         if player.would_win(n_rolls, hist):
           player.won += new_n_univ
           n_wins += 1
         else:
           nxt[n_rolls] = new_n_univ
+          self.forp[n_rolls] = (p1, p2)
     self.rolls2u = nxt
     player.wins += n_wins
     if n_wins:
