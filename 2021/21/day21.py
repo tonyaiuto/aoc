@@ -30,9 +30,10 @@ class Player(object):
     self.pos_to_scores = {}
     for i in range(1, 11):
       self.pos_to_scores[i] = defaultdict(int)
-      #X self.pos_to_scores[i] = [0] * 30
     self.pos_to_scores[start][0] = 1
     self.won = 0
+    self.h = {0: (self.pos, 0)}
+    self.path2rolls = defaultdict(list))
 
   def __str__(self):
     return 'player %d: space %d, score %d' % (self.player, self.pos, self.score)
@@ -41,6 +42,35 @@ class Player(object):
     self.pos = (self.pos - 1 + n) % 10 + 1
     self.score += self.pos
 
+  def would_win(self, rolls, odd):
+    prev = rolls // 10
+    cur_roll = rolls - prev * 10
+    self.path2rolls[prev]
+
+    roll_i = [int(c) for c in str(rolls)]
+    prev = 0
+    for r in roll_i[0 if odd else 1:-1:2]:
+      prev = prev * 10 + r
+    cur_roll = roll_i[-1]
+    # print("would_win", roll_i, prev, cur_roll)
+    pos, score = self.h[prev]
+
+    pos = (pos - 1 + cur_roll) % 10 + 1
+    score += pos
+
+    self.h[prev*10+cur_roll] = (pos, score)
+    # print("h", prev*10+cur_roll, '=', pos, score)
+    if score >= 21:
+       return True
+    return False
+
+    """XXX
+    rolls_i = [int(c) for c in str(rolls)]
+    for roll in rolls_i:
+       if score >= 21:
+         return True
+    return False
+    """
 
 class day21(aoc.aoc):
 
@@ -99,6 +129,65 @@ class day21(aoc.aoc):
     return nrolls * 3 * self.p2.score
 
   def part2(self):
+    print('===== Start part 2')
+
+    # roll history to # universes
+    self.rolls2u = defaultdict(int)
+    for i in range(10):
+      self.playerturn(self.p1, odd=True)
+      print('= after round', i, 'player 1, n_rolls:', len(self.rolls2u))
+
+      # self.pr2u()
+      self.playerturn(self.p2, odd=False)
+      print('= after round', i, 'player 2, n_rolls:', len(self.rolls2u))
+
+    if self.p1.won > self.p2.won:
+      return self.p1.won
+    return self.p2.won
+
+
+  def playerturn(self, player, odd):
+    self.part2turn()
+    # to_drop = []
+    keep = {}
+    n_wins = 0
+    for rolls, n_univ in self.rolls2u.items():
+      if player.would_win(rolls, odd):
+        player.won += n_univ
+        # to_drop.append(rolls)
+        n_wins += 1
+      else:
+        keep[rolls] = n_univ
+    self.rolls2u = keep
+    if n_wins:
+      print(' -> player', player.player, 'won:', n_wins, 'tot:', player.won)
+    #for drop in to_drop:
+    #  del self.rolls2u[drop]
+    #  print('dropping', drop)
+
+
+  def part2turn(self):
+    nxt = defaultdict(int)
+    for roll in range(3, 10):
+      roll_times = roll_probs[roll]
+      if len(self.rolls2u) == 0:
+        nxt[roll] = roll_times
+      else:
+        for rolls, n_univ in self.rolls2u.items():
+          n_rolls = rolls * 10 + roll 
+          # print('nrolls', n_rolls)
+          nxt[n_rolls] = n_univ * roll_times
+    self.rolls2u = nxt
+
+  def pr2u(self):
+    tot = 0
+    for rolls in sorted(self.rolls2u):
+      print(rolls, self.rolls2u[rolls])
+      tot += self.rolls2u[rolls]
+    p = what_pow_27.get(tot) or '???'
+    print('  tot:', tot, ', 27^%s' % p)
+
+  def Xpart2(self):
     print('===== Start part 2')
     self.reset()
 
@@ -200,21 +289,9 @@ def p_p2s(p_to_s):
     scores = p_to_s[p]
     print('  scores@%-2d:' % p, ', '.join(['%2d:%6d' % (s, scores[s]) for s in sorted(scores)]))
     tot += sum(scores.values())
-
   p = what_pow_27.get(tot) or '???'
   print('  tot:', tot, ', 27^%s' % p)
 
-
-def n_winning_universes(player, clip=False):
-  tot = 0
-  for p, scores in player.pos_to_scores.items():
-    for score in scores:
-      if score >= 21:
-        tot += scores[score]
-        if clip:
-          # The clip is tricky
-          scores[score] = 0
-  return tot
 
 def roll(dice):
   # internal is 0-99, return +1 of each
