@@ -18,7 +18,7 @@ roll_probs = {
 }
 
 pow27 = [27 ** n for n in range(25)]
-what_pow_27 = {pow27[n]:n for n in range(25)}
+what_pow_27 = {27 ** n:n for n in range(25)}
 # print(pow27)
 
 class Player(object):
@@ -135,21 +135,17 @@ class day21(aoc.aoc):
         scores[score] *= times
 
   def turn2(self, player, other):
-
-    # self.split(player)
-    # self.split(other)
-
-    # position to #univ at that score
-    p_to_s = copy.deepcopy(player.pos_to_scores)
+    # position to # of universes at each score
     p_to_s = {}
     for i in range(1, 11):
       p_to_s[i] = defaultdict(int)
 
     still_playing = set()
     won_at = defaultdict(int)
-
+    winnings = 0
     for roll in range(3, 10):
       roll_times = roll_probs[roll]
+      nw = 0
       for o_pos in range(1, 11):
         n_pos = (o_pos - 1 + roll) % 10 + 1
 
@@ -162,27 +158,37 @@ class day21(aoc.aoc):
         then p2s[n_pos][new score] increases by U * roll_times
         # for each old position, how many different scores got us there
         """
-        nw = 0
         for score, n_univ in player.pos_to_scores[o_pos].items():
           # new score for the people at pos o_pos with prev_score score
           n_score = score + n_pos
+          new_n_univ = n_univ * roll_times
           if n_score >= 21:
-            player.won += n_univ * roll_times
-            won_at[n_score] += n_univ * roll_times
+            player.won += new_n_univ
+            won_at[n_score] += new_n_univ
+            winnings += new_n_univ
             nw += 1
-            # p_to_s[n_pos][n_score] = 0
           else:
-            p_to_s[n_pos][n_score] += n_univ * roll_times
+            p_to_s[n_pos][n_score] += new_n_univ
       if nw == 0:
         still_playing.add(roll)
       if nw > 0:
-        print('   => won', nw, ['%d: %d' % (k, v) for k,v in won_at.items()])
+        print('   => won, roll:', roll,  '%2d' % nw, ','.join(['%d: %-6d' % (k, v) for k,v in won_at.items()]))
 
     player.pos_to_scores = p_to_s
+
+    t = 0
+    for p in p_to_s:
+      scores = p_to_s[p]
+      for score, n in scores.items():
+        t += n
+    # assert (t + player.won) in what_pow_27
 
     sp = sum([roll_probs[roll] for roll in still_playing])
     print('sp', sp)
     assert sp <= 27
+    if winnings > 0:
+      assert sp < 27
+
     # self.split(player, times=sp)
     if sp > 0:
       self.split(other, times=sp)
@@ -196,7 +202,7 @@ def p_p2s(p_to_s):
     tot += sum(scores.values())
 
   p = what_pow_27.get(tot) or '???'
-  print('  tot:', tot, '27^%s' % p)
+  print('  tot:', tot, ', 27^%s' % p)
 
 
 def n_winning_universes(player, clip=False):
