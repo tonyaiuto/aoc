@@ -51,10 +51,10 @@ class Player(object):
     pos, score = self.h[prev]
     pos = (pos - 1 + cur_roll) % 10 + 1
     score += pos
-    self.h[prev*10+cur_roll] = (pos, score)
-    # print("h", prev*10+cur_roll, '=', pos, score)
     if score >= 21:
       return True
+    # print("h", hist, '=', pos, score)
+    self.h[hist] = (pos, score)
     return False
 
   def would_winO(self, rolls, odd):
@@ -137,10 +137,8 @@ class day21(aoc.aoc):
 
     # roll history to # universes
     self.rolls2u = {}
-    self.forp = {}
 
-    self.rolls2u[0] = 1
-    self.forp[0] = (0, 0)
+    self.rolls2u[0] = (1, 0, 0)
     for i in range(5):
       self.playerturn(self.p1)
       # self.pr2u()
@@ -171,9 +169,9 @@ class day21(aoc.aoc):
     n_wins = 0
     for roll in range(3, 10):
       roll_times = roll_probs[roll]
-      for rolls, n_univ in self.rolls2u.items():
+      for rolls, parts in self.rolls2u.items():
+        n_univ, p1, p2  = parts
         new_n_univ = n_univ * roll_times
-        (p1, p2) = self.forp[rolls]
         n_rolls = rolls * 10 + roll 
         # print('nrolls', n_rolls)
         if player.odd:
@@ -182,13 +180,12 @@ class day21(aoc.aoc):
         else:
           p2 = p2*10+roll
           hist = p2
-        # print('   -> forp', n_rolls, self.forp[n_rolls])
+        # print('   -> hist', n_rolls, p1, p2)
         if player.would_win(n_rolls, hist):
           player.won += new_n_univ
           n_wins += 1
         else:
-          nxt[n_rolls] = new_n_univ
-          self.forp[n_rolls] = (p1, p2)
+          nxt[n_rolls] = (new_n_univ, p1, p2)
     self.rolls2u = nxt
     player.wins += n_wins
     if n_wins:
