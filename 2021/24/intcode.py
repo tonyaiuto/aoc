@@ -17,7 +17,8 @@ class Ins(object):
 class Intcode(object):
 
   def __init__(self, trace=False, registers=None,
-               input=None, get_input=None):
+               input=None, get_input=None,
+               terminate_on_end_of_input=False):
     self.mem = []
     self.pc = 0
     self.acc = 0
@@ -25,6 +26,7 @@ class Intcode(object):
     self.halted = False
 
     self.input = input or []
+    self.terminate_on_end_of_input = terminate_on_end_of_input
     self.get_input = get_input
     self.extra_output = None
     self.out_buf = []
@@ -88,6 +90,22 @@ class Intcode(object):
     else:
       self.input.append(more_input)
 
+  def next_input(self):
+    if not self.input:
+      if self.terminate_on_end_of_input:
+        self.halted = True
+        return 0
+      if self.get_input:
+        self.push_input(self.get_input())
+      else:
+        print('Ran out of input and no get_input() supplied')
+        assert False
+    value = self.input[0]
+    if self.trace:
+      print('input:', value)
+    self.input = self.input[1:]
+    return value
+
   def run(self, loop_detect=False):
     self.pc = 0
     self.acc = 0
@@ -95,6 +113,8 @@ class Intcode(object):
     if loop_detect:
       seen = set()
     while self.pc < len(self.mem):
+      if self.is_halted:
+        break
       n_cycles += 1
       if n_cycles > 1000:
         # print('====== infinite loop')
@@ -106,7 +126,7 @@ class Intcode(object):
         seen.add(self.pc)
       op = self.mem[self.pc]
       if self.trace:
-        before = 'pc:%d,' % self.pc + self.reg_str() + ' [' +str(op) + ']'
+        before = 'pc:%3d, ' % self.pc + self.reg_str() + ' [' +str(op) + ']'
       self.step(op)
       if self.trace:
         print(before, '->', self.reg_str())
@@ -114,137 +134,11 @@ class Intcode(object):
 
   def reg_str(self):
     if self.registers:
-      return ' '.join(['%c:%d' % (r, self.registers[r]) for r in self.register_names])
+      return ','.join(['%c:%3d' % (r, self.registers[r]) for r in self.register_names])
     return 'acc:%d' % self.acc
 
   def one_line_trace(self, op=None):
     print('pc', self.pc, self.reg_str(), op or '')
-
-
-"""
-From 2019
-
-OpCode = collections.namedtuple('OpCode', 'mnemonic op n_args n_store')
-
-class IntCode(object):
-
-  opcodes = {op.op: op for op in [
-    OpCode('+', 1, 2, 1),
-    OpCode('INPUT', 3, 0, 1),
-    OpCode('RELBASE', 9, 1, 0),
-  ]}
-
-  modifiers = ['', '#', 'rel+']
-
-  def __init__(self, mem, input=None, get_input=None):
-    self.pc = 0
-    self.mem = mem
-    ...
-
-  def extend_mem(self, max_addr):
-    if len(self.mem) < max_addr + 1:
-      # print("EXTEND: from %d to %d" % (len(self.mem), max_addr))
-      self.mem += [0] * (max_addr + 1 - len(self.mem))
-      # print("EXTEND: New len", len(self.mem))
-
-  def run(self):
-    ret = []
-    while True:
-      out = self.run_until_output()
-      if self.halted:
-        return ret
-      else:
-        ret.append(out)
-
-  def run_until_newline(self):
-    return self.run_until_terminator(self, ['\n'])
-
-  def run_until_terminator(self, terminators):
-    line = []
-    terminators = [ord(c) for c in terminators]
-    while True:
-      word = self.run_until_output()
-      if not word:
-        break
-      if word in terminators:
-        if word >= ord(' '):
-          line.append(chr(word))
-        break
-      if word > ord('z'):
-        print('Unexpected word', word)
-        self.extra_output = word
-        break
-      line.append(chr(word))
-    return ''.join(line)
-
-  def run_until_output(self):
-    out = []
-    while not self.halted:
-      out = self.step()
-      if self.out_buf:
-        ret = self.out_buf[0]
-        self.out_buf = self.out_buf[1:]
-        return ret
-    return None
-
-  def step(self, output=None):
-    if not output:
-      output = lambda word: self.save_output(word)
-
-    elif op == 4:
-      if self.trace:
-        print('output: ', arg1)
-      output(arg1)
-      raise Exception('illegal op:%d at %d' % (op, self.pc-1))
-    return None
-
-
-def load_intcode(inp_path):
-  with open(inp_path, 'r') as inp:
-    return [int(i) for i in inp.read().split(',')]
-  return None
-
-
-def code_to_ascii(code, sep=',', verbose=False):
-  ret = []
-  for word in code:
-    if ret:
-      ret.append(ord(sep))
-    if isinstance(word, str):
-      for c in word:
-        ret.append(ord(c))
-    else:
-      for c in str(word):
-        ret.append(ord(c))
-  # assert len(ret) <= 20
-  ret.append(10)
-  if verbose:
-    print('%s => %s' % (code, ret))
-  return ret
-
-def print_final_output(self):
-  line = ''
-  while True:
-    out = self.run_until_output()
-    if self.is_halted:
-      break
-    c = chr(out)
-    if c == '\n':
-      print(line)
-      line = ''
-    else:
-      line += c
-  if line:
-    print(line)
-
-
-def asc_to_str(s):
-  try:
-    return ''.join(chr(c) for c in s)
-  except ValueError as e:
-    return s
-
-"""
 
 
 class Op(object):
@@ -287,11 +181,7 @@ class ALU(Intcode):
     super(ALU, self).__init__(
         registers=('w', 'x', 'y', 'z'),
         **kwargs)
-
-    self.w = 0
-    self.x = 0
-    self.y = 0
-    self.z = 0
+    self.expectz = []
 
   def step(self, op):
     save_pc = self.pc
@@ -304,16 +194,16 @@ class ALU(Intcode):
 
     if op.opcode == 'inp':
       # inp a - Read an input value and write it to variable a.
-      if not self.input:
-        assert self.get_input
-        self.push_input(self.get_input())
-      v = self.input[0]
+      curz = self.reg('z')
+      if self.expectz:
+        e = self.expectz[0]
+        self.expectz = self.expectz[1:]
+        if curz != e:
+          print('Ask for input, expect z:', e, 'got', curz)
+      v = self.next_input()
       if v > 9:
         print('  bad input', v, 'in', self.input)
       self.reg_set(r, v)
-      if self.trace:
-        print('input', r, '<-', v)
-      self.input = self.input[1:]
     elif op.opcode == 'add':
       # add a b - Add the value of a to the value of b,
       # then store the result in variable a.
@@ -334,7 +224,8 @@ class ALU(Intcode):
       # remainder in variable a. (This is also called the modulo operation.)
       assert a >= 0
       assert v > 0
-      self.reg_set(r, a - v * int(a / v))
+      # MAYBE? self.reg_set(r, a - v * int(a / v))
+      self.reg_set(r, a % v)
     elif op.opcode == 'eql':
       # eql a b - If the value of a and b are equal, then store the value
       # 1 in variable a. Otherwise, store the value 0 in variable a.

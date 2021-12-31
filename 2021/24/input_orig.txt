@@ -1,115 +1,11 @@
 inp w
-mul z 0
-add z w
-add z 8
-
-# z = inp + 8
-
-inp w
-mul z 26
-# z = (i1 + 8) * 26
-add z w
-add z 8
-# y = (i2 + 8)
-
-# z = (d1 + 8) * 26 + d2 * 8
-
-inp w
 mul x 0
 add x z
 mod x 26
-# x = z % 26
-add x 10
+div z 1
+add x 11
 eql x w
 eql x 0
-# x = 1
-mul y 0
-add y 25
-mul y x
-add y 1
-# y = 26
-mul z y
-# z = ((d1 + 8) * 26 + d2 * 8) * 26 
-mul y 0
-add y w
-add y 12
-# y = (d3 + 12)
-mul y x
-add z y
-# z = ((d1 + 8) * 26 + d2 * 8) * 26 + d3 + 12
-
-
-inp w
-mul x 0
-add x z
-#  x = z % 26
-mod x 26
-div z 26
-#  z = z / 26
-add x -8
-#  x = (z % 26) - 8
-
-#  x = d3 + 4
-eql x w
-# X = d3 + 4 == d4:
-eql x 0
-# X = d3 + 4 != d4:
-mul y 0
-add y 25
-mul y x
-add y 1
-
-# if d3 + 4 != d4:
-#   y = 26
-# else
-#   y = 1
-
-mul z y
-# z = z * y
-mul y 0
-add y w
-add y 10
-mul y x
-add z y
-# if d3 + 4 != d4:
-#   z = z * y + d4 + 10
-# else
-#   z = z * y
-#
-
-# d5
-inp w
-mul x 0
-#add x z
-#mod x 26
-## x = z % 26
-#add x 15
-## x = z % 26 + 15
-#eql x w
-#eql x 0
-# x = 1
-add x 1
-mul y 0
-add y 25
-mul y x
-add y 1
-mul z y
-# z *= 26
-mul y 0
-add y w
-add y 2
-mul y x
-add z y
-# z = z * 26 + w + 2
-
-inp w
-mul x 0
-add x z
-mod x 26
-add x 15
-eql x w
-eql x 0
-# x = 1
 mul y 0
 add y 25
 mul y x
@@ -120,8 +16,96 @@ add y w
 add y 8
 mul y x
 add z y
-# z = z * 26 + w + 8
-
+inp w
+mul x 0
+add x z
+mod x 26
+div z 1
+add x 12
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 8
+mul y x
+add z y
+inp w
+mul x 0
+add x z
+mod x 26
+div z 1
+add x 10
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 12
+mul y x
+add z y
+inp w
+mul x 0
+add x z
+mod x 26
+div z 26
+add x -8
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 10
+mul y x
+add z y
+inp w
+mul x 0
+add x z
+mod x 26
+div z 1
+add x 15
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 2
+mul y x
+add z y
+inp w
+mul x 0
+add x z
+mod x 26
+div z 1
+add x 15
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 8
+mul y x
+add z y
 inp w
 mul x 0
 add x z
@@ -140,11 +124,11 @@ add y w
 add y 4
 mul y x
 add z y
-
 inp w
 mul x 0
 add x z
 mod x 26
+div z 1
 add x 10
 eql x w
 eql x 0
@@ -180,6 +164,7 @@ inp w
 mul x 0
 add x z
 mod x 26
+div z 1
 add x 15
 eql x w
 eql x 0
