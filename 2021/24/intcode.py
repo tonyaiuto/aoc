@@ -177,11 +177,19 @@ class Op(object):
 
 class ALU(Intcode):
 
+  class ZCheck(Exception):
+    def __init__(self, message):
+      self.message = message
+
   def __init__(self, **kwargs):
     super(ALU, self).__init__(
         registers=('w', 'x', 'y', 'z'),
         **kwargs)
     self.expectz = []
+    
+  def reset(self):
+    super(ALU, self).reset()
+    self.n_input = 0
 
   def step(self, op):
     save_pc = self.pc
@@ -195,11 +203,12 @@ class ALU(Intcode):
     if op.opcode == 'inp':
       # inp a - Read an input value and write it to variable a.
       curz = self.reg('z')
-      if self.expectz:
-        e = self.expectz[0]
-        self.expectz = self.expectz[1:]
+      if self.expectz and self.n_input < len(self.expectz):
+        e = self.expectz[self.n_input]
         if curz != e:
-          print('Ask for input, expect z:', e, 'got', curz)
+          raise ALU.ZCheck('Ask for input %d: expect %d, got %d' % (
+              self.n_input, e, curz))
+      self.n_input += 1
       v = self.next_input()
       if v > 9:
         print('  bad input', v, 'in', self.input)
@@ -219,6 +228,7 @@ class ALU(Intcode):
       # (Here, "truncate" means to round the value toward zero.)
       assert v != 0
       self.reg_set(r, int(a / v))
+      self.reg_set(r, a // v)
     elif op.opcode == 'mod':
       # mod a b - Divide the value of a by the value of b, then store the
       # remainder in variable a. (This is also called the modulo operation.)
