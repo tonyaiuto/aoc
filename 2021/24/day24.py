@@ -1,19 +1,13 @@
 #!/usr/bin/env python3
 "AOC 2021: day 24"
 
-from collections import defaultdict
-import copy
-import heapq
 import itertools
-import math
 import sys
 
 from tools import aoc
-from tools import gridutils
 
-
-from intcode import ALU
-from intcode import Op
+from alu import ALU
+from alu import Op
 
 class day24(aoc.aoc):
 
