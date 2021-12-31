@@ -8,7 +8,7 @@ elf_image_test:
 	python3 elf_image.py
 
 grid_test:
-	python3 grid.py
+	python3 gridutils.py
 
 memoized_test:
 	python3 memoized.py
