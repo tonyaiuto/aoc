@@ -53,13 +53,14 @@ class day24(aoc.aoc):
 
     # self.alu.zexpect[0] = 0
 
-    for d1, d2, d3, d4, d5, d6 in itertools.product(
+    for d1, d2, d3, d4, d5, d6, d7 in itertools.product(
             range(8, 10),
             range(8, 10),
             range(1, 3),
             range(5, 8),
             range(1, 4),
-            range(3, 8),
+            range(6, 7),
+            range(3, 5),
             ):
         d1z = d1 + 8
         d2z = d1z * 26 + d2 + 8
@@ -72,31 +73,21 @@ class day24(aoc.aoc):
           d4z = d2z * 26 + d4 + 10
         d5z = d4z * 26 + d5 + 2
         d6z = d5z * 26 + d6 + 8
+        if d6 - 3 == d7:
+          d7z = d5z
+        else:
+          d7z = d5z * 26 + d7 + 4
 
-        model_inp = [d1, d2, d3, d4, d5, d6]
-        print(model_inp)
+        model_inp = [d1, d2, d3, d4, d5, d6, d7]
         self.alu.reset()
         self.alu.push_input(model_inp)
-        self.alu.expectz = [0, d1z, d2z, d3z, d4z, d5z, d6z]
+        self.alu.expectz = [0,
+                            d1z, d2z, d3z, d4z, d5z, d6z, d7z]
+        print(model_inp, self.alu.expectz)
         self.alu.run()
-        self.zcheck(d6z)
+        self.zcheck(d7z)
 
 
-    """
-    loop = 0
-    for model_inp in models():
-      loop += 1
-      if loop % 10000 == 0:
-        print('loop', loop)
-      self.alu.reset()
-      self.alu.push_input(model_inp)
-      self.alu.run()
-      z = self.alu.reg('z')
-      if loop % 100 == 0:
-        print(model_inp, '->', z)
-      if z == 0:
-        return ''.join(model_inp)
-    """
     return 5
 
   def zcheck(self, expect):
