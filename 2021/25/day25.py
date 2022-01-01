@@ -73,7 +73,7 @@ class day25(aoc.aoc):
     self.print(0)
     self.step1()
     self.print(1)
-    for i in range(2, 5):
+    for i in range(2, 5000):
       moved = self.step1()
       if not moved:
         return i
@@ -87,21 +87,19 @@ class day25(aoc.aoc):
     toset = -1
     for row, east in enumerate(self.east):
       s = self.south[row]
+      to_move = [False] * self.w
+      # Calculate can I move for all at the same time.
       for col, e in enumerate(east):
         right = (col + 1) % self.w
-        # can I move?
-        mv = e and not east[right] and not s[right]
-        if toset >= 0:
-          east[toset] = True
-          toset = -1
+        to_move[col] = east[col] and not east[right] and not s[right]
+
+      for col, mv in enumerate(to_move):
         if mv:
+          right = (col + 1) % self.w
           east[col] = False
-          toset = right
+          east[right] = True
           moved = True
           # print("SHOULD SET", row, right)
-      if toset >= 0:
-        moved = True
-        east[toset] = True
 
     old_move = []
     for row in range(self.h):
@@ -115,12 +113,20 @@ class day25(aoc.aoc):
           if mv:
             moved = True
             self.south[row][col] = True
-      for col, mv in enumerate(to_move):
-        if mv:
-          moved = True
-          self.south[row][col] = False
-          print('  moving down', row, col)
+      if row == 0:
+        to_move_0 = to_move
+      else:
+        for col, mv in enumerate(to_move):
+          if mv:
+            moved = True
+            self.south[row][col] = False
+            # print('  moving down', row, col)
       old_move = copy.copy(to_move)
+    for col, mv in enumerate(to_move_0):
+      if mv:
+        moved = True
+        self.south[0][col] = False
+        # print('  moving down', row, col)
     if old_move:
       for col, mv in enumerate(old_move):
         if mv:
@@ -148,4 +154,4 @@ v.v..>>v.v
 
 
 if __name__ == '__main__':
-  day25.run_and_check('input.txt', expect1=None, expect2=None)
+  day25.run_and_check('input.txt', expect1=532, expect2=None)
