@@ -18,11 +18,9 @@ mod x 26
 add x 10   # z % 26 + 10
 neq x w
 mulif z 26
-
 # z = ((d1 + 8) * 26 + d2 + 8) * 26
-mov y w
-add y 12
-addif z y
+addif z w
+addif z 12
 # z = ((d1 + 8) * 26 + d2 + 8) * 26 + d3 + 12
 
 # d4
@@ -37,14 +35,8 @@ add x -8
 # X = d3 + 4 != d4:
 neq x w
 mulif z 26
-# z = z * y
-mov y w
-add y 10
-addif z y
-# if d3 + 4 != d4:
-#   z = z * y + d4 + 10
-# else
-#   z = z * y
+addif z w
+addif z 10   # z = z * 26 + w + 10
 
 # d5
 inp w
@@ -53,10 +45,8 @@ mod x 26
 add x 15
 neq x w
 mulif z 26
-mov y w
-add y 2
-addif z y
-# z = z * 26 + w + 2
+addif z w
+addif z 2   # z = z * 26 + w + 2
 
 # d6
 inp w
@@ -66,10 +56,8 @@ add x 15
 neq x w
 # x = 1
 mulif z 26
-mov y w
-add y 8
-addif z y
-# z = z * 26 + w + 8
+addif z w
+addif z 8   # z = z * 26 + w + 8
 
 # d7
 inp w
@@ -81,11 +69,8 @@ add x -11
 # x = d5 - 3
 neq x w
 mulif z 26
-mov y w
-add y 4
-addif z y
-
-# z = z * 26 + w + 4
+addif z w
+addif z 4   # z = z * 26 + w + 4
 
 # d8
 inp w
@@ -94,10 +79,8 @@ mod x 26
 add x 10  # x := z % 26 + 10
 neq x w   # x := 1
 mulif z 26
-mov y w
-add y 9
-addif z y   # z += d8 + 9
-# z = z*26 + d8 + 9
+addif z w
+addif z 9   # z += d8 + 9
 
 # d9
 inp w
@@ -107,9 +90,8 @@ div z 26  # z = z / 26
 add x -3  # x is d8 + 6
 neq x w   # x :=  d8+6 != d9
 mulif z 26
-mov y w
-add y 10
-addif z y
+addif z w
+addif z 10
 
 # d10
 inp w
@@ -118,9 +100,8 @@ mod x 26
 add x 15
 neq x w
 mulif z 26
-mov y w
-add y 3
-addif z y  # z := z * 26 + d10 + 3
+addif z w
+addif z 3  # z := z * 26 + d10 + 3
 
 # d11
 inp w
@@ -130,9 +111,8 @@ div z 26
 add x -3  # x is d10
 neq x w
 mulif z 26
-mov y w
-add y 7
-addif z y
+addif z w
+addif z 7
 #   if d11 == d10: z = z' else z = z*26+d11+7
 
 # d12
@@ -143,9 +123,8 @@ div z 26   # z := z10
 add x -1   # x is d11+6
 neq x w
 mulif z 26
-mov y w
-add y 7
-addif z y   # z = z'//26 or z'//26 * 26 + d12 + 7
+addif z w
+addif z 7
 
 # d13
 inp w
@@ -155,9 +134,8 @@ div z 26
 add x -10   # d12 - 3
 neq x w   # X is d12 - 3 != d13
 mulif z 26
-mov y w
-add y 2
-addif z y
+addif z w
+addif z 2
 
 # d14
 inp w
@@ -168,6 +146,5 @@ add x -16
 # x = z % 26 - 16
 neq x w
 mulif z 26
-mov y w
-add y 2
-addif z y
+addif z w
+addif z 2
