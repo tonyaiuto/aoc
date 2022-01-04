@@ -31,8 +31,7 @@ mul z y
 mov y w
 add y 12
 # y = (d3 + 12)
-mul y x
-add z y
+addif z y
 # z = ((d1 + 8) * 26 + d2 * 8) * 26 + d3 + 12
 
 
@@ -62,8 +61,7 @@ mul z y
 # z = z * y
 mov y w
 add y 10
-mul y x
-add z y
+addif z y
 # if d3 + 4 != d4:
 #   z = z * y + d4 + 10
 # else
@@ -81,8 +79,7 @@ add y 1
 mul z y
 mov y w
 add y 2
-mul y x
-add z y
+addif z y
 # z = z * 26 + w + 2
 
 # d6
@@ -98,8 +95,7 @@ add y 1
 mul z y
 mov y w
 add y 8
-mul y x
-add z y
+addif z y
 # z = z * 26 + w + 8
 
 # d7
@@ -117,8 +113,7 @@ add y 1
 mul z y
 mov y w
 add y 4
-mul y x
-add z y
+addif z y
 
 # z = z * 26 + w + 4
 
@@ -134,8 +129,7 @@ add y 1   # y := 26
 mul z y   # z = z * 26
 mov y w
 add y 9
-mul y x
-add z y   # z += d8 + 9
+addif z y   # z += d8 + 9
 # z = z*26 + d8 + 9
 
 # d9
@@ -151,8 +145,7 @@ add y 1
 mul z y
 mov y w
 add y 10
-mul y x
-add z y
+addif z y
 
 # d10
 inp w
@@ -166,8 +159,7 @@ add y 1   # y := 26
 mul z y   
 mov y w
 add y 3
-mul y x
-add z y  # z := z * 26 + d10 + 3
+addif z y  # z := z * 26 + d10 + 3
 
 # d11
 inp w
@@ -182,8 +174,7 @@ add y 1
 mul z y
 mov y w
 add y 7
-mul y x
-add z y
+addif z y
 #   if d11 == d10: z = z' else z = z*26+d11+7
 
 # d12
@@ -199,8 +190,7 @@ add y 1
 mul z y   # if COND z *= 26
 mov y w
 add y 7
-mul y x
-add z y   # z = z'//26 or z'//26 * 26 + d12 + 7
+addif z y   # z = z'//26 or z'//26 * 26 + d12 + 7
 
 # d13
 inp w
@@ -215,8 +205,7 @@ add y 1
 mul z y
 mov y w
 add y 2
-mul y x
-add z y
+addif z y
 
 
 # d14
@@ -233,5 +222,4 @@ add y 1
 mul z y
 mov y w
 add y 2
-mul y x
-add z y
+addif z y

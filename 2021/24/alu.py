@@ -48,11 +48,13 @@ class ALU(intcode.Intcode):
     super(ALU, self).__init__(
         registers=('w', 'x', 'y', 'z'),
         **kwargs)
-    self.expectz = []
-    
+    self.reset()
+
   def reset(self):
     super(ALU, self).reset()
+    self.cc = 0
     self.n_input = 0
+    self.expectz = []
 
   def step(self, op):
     save_pc = self.pc
@@ -80,10 +82,16 @@ class ALU(intcode.Intcode):
       # add a b - Add the value of a to the value of b,
       # then store the result in variable a.
       self.reg_set(r, a + v)
+    elif op.opcode == 'addif':
+      if self.cc:
+        self.reg_set(r, a + v)
     elif op.opcode == 'mul':
       # mul a b - Multiply the value of a by the value of b,
       # then store the result in variable a.
       self.reg_set(r, a * v)
+    elif op.opcode == 'mulif':
+      if self.cc:
+        self.reg_set(r, a * v)
     elif op.opcode == 'div':
       # div a b - Divide the value of a by the value of b,
       # truncate the result to an integer,
@@ -102,11 +110,13 @@ class ALU(intcode.Intcode):
     elif op.opcode == 'eql':
       # eql a b - If the value of a and b are equal, then store the value
       # 1 in variable a. Otherwise, store the value 0 in variable a.
-      self.reg_set(r, 1 if a == v else 0)
+      self.cc = 1 if a == v else 0
+      self.reg_set(r, self.cc)
 
     # My additions
     elif op.opcode == 'neq':
-      self.reg_set(r, 0 if a == v else 1)
+      self.cc = 0 if a == v else 1
+      self.reg_set(r, self.cc)
     elif op.opcode == 'mov':
       self.reg_set(r, v)
     else:
