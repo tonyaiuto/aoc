@@ -1,19 +1,14 @@
 # d1
 inp w
 mov z w
-add z 8   # z := d1+8
-
-# z = d1 + 8
+add z 8    # z := d1+8
 
 # d2
 inp w
 mul z 26
-# z = (i1 + 8) * 26
+# z = (d1 + 8) * 26
 add z w
-add z 8
-# y = (i2 + 8)
-
-# z = (d1 + 8) * 26 + d2 * 8
+add z 8    # z = (d1 + 8) * 26 + d2 + 8
 
 # d3
 inp w
@@ -22,42 +17,26 @@ mod x 26
 # x = z % 26
 add x 10   # z % 26 + 10
 neq x w
-mov y 25
-mul y x
-add y 1
-# y = 26
-mul z y
-# z = ((d1 + 8) * 26 + d2 * 8) * 26 
+mulif z 26
+
+# z = ((d1 + 8) * 26 + d2 + 8) * 26
 mov y w
 add y 12
-# y = (d3 + 12)
 addif z y
-# z = ((d1 + 8) * 26 + d2 * 8) * 26 + d3 + 12
-
+# z = ((d1 + 8) * 26 + d2 + 8) * 26 + d3 + 12
 
 # d4
 inp w
 mov x z
-#  x = z % 26
-mod x 26
+mod x 26   #  x = z % 26
 div z 26
 #  z = z / 26
 add x -8
 #  x = (z % 26) - 8
-
 # x = d3 + 4
 # X = d3 + 4 != d4:
 neq x w
-mov y 25
-mul y x
-add y 1
-
-# if d3 + 4 != d4:
-#   y = 26
-# else
-#   y = 1
-
-mul z y
+mulif z 26
 # z = z * y
 mov y w
 add y 10
@@ -73,10 +52,7 @@ mov x z
 mod x 26
 add x 15
 neq x w
-mov y 25
-mul y x
-add y 1
-mul z y
+mulif z 26
 mov y w
 add y 2
 addif z y
@@ -89,10 +65,7 @@ mod x 26
 add x 15
 neq x w
 # x = 1
-mov y 25
-mul y x
-add y 1
-mul z y
+mulif z 26
 mov y w
 add y 8
 addif z y
@@ -107,10 +80,7 @@ div z 26
 add x -11
 # x = d5 - 3
 neq x w
-mov y 25
-mul y x
-add y 1
-mul z y
+mulif z 26
 mov y w
 add y 4
 addif z y
@@ -123,10 +93,7 @@ mov x z
 mod x 26
 add x 10  # x := z % 26 + 10
 neq x w   # x := 1
-mov y 25  # y : 25
-mul y x
-add y 1   # y := 26
-mul z y   # z = z * 26
+mulif z 26
 mov y w
 add y 9
 addif z y   # z += d8 + 9
@@ -139,10 +106,7 @@ mod x 26  # x = z % 26   is d8+9
 div z 26  # z = z / 26
 add x -3  # x is d8 + 6
 neq x w   # x :=  d8+6 != d9
-mov y 25
-mul y x
-add y 1
-mul z y
+mulif z 26
 mov y w
 add y 10
 addif z y
@@ -153,10 +117,7 @@ mov x z
 mod x 26
 add x 15
 neq x w
-mov y 25
-mul y x
-add y 1   # y := 26
-mul z y   
+mulif z 26
 mov y w
 add y 3
 addif z y  # z := z * 26 + d10 + 3
@@ -168,10 +129,7 @@ mod x 26  # x is d10 + 3
 div z 26
 add x -3  # x is d10
 neq x w
-mov y 25
-mul y x
-add y 1
-mul z y
+mulif z 26
 mov y w
 add y 7
 addif z y
@@ -180,14 +138,11 @@ addif z y
 # d12
 inp w
 mov x z
-mod x 26   # x is z % 26 is d11+7 
+mod x 26   # x is z % 26 is d11+7
 div z 26   # z := z10
 add x -1   # x is d11+6
 neq x w
-mov y 25
-mul y x
-add y 1
-mul z y   # if COND z *= 26
+mulif z 26
 mov y w
 add y 7
 addif z y   # z = z'//26 or z'//26 * 26 + d12 + 7
@@ -199,14 +154,10 @@ mod x 26
 div z 26
 add x -10   # d12 - 3
 neq x w   # X is d12 - 3 != d13
-mov y 25
-mul y x
-add y 1
-mul z y
+mulif z 26
 mov y w
 add y 2
 addif z y
-
 
 # d14
 inp w
@@ -216,10 +167,7 @@ div z 26
 add x -16
 # x = z % 26 - 16
 neq x w
-mov y 25
-mul y x
-add y 1
-mul z y
+mulif z 26
 mov y w
 add y 2
 addif z y

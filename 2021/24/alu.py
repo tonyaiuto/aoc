@@ -57,7 +57,6 @@ class ALU(intcode.Intcode):
     self.expectz = []
 
   def step(self, op):
-    save_pc = self.pc
     r = op.reg
     a = self.reg(r)
     if op.vreg:
@@ -82,16 +81,10 @@ class ALU(intcode.Intcode):
       # add a b - Add the value of a to the value of b,
       # then store the result in variable a.
       self.reg_set(r, a + v)
-    elif op.opcode == 'addif':
-      if self.cc:
-        self.reg_set(r, a + v)
     elif op.opcode == 'mul':
       # mul a b - Multiply the value of a by the value of b,
       # then store the result in variable a.
       self.reg_set(r, a * v)
-    elif op.opcode == 'mulif':
-      if self.cc:
-        self.reg_set(r, a * v)
     elif op.opcode == 'div':
       # div a b - Divide the value of a by the value of b,
       # truncate the result to an integer,
@@ -119,6 +112,12 @@ class ALU(intcode.Intcode):
       self.reg_set(r, self.cc)
     elif op.opcode == 'mov':
       self.reg_set(r, v)
+    elif op.opcode == 'addif':
+      if self.cc:
+        self.reg_set(r, a + v)
+    elif op.opcode == 'mulif':
+      if self.cc:
+        self.reg_set(r, a * v)
     else:
       print('bad opcode', op)
       raise Exception('illegal op:%s at %d' % (op, saved_pc))
