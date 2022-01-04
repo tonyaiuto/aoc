@@ -423,4 +423,5 @@ def sample():
 
 if __name__ == '__main__':
   day24.run_and_check('input_orig.txt', expect1=99598963999971, expect2=93151411711211)
+  day24.run_and_check('input_opt.txt', expect1=99598963999971, expect2=93151411711211)
   pass

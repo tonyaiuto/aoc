@@ -103,6 +103,12 @@ class ALU(intcode.Intcode):
       # eql a b - If the value of a and b are equal, then store the value
       # 1 in variable a. Otherwise, store the value 0 in variable a.
       self.reg_set(r, 1 if a == v else 0)
+
+    # My additions
+    elif op.opcode == 'neq':
+      self.reg_set(r, 0 if a == v else 1)
+    elif op.opcode == 'mov':
+      self.reg_set(r, v)
     else:
       print('bad opcode', op)
       raise Exception('illegal op:%s at %d' % (op, saved_pc))
