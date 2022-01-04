@@ -51,9 +51,9 @@ class day24(aoc.aoc):
 
     row = 0
     for d1, d2, d3, d5, d6, d8, d10 in itertools.product(
-          range(1, 10),
-          range(1, 10),
-          range(1, 10),
+          range(9, 10),
+          range(9, 10),
+          range(5, 10),
           # range(4, 8),
           range(8, 10),
           range(8, 10),

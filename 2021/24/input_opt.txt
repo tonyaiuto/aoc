@@ -1,22 +1,20 @@
 # d1
 inp w
 mov z w
-add z 8    # z := d1+8
+add z 8      # z = d1+8
 
 # d2
 inp w
 mul z 26
-# z = (d1 + 8) * 26
 add z w
-add z 8    # z = (d1 + 8) * 26 + d2 + 8
+add z 8      # z = (d1 + 8) * 26 + d2 + 8
 
 # d3
 inp w
 mov x z
-mod x 26
-# x = z % 26
-add x 10   # z % 26 + 10
-neq x w
+mod x 26     # x = z % 26
+add x 10     # x = z % 26 + 10
+neq x w	     # always true
 mulif z 26
 # z = ((d1 + 8) * 26 + d2 + 8) * 26
 addif z w
@@ -26,14 +24,13 @@ addif z 12
 # d4
 inp w
 mov x z
-mod x 26   #  x = z % 26
-div z 26
-#  z = z / 26
+mod x 26     #  x = z % 26
 add x -8
 #  x = (z % 26) - 8
 # x = d3 + 4
 # X = d3 + 4 != d4:
 neq x w
+div z 26     #  z = z / 26
 mulif z 26
 addif z w
 addif z 10   # z = z * 26 + w + 10
@@ -43,7 +40,7 @@ inp w
 mov x z
 mod x 26
 add x 15
-neq x w
+neq x w	     # always true
 mulif z 26
 addif z w
 addif z 2   # z = z * 26 + w + 2
@@ -53,8 +50,7 @@ inp w
 mov x z
 mod x 26
 add x 15
-neq x w
-# x = 1
+neq x w	     # always true
 mulif z 26
 addif z w
 addif z 8   # z = z * 26 + w + 8
@@ -63,11 +59,11 @@ addif z 8   # z = z * 26 + w + 8
 inp w
 mov x z
 mod x 26
-div z 26
 # z = z // 26  => z(-2)
 add x -11
 # x = d5 - 3
 neq x w
+div z 26
 mulif z 26
 addif z w
 addif z 4   # z = z * 26 + w + 4
@@ -76,19 +72,19 @@ addif z 4   # z = z * 26 + w + 4
 inp w
 mov x z
 mod x 26
-add x 10  # x := z % 26 + 10
-neq x w   # x := 1
+add x 10     # x := z % 26 + 10
+neq x w	     # always true
 mulif z 26
 addif z w
-addif z 9   # z += d8 + 9
+addif z 9    # z += d8 + 9
 
 # d9
 inp w
 mov x z
 mod x 26  # x = z % 26   is d8+9
-div z 26  # z = z / 26
 add x -3  # x is d8 + 6
 neq x w   # x :=  d8+6 != d9
+div z 26  # z = z / 26
 mulif z 26
 addif z w
 addif z 10
@@ -98,7 +94,7 @@ inp w
 mov x z
 mod x 26
 add x 15
-neq x w
+neq x w	     # always true
 mulif z 26
 addif z w
 addif z 3  # z := z * 26 + d10 + 3
@@ -107,9 +103,9 @@ addif z 3  # z := z * 26 + d10 + 3
 inp w
 mov x z
 mod x 26  # x is d10 + 3
-div z 26
 add x -3  # x is d10
 neq x w
+div z 26
 mulif z 26
 addif z w
 addif z 7
@@ -119,9 +115,9 @@ addif z 7
 inp w
 mov x z
 mod x 26   # x is z % 26 is d11+7
-div z 26   # z := z10
 add x -1   # x is d11+6
 neq x w
+div z 26   # z := z10
 mulif z 26
 addif z w
 addif z 7
@@ -130,9 +126,9 @@ addif z 7
 inp w
 mov x z
 mod x 26
-div z 26
 add x -10   # d12 - 3
 neq x w   # X is d12 - 3 != d13
+div z 26
 mulif z 26
 addif z w
 addif z 2
@@ -141,10 +137,10 @@ addif z 2
 inp w
 mov x z
 mod x 26
-div z 26
 add x -16
 # x = z % 26 - 16
 neq x w
+div z 26
 mulif z 26
 addif z w
 addif z 2
