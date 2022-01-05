@@ -72,7 +72,8 @@ class day24(aoc.aoc):
 
         assert (z3 // 26) == z2
         # if d4 == d3 + 4:
-        d4 = z3 % 26 - 8
+        # d4 = z3 % 26 - 8
+        d4 = d3 + 12 -8
         if d4 < 1 or d4 > 9:
           continue
         if d4 == z3 % 26 - 8:
@@ -87,6 +88,7 @@ class day24(aoc.aoc):
         z6 = z5 * 26 + d6 + 8
 
         d7 = z6 % 26 - 11
+        d7 = d6 - 3
         if d7 < 1 or d7 > 9:
           continue
         if d7 == z6 % 26 - 11:
@@ -411,6 +413,202 @@ class day24(aoc.aoc):
     return int(''.join([str(d) for d in ret]))
 
 
+  def part1_opt(self):
+    print('===== Start part 1 opt')
+    self.reset()
+
+    row = 0
+    for d1, d2, d3, d5, d6, d8, d10 in itertools.product(
+          range(9, 1, -1),
+          range(9, 10),     #  range(9, 1, -1),
+          range(9, 1, -1),
+          range(9, 1, -1),
+          range(9, 1, -1),
+          range(9, 1, -1),
+          range(9, 1, -1),
+          ):
+        z1 = d1 + 8
+        z2 = z1 * 26 + d2 + 8
+        z3 = z2 * 26 + d3 + 12
+
+        d4 = d3 + 12 -8
+        if d4 < 1 or d4 > 9:
+          continue
+        z4 = z3 // 26
+
+        z5 = z4 * 26 + d5 + 2
+        z6 = z5 * 26 + d6 + 8
+
+        # d7 = z6 % 26 - 11
+        d7 = d6 - 3
+        if d7 < 1 or d7 > 9:
+          continue
+        # z7 = z6 // 26
+        z7 = z5
+
+        z8 = z7 * 26 + d8 + 9
+        # d9 = z8 % 26 - 3
+        d9 = d8 + 9 - 3
+        if d9 < 1 or d9 > 9:
+          continue
+        # z9 = z8 // 26
+        # z9 = (z7 * 26 + d8 + 9) // 26
+        z9 = z7
+        z9 = z5
+
+        # z10 = z9 * 26 + d10 + 3
+        z10 = z5 * 26 + d10 + 3
+
+        assert (z10 // 26) == z9
+        # d11 = z10 % 26 - 3
+        # d11 = d10 + 3 - 3
+        d11 = d10
+        if d11 < 1 or d11 > 9:
+          continue
+        # z11 = z10 // 26
+        # z11 = (z5 * 26 + d10 + 3) // 26
+        z11 = z5
+
+        #if z11 // 26 != z10:
+        #  print('d8-11', d8, d9, d10, d11)
+        #  print("wtf", z11, z11//26, z10, z9)
+        #  assert (z11 // 26) == z10
+
+        # if d12 == d11 + 6:
+        # d12 = z11 % 26 - 1
+        # d12 = z5 % 26 - 1
+        # d12 = z5 % 26 - 1
+        # d12 = (z4 * 26 + d5 + 2) % 26 - 1
+        d12 = d5 + 2 - 1
+        if d12 < 1 or d12 > 9:
+          continue
+
+        # z12 = z11 // 26
+        # z12 = z5 // 26
+        # z12 = (z4 * 26 + d5 + 2) // 26
+        z12 = z4
+
+        # d13 = z12 % 26 - 10
+        d13 = z4 % 26 - 10
+        if d13 < 1 or d13 > 9:
+          continue
+        #z13 = z12 // 26
+        #z13 = z4 // 26
+        #z13 = z3 // 26 // 26
+        #z13 = (z2 * 26 + d3 + 12) // 26 // 26
+        #z13 = (z2 + 26) // 26
+        #z13 = z2
+        z13 = z1 * 26 + d2 + 8
+        #z1 = d1 + 8
+
+        #d14 = (z13 % 26) - 16
+        #d14 = (z1 * 26 + d2 + 8) % 26 - 16
+        #d14 = (d2 + 8) - 16
+        d14 = d2 - 8
+        if d14 < 1 or d14 > 9:   # implies d2 == 9
+          continue
+
+        model_inp = [d1, d2, d3, d5, d6, d8, d10]
+        self.alu.reset()
+        self.alu.push_input(model_inp)
+        row += 1
+        # print(row, model_inp, self.alu.expectz)
+        try:
+          self.alu.run()
+        except ALU.ZCheck as e:
+          print(row, model_inp, self.alu.expectz)
+          print(e.message)
+          sys.exit(1)
+        z = self.alu.reg('z')
+        if z == 0:
+          print("GOT ZERO")
+          print(row, model_inp, self.alu.expectz)
+          ret = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14]
+          break
+
+    return int(''.join([str(d) for d in ret]))
+
+  def part2_opt(self):
+    print('===== Start part 2 opt')
+    self.reset()
+
+    row = 0
+    for d1, d2, d3, d5, d6, d8, d10 in itertools.product(
+          range(1, 10),
+          range(9, 10),     #  range(9, 1, -1),
+          range(1, 10),
+          range(1, 10),
+          range(1, 10),
+          range(1, 10),
+          range(1, 10),
+          ):
+        z1 = d1 + 8
+        z2 = z1 * 26 + d2 + 8
+        z3 = z2 * 26 + d3 + 12
+
+        d4 = d3 + 4
+        if d4 < 1 or d4 > 9:
+          continue
+        z4 = z3 // 26
+
+        z5 = z4 * 26 + d5 + 2
+        z6 = z5 * 26 + d6 + 8
+
+        d7 = d6 - 3
+        if d7 < 1 or d7 > 9:
+          continue
+        z7 = z5
+
+        # z8 = z7 * 26 + d8 + 9
+        d9 = d8 + 9 - 3
+        if d9 < 1 or d9 > 9:
+          continue
+        z9 = z5
+
+        # z10 = z9 * 26 + d10 + 3
+        z10 = z5 * 26 + d10 + 3
+
+        assert (z10 // 26) == z9
+        d11 = d10
+        if d11 < 1 or d11 > 9:
+          continue
+        z11 = z5
+
+        d12 = d5 + 2 - 1
+        if d12 < 1 or d12 > 9:
+          continue
+
+        z12 = z4
+
+        # d13 = z12 % 26 - 10
+        d13 = z4 % 26 - 10
+        if d13 < 1 or d13 > 9:
+          continue
+        z13 = z1 * 26 + d2 + 8
+
+        d14 = d2 - 8
+        if d14 < 1 or d14 > 9:   # implies d2 == 9
+          continue
+
+        model_inp = [d1, d2, d3, d5, d6, d8, d10]
+        self.alu.reset()
+        self.alu.push_input(model_inp)
+        row += 1
+        try:
+          self.alu.run()
+        except ALU.ZCheck as e:
+          print(row, model_inp, self.alu.expectz)
+          print(e.message)
+          sys.exit(1)
+        z = self.alu.reg('z')
+        if z == 0:
+          print("GOT ZERO")
+          print(row, model_inp, self.alu.expectz)
+          ret = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14]
+          break
+
+    return int(''.join([str(d) for d in ret]))
+
 def sample():
   prog = day24()
   prog.load_file('input.txt')
@@ -421,7 +619,16 @@ def sample():
 
 # sample()
 
+def try_opt():
+  prog = day24()
+  prog.load_file('input_super_opt.txt')
+
+  aoc.run_func(prog.part1_opt, expect=99598963999971, tag='part1 super optimized')
+  aoc.run_func(prog.part2_opt, expect=93151411711211, tag='part2 super optimized')
+
+# sample()
+
 if __name__ == '__main__':
-  day24.run_and_check('input_orig.txt', expect1=99598963999971, expect2=93151411711211)
-  day24.run_and_check('input_opt.txt', expect1=99598963999971, expect2=93151411711211)
-  pass
+  # day24.run_and_check('input_orig.txt', expect1=99598963999971, expect2=93151411711211)
+  # day24.run_and_check('input_opt.txt', expect1=99598963999971, expect2=93151411711211)
+  try_opt()
