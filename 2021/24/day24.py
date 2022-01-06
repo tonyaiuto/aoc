@@ -413,19 +413,28 @@ class day24(aoc.aoc):
     return int(''.join([str(d) for d in ret]))
 
 
-  def part1_opt(self):
+  def part1_opt(self, from_top=True):
+    """Do not even call input for the pre-determined numbers. Requires modified program."""
     print('===== Start part 1 opt')
     self.reset()
 
     row = 0
+    if from_top:
+      first = 9
+      last = 0
+      inc = -1
+    else:
+      first = 1
+      last = 10
+      inc = 1
     for d1, d2, d3, d5, d6, d8, d10 in itertools.product(
-          range(9, 1, -1),
-          range(9, 10),     #  range(9, 1, -1),
-          range(9, 1, -1),
-          range(9, 1, -1),
-          range(9, 1, -1),
-          range(9, 1, -1),
-          range(9, 1, -1),
+          range(first, last, inc),
+          range(first, last, inc),   # [9]
+          range(first, last, inc),
+          range(first, last, inc),
+          range(first, last, inc),
+          range(first, last, inc),
+          range(first, last, inc),
           ):
         z1 = d1 + 8
         z2 = z1 * 26 + d2 + 8
@@ -495,16 +504,17 @@ class day24(aoc.aoc):
         #z13 = z12 // 26
         #z13 = z4 // 26
         #z13 = z3 // 26 // 26
-        #z13 = (z2 * 26 + d3 + 12) // 26 // 26
-        #z13 = (z2 + 26) // 26
-        #z13 = z2
-        z13 = z1 * 26 + d2 + 8
+        # z13 = (z2 * 26 + d3 + 12) // 26 // 26
+        #z13 = (z2) // 26
+        z13 = z2 // 26
+
+        # z13 = z1 * 26 + d2 + 8
         #z1 = d1 + 8
 
-        #d14 = (z13 % 26) - 16
-        #d14 = (z1 * 26 + d2 + 8) % 26 - 16
-        #d14 = (d2 + 8) - 16
-        d14 = d2 - 8
+        d14 = (z13 % 26) - 16
+        # d14 = (z1 * 26 + d2 + 8) % 26 - 16
+        # d14 = (d2 + 8) - 16
+        # d14 = d2 - 8
         if d14 < 1 or d14 > 9:   # implies d2 == 9
           continue
 
@@ -522,92 +532,16 @@ class day24(aoc.aoc):
         z = self.alu.reg('z')
         if z == 0:
           print("GOT ZERO")
-          print(row, model_inp, self.alu.expectz)
+          print(row, model_inp)
           ret = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14]
           break
-
     return int(''.join([str(d) for d in ret]))
 
   def part2_opt(self):
     print('===== Start part 2 opt')
     self.reset()
+    return self.part1_opt(from_top=False)
 
-    row = 0
-    for d1, d2, d3, d5, d6, d8, d10 in itertools.product(
-          range(1, 10),
-          range(9, 10),     #  range(9, 1, -1),
-          range(1, 10),
-          range(1, 10),
-          range(1, 10),
-          range(1, 10),
-          range(1, 10),
-          ):
-        z1 = d1 + 8
-        z2 = z1 * 26 + d2 + 8
-        z3 = z2 * 26 + d3 + 12
-
-        d4 = d3 + 4
-        if d4 < 1 or d4 > 9:
-          continue
-        z4 = z3 // 26
-
-        z5 = z4 * 26 + d5 + 2
-        z6 = z5 * 26 + d6 + 8
-
-        d7 = d6 - 3
-        if d7 < 1 or d7 > 9:
-          continue
-        z7 = z5
-
-        # z8 = z7 * 26 + d8 + 9
-        d9 = d8 + 9 - 3
-        if d9 < 1 or d9 > 9:
-          continue
-        z9 = z5
-
-        # z10 = z9 * 26 + d10 + 3
-        z10 = z5 * 26 + d10 + 3
-
-        assert (z10 // 26) == z9
-        d11 = d10
-        if d11 < 1 or d11 > 9:
-          continue
-        z11 = z5
-
-        d12 = d5 + 2 - 1
-        if d12 < 1 or d12 > 9:
-          continue
-
-        z12 = z4
-
-        # d13 = z12 % 26 - 10
-        d13 = z4 % 26 - 10
-        if d13 < 1 or d13 > 9:
-          continue
-        z13 = z1 * 26 + d2 + 8
-
-        d14 = d2 - 8
-        if d14 < 1 or d14 > 9:   # implies d2 == 9
-          continue
-
-        model_inp = [d1, d2, d3, d5, d6, d8, d10]
-        self.alu.reset()
-        self.alu.push_input(model_inp)
-        row += 1
-        try:
-          self.alu.run()
-        except ALU.ZCheck as e:
-          print(row, model_inp, self.alu.expectz)
-          print(e.message)
-          sys.exit(1)
-        z = self.alu.reg('z')
-        if z == 0:
-          print("GOT ZERO")
-          print(row, model_inp, self.alu.expectz)
-          ret = [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14]
-          break
-
-    return int(''.join([str(d) for d in ret]))
 
 def sample():
   prog = day24()
@@ -622,13 +556,14 @@ def sample():
 def try_opt():
   prog = day24()
   prog.load_file('input_super_opt.txt')
-
   aoc.run_func(prog.part1_opt, expect=99598963999971, tag='part1 super optimized')
+  prog = day24()
+  prog.load_file('input_super_opt.txt')
   aoc.run_func(prog.part2_opt, expect=93151411711211, tag='part2 super optimized')
 
 # sample()
 
 if __name__ == '__main__':
-  # day24.run_and_check('input_orig.txt', expect1=99598963999971, expect2=93151411711211)
-  # day24.run_and_check('input_opt.txt', expect1=99598963999971, expect2=93151411711211)
+  day24.run_and_check('input_orig.txt', expect1=99598963999971, expect2=93151411711211)
+  day24.run_and_check('input_opt.txt', expect1=99598963999971, expect2=93151411711211)
   try_opt()
