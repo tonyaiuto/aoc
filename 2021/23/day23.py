@@ -1,20 +1,15 @@
 #!/usr/bin/env python3
 "AOC 2021: day 23"
 
-from collections import defaultdict
 from collections import deque
 import copy
-import heapq
-import itertools
-import math
 
 from tools import aoc
-from tools import gridutils
 
 
 class State(object):
 
-  ext = ['.', 'A', 'B', 'C', 'D']
+  TO_EXTERNAL = ['.', 'A', 'B', 'C', 'D']
 
   blockers = [
     #   0        1        2       3      4      5         6
@@ -79,7 +74,7 @@ class State(object):
     return State(stacks, rooms)
 
   def print(self, indent=''):
-    sx = State.ext
+    sx = State.TO_EXTERNAL
     print(indent, '#############', ' !!!!! FINAL !!!!!' if self.final else '')
     print(indent, '#' + sx[self.rooms[0]] + sx[self.rooms[1]]
           + '.' + sx[self.rooms[2]] + '.' + sx[self.rooms[3]] + '.' + sx[self.rooms[4]]
@@ -116,7 +111,7 @@ class State(object):
             continue
           cost = (State.DISTS[si][ri] + self.depth - 1 - self.locked[si]) * State.COSTS[pod]
           if verbose:
-            print('  can drop ', State.ext[pod], 'from', ri, 'to stack', si, 'at cost', cost)
+            print('  can drop ', State.TO_EXTERNAL[pod], 'from', ri, 'to stack', si, 'at cost', cost)
             print('   ', sig)
           yield sig, cost
 
@@ -136,7 +131,7 @@ class State(object):
             if sig == self.sig:
               continue
             if verbose:
-              print('can move', State.ext[pod], 'from', si, 'to room', ri)
+              print('can move', State.TO_EXTERNAL[pod], 'from', si, 'to room', ri)
               print('   ', sig)
             cost = (State.DISTS[si][ri] + self.depth - 1 - d) * State.COSTS[pod]
             yield sig, cost
@@ -239,6 +234,8 @@ class day23(aoc.aoc):
         node = fsig.get(sig)
         if node:
           if total_cost >= node.cost:
+            continue
+          if total_cost > best_cost:
             continue
         else:
           node = State.from_sig(sig)
