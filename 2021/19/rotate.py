@@ -3,86 +3,85 @@
 
 
 def rotations(x,y,z):
-  yield  x,  y,  z
-  yield  x,  z, -y
-  yield  x, -y, -z
-  yield  x, -z,  y
+  yield ( x,  y,  z)
+  yield ( x,  z, -y)
+  yield ( x, -y, -z)
+  yield ( x, -z,  y)
 
-  yield  y, -x,  z
-  yield  y,  z,  x
-  yield  y,  x, -z
-  yield  y, -z, -x
+  yield ( y, -x,  z)
+  yield ( y,  z,  x)
+  yield ( y,  x, -z)
+  yield ( y, -z, -x)
 
-  yield -x, -y,  z
-  yield -x, -z, -y
-  yield -x,  y, -z
-  yield -x,  z,  y
+  yield (-x, -y,  z)
+  yield (-x, -z, -y)
+  yield (-x,  y, -z)
+  yield (-x,  z,  y)
 
-  yield -y,  x,  z
-  yield -y, -z,  x
-  yield -y, -x, -z
-  yield -y,  z, -x
+  yield (-y,  x,  z)
+  yield (-y, -z,  x)
+  yield (-y, -x, -z)
+  yield (-y,  z, -x)
 
-  yield  z,  y, -x
-  yield  z,  x,  y
-  yield  z, -y,  x
-  yield  z, -x, -y
+  yield ( z,  y, -x)
+  yield ( z,  x,  y)
+  yield ( z, -y,  x)
+  yield ( z, -x, -y)
 
-  yield -z, -y, -x
-  yield -z, -x,  y
-  yield -z,  y,  x
-  yield -z,  x, -y
+  yield (-z, -y, -x)
+  yield (-z, -x,  y)
+  yield (-z,  y,  x)
+  yield (-z,  x, -y)
 
 
-def rot_00(x, y, z):
-  return  x,  y,  z
-def rot_01(x, y, z):
-  return  x,  z, -y
-def rot_02(x, y, z):
-  return  x, -y, -z
-def rot_03(x, y, z):
-  return  x, -z,  y
-def rot_04(x, y, z):
-  return  y, -x,  z
-def rot_05(x, y, z):
-  return  y,  z,  x
-def rot_06(x, y, z):
-  return  y,  x, -z
-def rot_07(x, y, z):
-  return  y, -z, -x
-def rot_08(x, y, z):
-  return -x, -y,  z
-def rot_09(x, y, z):
-  return -x, -z, -y
-def rot_10(x, y, z):
-  return -x,  y, -z
-def rot_11(x, y, z):
-  return -x,  z,  y
-def rot_12(x, y, z):
-  return -y,  x,  z
-def rot_13(x, y, z):
-  return -y, -z,  x
-def rot_14(x, y, z):
-  return -y, -x, -z
-def rot_15(x, y, z):
-  return -y,  z, -x
-def rot_16(x, y, z):
-  return  z,  y, -x
-def rot_17(x, y, z):
-  return  z,  x,  y
-def rot_18(x, y, z):
-  return  z, -y,  x
-def rot_19(x, y, z):
-  return  z, -x, -y
-def rot_20(x, y, z):
-  return -z, -y, -x
-def rot_21(x, y, z):
-  return -z, -x,  y
-def rot_22(x, y, z):
-  return -z,  y,  x
-def rot_23(x, y, z):
-  return -z,  x, -y
-
+def rot_00(pos):
+  return ( pos[0],  pos[1],  pos[2])
+def rot_01(pos):
+  return ( pos[0],  pos[2], -pos[1])
+def rot_02(pos):
+  return ( pos[0], -pos[1], -pos[2])
+def rot_03(pos):
+  return ( pos[0], -pos[2],  pos[1])
+def rot_04(pos):
+  return ( pos[1], -pos[0],  pos[2])
+def rot_05(pos):
+  return ( pos[1],  pos[2],  pos[0])
+def rot_06(pos):
+  return ( pos[1],  pos[0], -pos[2])
+def rot_07(pos):
+  return ( pos[1], -pos[2], -pos[0])
+def rot_08(pos):
+  return (-pos[0], -pos[1],  pos[2])
+def rot_09(pos):
+  return (-pos[0], -pos[2], -pos[1])
+def rot_10(pos):
+  return (-pos[0],  pos[1], -pos[2])
+def rot_11(pos):
+  return (-pos[0],  pos[2],  pos[1])
+def rot_12(pos):
+  return (-pos[1],  pos[0],  pos[2])
+def rot_13(pos):
+  return (-pos[1], -pos[2],  pos[0])
+def rot_14(pos):
+  return (-pos[1], -pos[0], -pos[2])
+def rot_15(pos):
+  return (-pos[1],  pos[2], -pos[0])
+def rot_16(pos):
+  return ( pos[2],  pos[1], -pos[0])
+def rot_17(pos):
+  return ( pos[2],  pos[0],  pos[1])
+def rot_18(pos):
+  return ( pos[2], -pos[1],  pos[0])
+def rot_19(pos):
+  return ( pos[2], -pos[0], -pos[1])
+def rot_20(pos):
+  return (-pos[2], -pos[1], -pos[0])
+def rot_21(pos):
+  return (-pos[2], -pos[0],  pos[1])
+def rot_22(pos):
+  return (-pos[2],  pos[1],  pos[0])
+def rot_23(pos):
+  return (-pos[2],  pos[0], -pos[1])
 
 rot_func = [None] * 24
 rot_func[ 0] = rot_00
@@ -119,11 +118,10 @@ def check():
   for x,y,z in rotations(1, 2, 3):
     print('%2d' % x, '%2d' % y, '%2d' % z)
   print('Last 2')
-  print(rot_func[22](1, 2, 3))
-  print(rot_func[23](1, 2, 3))
+  print(rot_func[22]((1, 2, 3)))
+  print(rot_func[23]((1, 2, 3)))
 
 
 if __name__ == '__main__':
   check()
   # pfunc()
-
