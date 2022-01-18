@@ -57,6 +57,38 @@ class Scanner(object):
     # print('  ', ','.join(['%3d' % i for i in self.z_deltas]))
 
 
+  def check_matches(self, other, rotation):
+    s_beacons = self.beacons
+    deltas = s_beacons.deltas
+    n_match = 0
+
+    other.beacons = BeaconList(other, X_AXIS, rotation)
+    other_beacons = other.beacons
+    other_deltas = other_beacons.deltas
+    for d in other_deltas:
+      if d in s_beacons.deltas:
+        if d == s_beacons.bingod:
+          print('got the bingod')
+        if d == other_beacons.bingod:
+          print('got the Rbingod')
+        f1,f2 = deltas[d]
+        t1,t2 = other_deltas[d]
+        print('s %2d %2d:' % (self.n, other.n), d, f1, f2, '...', t1, t2)
+        n_match += 1
+    return n_match
+
+  def rotate_to_me(self, other):
+    n_rots = 0
+    for rotation in range(24):
+      n_match = self.check_matches(other, rotation)
+      if n_match >= 12:
+        n_rots += 1
+        print('=========== align', self.n, other.n, 'n_match:', n_match)
+    if n_rots > 1:
+      print('FUCKIT.  I got two alignments')
+
+
+
 class BeaconList(object):
 
   def __init__(self, scanner, axis, rotation):
@@ -131,34 +163,32 @@ class day19(aoc.aoc):
     #for s in self.scanners:
     #  s.pdeltas()
     
-    for s in self.scanners:
-       s.beacons = BeaconList(s, X_AXIS, 0)
+    s = self.scanners[0]
+    s.beacons = BeaconList(s, X_AXIS, 0)
 
-    for i_s, s in enumerate(self.scanners):
-      s_beacons = s.beacons
-      deltas = s_beacons.deltas
-      deltas = self.scanners[i_s].beacons.deltas
+    anchor = None
+    for i_s, scanner in enumerate(self.scanners):
+      if anchor:
+        break
       for i_t in range(i_s+1, ns):
-        n_match = 0
-        other_beacons = self.scanners[i_t].beacons
-        other_deltas = other_beacons.deltas
-        for d in other_deltas:
-          if d in deltas:
-            if d == s_beacons.bingod:
-              print('got the bingod')
-            if d == other_beacons.bingod:
-              print('got the Rbingod')
-            f1,f2 = deltas[d]
-            t1,t2 = other_deltas[d]
-            print('s %2d %2d:' % (i_s, i_t), d, f1, f2, '...', t1, t2)
-            n_match += 1
-
-        if n_match >= 11:
+        other = self.scanners[i_t]
+        n_match = scanner.check_matches(other, 0)
+        if n_match >= 12:
           print('You sunk my battleship', i_s, i_t)
+          scanner.rotation = 0
+          other.rotation = 0
+          anchor = scanner
+          break
+
+    # We have the first pair. So we rotate the others to match these.
+    print('Checking with anchor', anchor.n)
+    for scanner in self.scanners:
+      if scanner.rotation >= 0:
+        continue
+      anchor.rotate_to_me(scanner)
 
     return 42
 
-   
 
   def part2(self):
     print('===== Start part 2')
@@ -210,7 +240,7 @@ class day19(aoc.aoc):
 """
 
 day19.sample_test('sample.txt', is_file=True, expect1=42, expect2=None)
-# day19.sample_test('input.txt', is_file=True, expect1=22, expect2=None)
+day19.sample_test('input.txt', is_file=True, expect1=22, expect2=None)
 
 
 if __name__ == '__main__':
