@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 "AOC 2021: day 19"
 
+import itertools
+
 from tools import aoc
 
 import rotate
@@ -31,12 +33,11 @@ class Scanner(object):
       self.positions.append(x)
     self.beacons = BeaconList(self, 0)
 
-
   def __str__(self):
     return 'scr:%d, %s' % (self.n, self.positions)
 
-  def check_matches(self, other, rotation):
-    """Check for matches at a rotation."""
+  def check_for_matches(self, other, rotation):
+    """Check for matches against another at a rotation."""
     other.beacons = BeaconList(other, rotation)
     other.rotation = rotation
     return self.beacons.find_matches(
@@ -49,7 +50,7 @@ class Scanner(object):
     best_matched = 0
     best_beacons = None
     for rotation in range(24):
-      n_match, translation, matched = self.check_matches(other, rotation)
+      n_match, translation, matched = self.check_for_matches(other, rotation)
       if n_match > best_n_match:
         best_n_match = n_match
         best_translation = translation
@@ -171,41 +172,29 @@ class day19(aoc.aoc):
     self.trace = True
     self.scanners = []
 
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     self.scanners.append(Scanner(line))
 
-  def post_load(self):
-    # called after all input is read
-    pass
-
-
   def part1(self):
     print('===== Start part 1')
-    self.reset()
-    ns = len(self.scanners)
 
-    s = self.scanners[0]
-    s.beacons = BeaconList(s, 0)
+    # Better solution idea:
+    # Do not find an anchor pair. Start with 0
+    # Do the merge passes as below.
+    # If nothing matches with scanner 0, repeat for scanner 1, ...
 
+    # Find a pair that match at no rotation.
     anchor = None
-    for i_s, scanner in enumerate(self.scanners):
-      if anchor:
+    for scanner, other in itertools.combinations(self.scanners, 2):
+      n_match, translation, matches = scanner.check_for_matches(other, 0)
+      if n_match >= 12:
+        print('You sunk my battleship', scanner.n, other.n, 'by', n_match)
+        scanner.rotation = 0
+        other.rotation = 0
+        anchor = scanner
+        scanner.merge_in(other, translation, matches)
         break
-      for i_t in range(i_s+1, ns):
-        other = self.scanners[i_t]
-        n_match, translation, matches = scanner.check_matches(other, 0)
-        if n_match >= 12:
-          print('You sunk my battleship', i_s, i_t, 'by', n_match)
-          scanner.rotation = 0
-          other.rotation = 0
-          anchor = scanner
-          scanner.merge_in(other, translation, matches)
-          break
 
     # We have the first pair. So we rotate the others to match these.
     print('Checking with anchor', anchor.n)
@@ -228,20 +217,13 @@ class day19(aoc.aoc):
           print('Did not match', anchor.n, 'to', scanner.n)
       if not did_merge:
         min_match -= 1
-
     return len(anchor.positions)
-
 
   def part2(self):
     print('===== Start part 2')
+    return max([m_dist(a.pos, b.pos)
+                for a, b in itertools.combinations(self.scanners, 2)])
 
-    ret = 0
-    for i_s, scanner in enumerate(self.scanners):
-      for i_t in range(i_s+1, len(self.scanners)):
-        other = self.scanners[i_t]
-        d = m_dist(scanner.pos, other.pos)
-        ret = max(ret, d)
-    return ret
 
 
 day19.sample_test('sample.txt', is_file=True, expect1=79, expect2=3621, recreate=False)
