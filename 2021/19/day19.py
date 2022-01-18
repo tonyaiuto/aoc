@@ -28,7 +28,7 @@ class Scanner(object):
     assert inp[0].startswith('--- scanner ')
     t = inp[0][12:].split(' ')
     self.n = int(t[0])
-    self.b = []
+    self.positions = []
     self.rotation = -1
     self.merged = False
     self.pos = (0, 0, 0)
@@ -38,17 +38,10 @@ class Scanner(object):
       x = tuple([int(n) for n in line.split(',')])
       if x == (-618, -824, -621):
         print('Got the 618')
-      self.b.append(x)
+      self.positions.append(x)
 
   def __str__(self):
-    return 'scr:%d, %s' % (self.n, self.b)
-
-  def deltas(self, axis):
-    positions = sorted([pos[axis] for pos in self.b])
-    last = positions[0]
-    for pos in positions:
-      yield pos - last
-      last = pos
+    return 'scr:%d, %s' % (self.n, self.positions)
 
   def check_matches(self, other, rotation):
     """Check for enough matchs at the same translation."""
@@ -65,11 +58,6 @@ class Scanner(object):
     matched = set()
     for d in other_deltas:
       if d in my_deltas:
-        if d == s_beacons.bingod:
-          print('got the bingod')
-        if d == other_beacons.bingod:
-          print('got the Rbingod')
-
         t1, t2 = other_deltas[d]
         if t1 not in matched:
           n_match += 1
@@ -148,8 +136,8 @@ class Scanner(object):
         n_match += 1
       else:
         to_add.append(n_pos)
-    self.b.extend(to_add)
-    print('eliminated', n_match, 'leaving', len(to_add), 'total beacons:', len(self.b))
+    self.positions.extend(to_add)
+    print('eliminated', n_match, 'leaving', len(to_add), 'total beacons:', len(self.positions))
     self.beacons = BeaconList(self, self.rotation)
 
 
@@ -160,30 +148,17 @@ class BeaconList(object):
     self.scanner = scanner
     self.rotation = rotation
     rf = rotate.rot_func[rotation]
-    rotated = [rf(pos) for pos in scanner.b]
-    # first = rotated[0]
-    # self.positions = [pdiff(first, pos) for pos in rotated]
+    rotated = [rf(pos) for pos in scanner.positions]
     self.positions = rotated
-    self.bingod = None
 
     # compute all the deltas
     lp = len(self.positions)
     deltas = {}
     for fp in range(0, lp):
       fpos = self.positions[fp]
-      if fpos == (-618, -824, -621):
-        print('Got the 618', fpos)
       for tp in range(fp+1, lp):
         tpos = self.positions[tp]
         delta = pdiff(fpos, tpos)
-        if delta == (68, -1246, -43):
-          print('============================ BINGO')
-        if fpos[0] == -618 and tpos[0] == -537:
-          print('============================ BINGO', fpos, tpos, delta)
-          self.bingod = delta
-        if tpos[0] == -618 and fpos[0] == -537:
-          print('============================ RBINGO', fpos, tpos, delta)
-          self.bingod = pdiff(delta, (0,0,0))
         if delta in deltas:
           print("FUCK, do it the hard way")
           print(deltas)
@@ -265,7 +240,7 @@ class day19(aoc.aoc):
         else:
           print('Did not match', anchor.n, 'to', scanner.n)
 
-    return len(anchor.b)
+    return len(anchor.positions)
 
 
   def part2(self):
@@ -283,6 +258,4 @@ day19.sample_test('sample.txt', is_file=True, expect1=79, expect2=3621, recreate
 
 
 if __name__ == '__main__':
-  # 369 is too high
   day19.run_and_check('input.txt', expect1=357, expect2=12317, recreate=False)
-  pass
