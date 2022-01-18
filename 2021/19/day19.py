@@ -15,7 +15,11 @@ Z_AXIS = 2
 
 
 def pdiff(a, b):
-  return (b[0]-a[0], b[1]-a[1], b[2]-a[2]) 
+  return (b[0]-a[0], b[1]-a[1], b[2]-a[2])
+
+
+def m_dist(a, b):
+  return abs(b[0]-a[0]) + abs(b[1]-a[1]) + abs(b[2]-a[2])
 
 
 class Scanner(object):
@@ -26,20 +30,15 @@ class Scanner(object):
     self.n = int(t[0])
     self.b = []
     self.rotation = -1
+    self.merged = False
+    self.pos = (0, 0, 0)
     for line in inp[1:]:
-      if not line: 
+      if not line:
         continue
       x = tuple([int(n) for n in line.split(',')])
       if x == (-618, -824, -621):
         print('Got the 618')
-      # XXX x.append(int(math.sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2])))
       self.b.append(x)
-
-    # print(self)
-    self.x_deltas = [i for i in self.deltas(X_AXIS)]
-    self.y_deltas = [i for i in self.deltas(Y_AXIS)]
-    self.z_deltas = [i for i in self.deltas(Z_AXIS)]
-
 
   def __str__(self):
     return 'scr:%d, %s' % (self.n, self.b)
@@ -51,49 +50,114 @@ class Scanner(object):
       yield pos - last
       last = pos
 
-  def pdeltas(self):
-    print('%2d' % self.n, ','.join(['%3d' % i for i in self.x_deltas]))
-    # print('  ', ','.join(['%3d' % i for i in self.y_deltas]))
-    # print('  ', ','.join(['%3d' % i for i in self.z_deltas]))
-
-
   def check_matches(self, other, rotation):
+    """Check for enough matchs at the same translation."""
     s_beacons = self.beacons
-    deltas = s_beacons.deltas
-    n_match = 0
-
-    other.beacons = BeaconList(other, X_AXIS, rotation)
+    my_deltas = self.beacons.deltas
+    other.beacons = BeaconList(other, rotation)
     other_beacons = other.beacons
     other_deltas = other_beacons.deltas
+
+    scanner_translation = None
+    possible_translation_1 = None
+    possible_translation_2 = None
+    n_match = 0
+    matched = set()
     for d in other_deltas:
-      if d in s_beacons.deltas:
+      if d in my_deltas:
         if d == s_beacons.bingod:
           print('got the bingod')
         if d == other_beacons.bingod:
           print('got the Rbingod')
-        f1,f2 = deltas[d]
-        t1,t2 = other_deltas[d]
-        print('s %2d %2d:' % (self.n, other.n), d, f1, f2, '...', t1, t2)
-        n_match += 1
-    return n_match
+
+        t1, t2 = other_deltas[d]
+        if t1 not in matched:
+          n_match += 1
+          matched.add(t1)
+        if t2 not in matched:
+          n_match += 1
+          matched.add(t2)
+
+        f1,f2 = my_deltas[d]
+        # print('s %2d %2d:' % (self.n, other.n), d, f1, f2, '...', t1, t2)
+
+        # What is the delta between the points from self and other?
+        # They all must be the same
+        d1 = pdiff(f1, t1)
+        d2 = pdiff(f1, t2)
+        d3 = pdiff(f2, t2)
+
+        assert d1 == d3
+        if not possible_translation_1:
+          possible_translation_1 = d1
+          possible_translation_2 = d2
+        else:
+          if not scanner_translation:
+            if d1 == possible_translation_1:
+              scanner_translation = d1
+              assert d2 != possible_translation_2
+            elif d1 == possible_translation_2:
+              scanner_translation = d1
+            else:
+              assert d2 == possible_translation1 or d2 == possible_translation_2
+              scanner_translation = d2
+          assert d1 == scanner_translation or d2 == scanner_translation
+    if matched:
+      print('match:', self.n, other.n, 'at rotation', rotation, '->', n_match, 'matches')
+      assert len(matched) == n_match
+    return n_match, scanner_translation, matched
 
   def rotate_to_me(self, other):
     n_rots = 0
+    best_n_match = 0
+    best_translation = None
+    best_matched = 0
+    best_beacons = None
     for rotation in range(24):
-      n_match = self.check_matches(other, rotation)
+      n_match, translation, matched = self.check_matches(other, rotation)
+      if n_match > best_n_match:
+        best_n_match = n_match
+        best_translation = translation
+        best_matched = matched
+        best_beacons = other.beacons
       if n_match >= 12:
         n_rots += 1
-        print('=========== align', self.n, other.n, 'n_match:', n_match)
+        print('=========== align', self.n, other.n, 'rot:', rotation, 'n_match:', n_match)
+        other.rotation = rotation
+        # return n_match, translation, matched
     if n_rots > 1:
-      print('FUCKIT.  I got two alignments')
+      print('FUCKIT.  I got two good alignments')
+    if best_beacons:
+      other.beacons = best_beacons
+    return best_n_match, best_translation, best_matched
 
+  def merge_in(self, other, translation, expected_matches):
+    """Merge other into me."""
+
+    print('merge', self.n, '<-', other.n, 'translation:', translation)
+    other.pos = pdiff(translation, (0, 0, 0))
+    other.merged = True
+    # assert, other.beacons is rotated correctly
+    other_beacons = other.beacons
+    n_match = 0
+    to_add = []
+    for pos in other_beacons.positions:
+      n_pos = pdiff(translation, pos)
+      if n_pos in self.beacons.positions:
+        # assert pos in expected_matches
+        n_match += 1
+      else:
+        to_add.append(n_pos)
+    self.b.extend(to_add)
+    print('eliminated', n_match, 'leaving', len(to_add), 'total beacons:', len(self.b))
+    self.beacons = BeaconList(self, self.rotation)
 
 
 class BeaconList(object):
+  """A rotated set of beacons and more!"""
 
-  def __init__(self, scanner, axis, rotation):
+  def __init__(self, scanner, rotation):
     self.scanner = scanner
-    self.axis = axis
     self.rotation = rotation
     rf = rotate.rot_func[rotation]
     rotated = [rf(pos) for pos in scanner.b]
@@ -119,14 +183,15 @@ class BeaconList(object):
           self.bingod = delta
         if tpos[0] == -618 and fpos[0] == -537:
           print('============================ RBINGO', fpos, tpos, delta)
-          self.bingod = delta
+          self.bingod = pdiff(delta, (0,0,0))
         if delta in deltas:
           print("FUCK, do it the hard way")
           print(deltas)
           sys.exit(1)
+
         deltas[delta] = (fpos, tpos)
     self.deltas = deltas
-    assert len(self.deltas) == lp * (lp - 1) // 2
+    # assert len(self.deltas) == lp * (lp - 1) // 2
 
 
 class day19(aoc.aoc):
@@ -160,11 +225,8 @@ class day19(aoc.aoc):
     self.reset()
     ns = len(self.scanners)
 
-    #for s in self.scanners:
-    #  s.pdeltas()
-    
     s = self.scanners[0]
-    s.beacons = BeaconList(s, X_AXIS, 0)
+    s.beacons = BeaconList(s, 0)
 
     anchor = None
     for i_s, scanner in enumerate(self.scanners):
@@ -172,77 +234,55 @@ class day19(aoc.aoc):
         break
       for i_t in range(i_s+1, ns):
         other = self.scanners[i_t]
-        n_match = scanner.check_matches(other, 0)
+        n_match, translation, matches = scanner.check_matches(other, 0)
         if n_match >= 12:
-          print('You sunk my battleship', i_s, i_t)
+          print('You sunk my battleship', i_s, i_t, 'by', n_match)
           scanner.rotation = 0
           other.rotation = 0
           anchor = scanner
+          scanner.merge_in(other, translation, matches)
           break
 
     # We have the first pair. So we rotate the others to match these.
     print('Checking with anchor', anchor.n)
-    for scanner in self.scanners:
-      if scanner.rotation >= 0:
-        continue
-      anchor.rotate_to_me(scanner)
+    more_scanners = True
+    loop_check = 0
+    min_match = 13
 
-    return 42
+    while more_scanners and loop_check < 40:
+      loop_check += 1
+      min_match -= 1
+      more_scanners = False
+      for scanner in self.scanners:
+        if scanner == anchor or scanner.merged:
+          continue
+        more_scanners = True
+        n_match, translation, matched = anchor.rotate_to_me(scanner)
+        if (n_match >= min_match) and translation:
+          print("MERGING", len(matched))
+          anchor.merge_in(scanner, translation, matched)
+          scanner.merged = True
+        else:
+          print('Did not match', anchor.n, 'to', scanner.n)
+
+    return len(anchor.b)
 
 
   def part2(self):
     print('===== Start part 2')
-    self.reset()
+    ret = 0
+    for i_s, scanner in enumerate(self.scanners):
+      for i_t in range(i_s+1, len(self.scanners)):
+        other = self.scanners[i_t]
+        d = m_dist(scanner.pos, other.pos)
+        ret = max(ret, d)
+    return ret
 
-    return 42
 
-
-"""
---- scanner 0 ---
--1,-1,1
--2,-2,2
--3,-3,3
--2,-3,1
-5,6,-4
-8,0,7
-
---- scanner 0 ---
-1,-1,1
-2,-2,2
-3,-3,3
-2,-1,3
--5,4,-6
--8,-7,0
-
---- scanner 0 ---
--1,-1,-1
--2,-2,-2
--3,-3,-3
--1,-3,-2
-4,6,5
--7,0,8
-
---- scanner 0 ---
-1,1,-1
-2,2,-2
-3,3,-3
-1,3,-2
--4,-6,5
-7,0,8
-
---- scanner 0 ---
-1,1,1
-2,2,2
-3,3,3
-3,1,2
--6,-4,-5
-0,7,-8
-"""
-
-day19.sample_test('sample.txt', is_file=True, expect1=42, expect2=None)
-day19.sample_test('input.txt', is_file=True, expect1=22, expect2=None)
+day19.sample_test('sample.txt', is_file=True, expect1=79, expect2=3621, recreate=False)
 
 
 if __name__ == '__main__':
-  # day19.run_and_check('input.txt', expect1=None, expect2=None)
+  # 369 is too high
+  day19.run_and_check('input.txt', expect1=357, expect2=12317, recreate=False)
   pass
