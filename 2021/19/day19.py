@@ -28,67 +28,22 @@ class Scanner(object):
       if not line:
         continue
       x = tuple([int(n) for n in line.split(',')])
-      if x == (-618, -824, -621):
-        print('Got the 618')
       self.positions.append(x)
+    self.beacons = BeaconList(self, 0)
+
 
   def __str__(self):
     return 'scr:%d, %s' % (self.n, self.positions)
 
   def check_matches(self, other, rotation):
-    """Check for enough matchs at the same translation."""
-    s_beacons = self.beacons
-    my_deltas = self.beacons.deltas
+    """Check for matches at a rotation."""
     other.beacons = BeaconList(other, rotation)
-    other_beacons = other.beacons
-    other_deltas = other_beacons.deltas
-
-    scanner_translation = None
-    possible_translation_1 = None
-    possible_translation_2 = None
-    n_match = 0
-    matched = set()
-    for d in other_deltas:
-      if d in my_deltas:
-        t1, t2 = other_deltas[d]
-        if t1 not in matched:
-          n_match += 1
-          matched.add(t1)
-        if t2 not in matched:
-          n_match += 1
-          matched.add(t2)
-
-        f1,f2 = my_deltas[d]
-        # print('s %2d %2d:' % (self.n, other.n), d, f1, f2, '...', t1, t2)
-
-        # What is the delta between the points from self and other?
-        # They all must be the same
-        d1 = pdiff(f1, t1)
-        d2 = pdiff(f1, t2)
-        d3 = pdiff(f2, t2)
-
-        assert d1 == d3
-        if not possible_translation_1:
-          possible_translation_1 = d1
-          possible_translation_2 = d2
-        else:
-          if not scanner_translation:
-            if d1 == possible_translation_1:
-              scanner_translation = d1
-              assert d2 != possible_translation_2
-            elif d1 == possible_translation_2:
-              scanner_translation = d1
-            else:
-              assert d2 == possible_translation1 or d2 == possible_translation_2
-              scanner_translation = d2
-          assert d1 == scanner_translation or d2 == scanner_translation
-    if matched:
-      print('match:', self.n, other.n, 'at rotation', rotation, '->', n_match, 'matches')
-      assert len(matched) == n_match
-    return n_match, scanner_translation, matched
+    other.rotation = rotation
+    return self.beacons.find_matches(
+        other.beacons, msg='(%2d %2d)' % (self.n, other.n))
 
   def rotate_to_me(self, other):
-    n_rots = 0
+    """Try all rotations for the other and return the best fit."""
     best_n_match = 0
     best_translation = None
     best_matched = 0
@@ -101,12 +56,7 @@ class Scanner(object):
         best_matched = matched
         best_beacons = other.beacons
       if n_match >= 12:
-        n_rots += 1
         print('=========== align', self.n, other.n, 'rot:', rotation, 'n_match:', n_match)
-        other.rotation = rotation
-        # return n_match, translation, matched
-    if n_rots > 1:
-      print('FUCKIT.  I got two good alignments')
     if best_beacons:
       other.beacons = best_beacons
     return best_n_match, best_translation, best_matched
@@ -134,7 +84,7 @@ class Scanner(object):
 
 
 class BeaconList(object):
-  """A rotated set of beacons and more!"""
+  """A rotated set of beacons and the set of deltas between each."""
 
   def __init__(self, scanner, rotation):
     self.scanner = scanner
@@ -159,6 +109,53 @@ class BeaconList(object):
         deltas[delta] = (fpos, tpos)
     self.deltas = deltas
     # assert len(self.deltas) == lp * (lp - 1) // 2
+
+  def find_matches(self, other, msg=''):
+    my_deltas = self.deltas
+    other_deltas = other.deltas
+    scanner_translation = None
+    possible_translation_1 = None
+    possible_translation_2 = None
+    n_match = 0
+    matched = set()
+    for d in other_deltas:
+      point_pair = my_deltas.get(d)
+      if point_pair:
+        f1, f2 = point_pair
+        t1, t2 = other_deltas[d]
+        if t1 not in matched:
+          n_match += 1
+          matched.add(t1)
+        if t2 not in matched:
+          n_match += 1
+          matched.add(t2)
+        # print('s %s:' % msg, d, f1, f2, '...', t1, t2)
+
+        # What is the delta between the points from self and other?
+        # They all must be the same
+        d1 = pdiff(f1, t1)
+        d2 = pdiff(f1, t2)
+        d3 = pdiff(f2, t2)
+
+        assert d1 == d3
+        if not possible_translation_1:
+          possible_translation_1 = d1
+          possible_translation_2 = d2
+        else:
+          if not scanner_translation:
+            if d1 == possible_translation_1:
+              scanner_translation = d1
+              assert d2 != possible_translation_2
+            elif d1 == possible_translation_2:
+              scanner_translation = d1
+            else:
+              assert d2 == possible_translation1 or d2 == possible_translation_2
+              scanner_translation = d2
+          assert d1 == scanner_translation or d2 == scanner_translation
+    if matched:
+      print('match:', msg, 'at rotation', other.rotation, '->', n_match, 'matches')
+      assert len(matched) == n_match
+    return n_match, scanner_translation, matched
 
 
 class day19(aoc.aoc):
@@ -213,13 +210,10 @@ class day19(aoc.aoc):
     # We have the first pair. So we rotate the others to match these.
     print('Checking with anchor', anchor.n)
     more_scanners = True
-    loop_check = 0
-    min_match = 13
-
-    while more_scanners and loop_check < 40:
-      loop_check += 1
-      min_match -= 1
+    min_match = 12
+    while more_scanners:
       more_scanners = False
+      did_merge = False
       for scanner in self.scanners:
         if scanner == anchor or scanner.merged:
           continue
@@ -229,14 +223,18 @@ class day19(aoc.aoc):
           print("MERGING", len(matched))
           anchor.merge_in(scanner, translation, matched)
           scanner.merged = True
+          did_merge = True
         else:
           print('Did not match', anchor.n, 'to', scanner.n)
+      if not did_merge:
+        min_match -= 1
 
     return len(anchor.positions)
 
 
   def part2(self):
     print('===== Start part 2')
+
     ret = 0
     for i_s, scanner in enumerate(self.scanners):
       for i_t in range(i_s+1, len(self.scanners)):
