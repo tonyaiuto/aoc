@@ -1,17 +1,9 @@
 #!/usr/bin/env python3
 "AOC 2021: day 19"
 
-from collections import defaultdict
-import math
-
 from tools import aoc
-from tools import memoized
 
 import rotate
-
-X_AXIS = 0
-Y_AXIS = 1
-Z_AXIS = 2
 
 
 def pdiff(a, b):
