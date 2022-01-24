@@ -3,13 +3,19 @@
 
 from collections import deque
 import copy
+import time
+from typing import List
+
+import jsonrpclib
 
 from tools import aoc
 
 
+VIS = True
+
 class State(object):
 
-  TO_EXTERNAL = ['.', 'A', 'B', 'C', 'D']
+  TO_EXTERNAL = [' ', 'A', 'B', 'C', 'D']
 
   blockers = [
     #   0        1        2       3      4      5         6
@@ -91,6 +97,21 @@ class State(object):
             + sx[self.stacks[2][r]] + '#' 
             + sx[self.stacks[3][r]] + '#')
     print(indent, '   %d %d %d %d' % (self.locked[0], self.locked[1], self.locked[2], self.locked[3]))
+
+  def vis(self, vis_server):
+    sx = State.TO_EXTERNAL
+    _ = vis_server.draw_cell( 1, 1, ord(sx[self.rooms[0]]))
+    _ = vis_server.draw_cell( 2, 1, ord(sx[self.rooms[1]]))
+    _ = vis_server.draw_cell( 4, 1, ord(sx[self.rooms[2]]))
+    _ = vis_server.draw_cell( 6, 1, ord(sx[self.rooms[3]]))
+    _ = vis_server.draw_cell( 8, 1, ord(sx[self.rooms[4]]))
+    _ = vis_server.draw_cell(10, 1, ord(sx[self.rooms[5]]))
+    _ = vis_server.draw_cell(11, 1, ord(sx[self.rooms[6]]))
+    for r in range(self.depth):
+      for s in range(4):
+        v = ord(sx[self.stacks[s][self.depth-1-r]])
+        _ = vis_server.draw_cell(3 + s*2, 2+r, v)
+
 
   def all_moves(self, verbose=False):
     for si, s in enumerate(self.stacks):
@@ -201,9 +222,25 @@ class day23(aoc.aoc):
     pass
 
 
-  def part1(self):
+  def part1(self, visualize=True):
     print('===== Start part 1')
     self.reset()
+
+    if visualize:
+      vh = self.initial.depth + 3
+      vis_server = jsonrpclib.Server('http://localhost:8888')
+      vis_server.grid(width=13, height=vh, cell_width=20)
+      for x in range(13):
+         _ = vis_server.draw_cell(x, 0, ord('#'))
+      _ = vis_server.draw_cell(0, 1, ord('#'))
+      _ = vis_server.draw_cell(12, 1, ord('#'))
+      for x in (0, 1, 2, 4, 6, 8, 10, 11, 12):
+        _ = vis_server.draw_cell(x, 2, ord('#'))
+      for y in range(3, vh):
+        for x in (2, 4, 6, 8, 10,):
+          _ = vis_server.draw_cell(x, y, ord('#'))
+      for x in range(2, 11):
+        _ = vis_server.draw_cell(x, vh-1, ord('#'))
 
     self.initial.cost = 0
 
@@ -222,6 +259,8 @@ class day23(aoc.aoc):
       lf = len(frontier)
       # print('= = = = = ', lf, 'nodes')
       cur = frontier.popleft()
+      if vis_server:
+        cur.vis(vis_server)
       if lf < 3:
         cur.print()
       any_more = False
@@ -271,7 +310,7 @@ class day23(aoc.aoc):
     print(sig)
     self.initial = State.from_sig(sig)
     self.initial.print()
-    return self.part1()
+    return self.part1(visualize=False)
 
 
 """
@@ -287,4 +326,5 @@ day23.sample_test("""
 
 
 if __name__ == '__main__':
-  day23.run_and_check('input2.txt', expect1=19167, expect2=47665)
+  # day23.run_and_check('input2.txt', expect1=19167, expect2=47665)
+  pass

@@ -146,7 +146,7 @@ class RPCServer(threading.Thread):
   def __init__(self, visualizer, host='localhost', port=8888):
     super(RPCServer, self).__init__()
     self.visualizer = visualizer
-    self.server = SimpleJSONRPCServer((host, port))
+    self.server = SimpleJSONRPCServer((host, port), logRequests=False)
     self.visualizer.register_functions(self.server)
 
   def run(self):
@@ -158,7 +158,6 @@ class RPCServer(threading.Thread):
     print('RPCServer.quit')
     # kill myself in another thread so that the current RPC can return.
     threading.Timer(.5, self.server.shutdown).start()
-
 
 
 def main(args: List[str]):
