@@ -10,7 +10,9 @@ from typing import List
 import jsonrpclib
 
 def main(args: List[str]):
-  server = jsonrpclib.Server('http://localhost:8888')
+  host = '10.0.0.135'
+  host = 'localhost'
+  server = jsonrpclib.Server('http://%s:8888' % host)
 
   if len(args) > 1 and args[1].startswith('q'):
     print('quit =>', server.quit())
@@ -18,18 +20,24 @@ def main(args: List[str]):
   # sanity(server)
   grid_demo(server)
 
-  # time.sleep(3)
-  # print('quit =>', server.quit())
+  if len(args) > 1 and args[1].startswith('s'):
+    time.sleep(3)
+    print('quit =>', server.quit())
 
 
 def grid_demo(server):
-  res = server.grid(width=40, height=40, cell_width=10)
+  res = server.grid(width=29, height=29, cell_width=10)
   print('grid =>', res)
 
-  for y in range(0, 40, 2):
-    for x in range(0, 40, 2):
-      time.sleep(.01)
-      res = server.draw_cell(x, y, 1)
+  for y in range(0, 30, 2):
+    for x in range(0, 30, 2):
+      time.sleep(.005)
+      v = 1
+      if x == 8:
+        v = ord('X')
+      if x == 14:
+        v = ord('A')
+      res = server.draw_cell(x, y, v)
       if y > 5:
         res = server.draw_cell(x, y-4, 0)
 

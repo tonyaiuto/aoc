@@ -19,16 +19,20 @@ class VisualizerCore(object):
 
     self.tk_root = tkinter.Tk()
     self.canvas = Canvas(self.tk_root)
+    self.verbose = 0
 
   def register_functions(self, rpc_server):
     rpc_server.register_function(lambda x: x, 'ping')
     rpc_server.register_function(self.quit)
     rpc_server.register_function(self.dims)
+    rpc_server.register_function(self.grid)
+    rpc_server.register_function(self.draw_cell)
+    # self.register_demo(rpc_server)
+
+  def register_demo(self, rpc_server):
     rpc_server.register_function(self.demo_arc1)
     rpc_server.register_function(self.demo_arc2)
     rpc_server.register_function(self.demo_arc3)
-    rpc_server.register_function(self.grid)
-    rpc_server.register_function(self.draw_cell)
 
   def serve(self):
     self.server.start()
@@ -55,7 +59,8 @@ class VisualizerCore(object):
     self.canvas.make_grid(height=height, width=width, cell_width=cell_width)
 
   def draw_cell(self, x, y, v, **kwargs):
-    print('draw_cell', x, y, v)
+    if self.verbose > 0:
+      print('draw_cell', x, y, v)
     self.canvas.draw_cell(x, y, v)
 
   def demo_arc1(self):
@@ -83,15 +88,17 @@ class Canvas(threading.Thread):
     self.background = 'white'
     self.foreground = 'black'
     self.canvas = None
-    self.resize(width, height)
     self.cells = {}
+    self.padding = 5
+    self.resize(width, height)
 
   def resize(self, width, height):
-    self.width = width
-    self.height = height
+    self.width = width + 2 * self.padding
+    self.height = height + 2 * self.padding
     print('resize canvas to %d x %d' % (self.width, self.height))
     if self.canvas:
-      self.canvas.configure(bg=self.background, width=self.width, height=self.height)
+      self.canvas.configure(
+          bg=self.background, width=self.width, height=self.height)
     else:
       self.canvas = tkinter.Canvas(
           self.root, width=self.width, height=self.height,
@@ -117,17 +124,19 @@ class Canvas(threading.Thread):
     self.resize(height=height*cell_width, width=width*cell_width)
 
   def draw_cell(self, x, y, v):
-    prev = self.cells.get((x,y))
-    if prev:
-       self.canvas.delete(prev)
-    if v == 0:
-      fill = self.background
+    fill = self.foreground if v == 1 else self.background
+    x_pos = x * self.cell_width + self.padding + 1
+    y_pos = y * self.cell_width + self.padding + 1
+    cell = self.cells.get((x,y))
+    if cell:
+      self.canvas.delete(cell)
+    if v <= ord(' '):
+      self.cells[(x, y)] = self.canvas.create_rectangle(
+          x_pos, y_pos, x_pos + self.cell_width, y_pos + self.cell_width,
+          fill=fill, outline=fill)
     else:
-      fill = self.foreground
-    self.cells[(x, y)] = self.canvas.create_rectangle(
-        x*self.cell_width+1, y*self.cell_width+1,
-        (x+1)*self.cell_width, (y+1)*self.cell_width,
-        fill=fill, outline=fill)
+      self.cells[(x, y)] = self.canvas.create_text(
+          x_pos+5, y_pos+5, text=chr(v))
     # self.pack()
 
 
