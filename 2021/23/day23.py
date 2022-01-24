@@ -222,10 +222,11 @@ class day23(aoc.aoc):
     pass
 
 
-  def part1(self, visualize=True):
+  def part1(self, visualize=False):
     print('===== Start part 1')
     self.reset()
 
+    vis_server = None
     if visualize:
       vh = self.initial.depth + 3
       vis_server = jsonrpclib.Server('http://localhost:8888')
@@ -274,13 +275,13 @@ class day23(aoc.aoc):
         if node:
           if total_cost >= node.cost:
             continue
-          if total_cost > best_cost:
-            continue
         else:
           node = State.from_sig(sig)
           fsig[node.sig] = node
-        any_more = True
         node.cost = total_cost
+        if total_cost > best_cost:
+          continue
+        any_more = True
         if node.final:
           print('==== Final node has cost', node.cost)
           if node.cost < best_cost:
@@ -326,5 +327,5 @@ day23.sample_test("""
 
 
 if __name__ == '__main__':
-  # day23.run_and_check('input2.txt', expect1=19167, expect2=47665)
+  day23.run_and_check('input2.txt', expect1=19167, expect2=47665)
   pass
