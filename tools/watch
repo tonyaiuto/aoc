@@ -10,6 +10,7 @@ while : ; do
   sleep 1
   if [[ $file -nt "$MOD" ]] ; then
     touch "$MOD"
+    echo ============================== $(date)
     timeout 120 $cmd
   fi
 done

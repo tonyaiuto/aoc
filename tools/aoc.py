@@ -26,6 +26,7 @@ class aoc(object):
     self.trace = False
     self.trace_sample = False
     self.all_input = None
+    self.debug = 0
     self.reader_params = {
         'by_group': False,
         'skip_first_blank': True,
@@ -33,6 +34,11 @@ class aoc(object):
         'verbose': False,
     }
     self.reader_params.update(reader_params)
+  
+  def dprint(self, *args, **kwargs):
+    level = kwargs.get('level') or 0
+    if level > self.debug:
+      print(*args)
 
   def reset(self):
     print('Reusing solver from part1')
