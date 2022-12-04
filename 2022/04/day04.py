@@ -2,10 +2,10 @@
 "AOC 2021: day 04"
 
 from tools import aoc
-from tools import gridutils
+from tools import qparser
 
 
-class Foo(object):
+class Assignments(object):
 
   def __init__(self):
     pass
@@ -26,7 +26,17 @@ class day04(aoc.aoc):
             'verbose': False,
         })
     self.trace = True
- 
+    # This is overkill, but I am refreshing memory of how to use it.
+    self.parser = qparser.QParser([
+        qparser.Number('ls'),
+        qparser.Literal('-'),
+        qparser.Number('le'),
+        qparser.Literal(','),
+        qparser.Number('rs'),
+        qparser.Literal('-'),
+        qparser.Number('re'),
+        ])
+
   def part1(self):
     print('===== Start part 1')
     self.reset()
@@ -50,11 +60,19 @@ class day04(aoc.aoc):
     print('===== Start part 2')
     ret = 0
     spans = []
-    for span in self.all_input:
-      ls, rs = self.do_spans(span)
-      # print(ls, rs)
+    for line in self.all_input:
+      a = Assignments()
+      self.parser.parse(a, line)
+      if a.ls > a.re:
+        continue
+      if a.le < a.rs:
+        continue
+      ret += 1
+      """
+      ls, rs = self.do_spans(line)
       if overlap(ls, rs):
         ret += 1
+      """
     return ret
 
 def contains(a, b):
