@@ -64,7 +64,7 @@ class day05(aoc.aoc):
     print(self.n_stacks, 'stacks')
     self.stacks = []
     for i in range(self.n_stacks+1):
-      self.stacks.append([])
+      self.stacks.append('')
  
     for ri in range(rows):
       l = si[rows - ri - 1]
@@ -74,7 +74,7 @@ class day05(aoc.aoc):
          container = l[c * 4 + 1]
          if container != ' ':
            # print(c+1, container)
-           self.stacks[c+1].append(container)
+           self.stacks[c+1] += container
     print('STACKS:', self.stacks)
 
   def do_move(self, move, rev=True):
@@ -83,14 +83,13 @@ class day05(aoc.aoc):
     # print('MOVE:', m.q, ':', m.f, '->', m.t)
     md = self.stacks[m.f][-m.q:]
     if rev:
-      md.reverse()
+      md = md[::-1]
     new_len_f = len(self.stacks[m.f]) - m.q
     self.stacks[m.f] = self.stacks[m.f][0:new_len_f]
-    # print("from stack", self.stacks[m.f])
-    self.stacks[m.t].extend(md)
+    self.stacks[m.t] += md
     # print(md, self.stacks[m.f], self.stacks[m.t])
     # print('  >> Stacks:', self.stacks)
- 
+
   def part2(self):
     print('===== Start part 2')
     self.load_stacks(self.all_input[0])
