@@ -45,7 +45,7 @@ class day08(aoc.aoc):
 
   def post_load(self):
     # called after all input is read
-    print(self.rows[0:4])
+    # print(self.rows[0:4])
     self.nrows = len(self.rows)
     self.ncols = len(self.rows[0])
     print('nr/nc', self.nrows, self.ncols)
@@ -59,7 +59,7 @@ class day08(aoc.aoc):
     for ri in range(self.nrows):
       row = self.rows[ri]
       ret += self.n_row_vis(row, ri)
-      print('got', ret, 'row', row)
+      # print('got', ret, 'row', row)
 
     for ci in range(self.ncols):
       ret += self.n_col_vis(ci)
@@ -75,9 +75,9 @@ class day08(aoc.aoc):
         if not (ri, ci) in self.counted:
           self.counted.add((ri, ci))
           ret += 1
-          print('add', ri, ci)
-        else:
-          print('skip', ri, ci)
+          # print('add', ri, ci)
+        #else:
+        #  print('skip', ri, ci)
         at = height
 
     at = -1
@@ -152,7 +152,7 @@ class day08(aoc.aoc):
         vr = abs(n - ci)
         break
     ret = vl * vr * vu * vd
-    print(ri, ci, 'h=', my_height, '->', ret, ',', vl, vr, vu, vd)
+    # print(ri, ci, 'h=', my_height, '->', ret, ',', vl, vr, vu, vd)
     return ret
  
     
