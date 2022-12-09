@@ -40,6 +40,10 @@ class aoc(object):
     if level > self.debug:
       print(*args)
 
+  def fail(self, *args):
+    print(*args)
+    assert False
+
   def reset(self):
     print('Reusing solver from part1')
 

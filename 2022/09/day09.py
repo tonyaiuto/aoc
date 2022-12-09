@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 "AOC 2021: day 09"
 
-from collections import defaultdict
-import copy
-import heapq
-import itertools
 import math
 
 from tools import aoc
@@ -32,37 +28,19 @@ class Pos(object):
     elif dir == 'D':
       self.r -= dist
     else:
-      print('bad input', dir, dist)
-      sys.exit(1)
+      self.fail('bad move', dir, dist)
 
   def follow(self, other):
     r_delta = other.r - self.r
     c_delta = other.c - self.c
-    rda = abs(r_delta)
-    cda = abs(c_delta)
-    r_inc = int(math.copysign(1, r_delta))
-    c_inc = int(math.copysign(1, c_delta))
+    # TIL: copysign(1, 0) => 1 instead of 0, because support for signed zero.
+    r_inc = int(math.copysign(1, r_delta)) if r_delta else 0
+    c_inc = int(math.copysign(1, c_delta)) if c_delta else 0
 
-    if rda <= 1 and cda <= 1:
+    if abs(r_delta) <= 1 and abs(c_delta) <= 1:
       return
-
-    if rda > 1:
-      self.r += r_inc
-      if cda == 1:
-        self.c = other.c
-      elif cda > 1:
-        print("cWhacky", self, other)
-        self.c += c_inc
-      # self.c = other.c
-
-    elif cda > 1:
-      self.c += c_inc
-      if rda == 1:
-        self.r = other.r
-      elif rda > 1:
-        print("rwhacky", self, other)
-        self.r = r_inc
-
+    self.r += r_inc
+    self.c += c_inc
     self.visited.add((self.r, self.c))
     return
 
@@ -90,8 +68,7 @@ class day09(aoc.aoc):
       for i in range(dist):
         self.head.move(dir, 1)
         self.tail.follow(self.head)
-
-        print(self.head, self.tail)
+        # print(self.head, self.tail)
 
     return len(self.tail.visited)
 
