@@ -42,6 +42,8 @@ class Pos(object):
     self.r += r_inc
     self.c += c_inc
     self.visited.add((self.r, self.c))
+    if abs(self.r) < 2:
+      print(self.visited)
     return
 
 
