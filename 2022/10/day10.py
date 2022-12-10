@@ -14,9 +14,15 @@ from tools import gridutils
 class CPU(object):
 
   def __init__(self):
-    self.cycle = 0
+    self.verbose = 0
     self.inst = []
+    self.cycle = 0
     self.pc = -1 
+    self.x = 1
+
+  def reset(self):
+    self.cycle = 0
+    self.pc = -1
     self.x = 1
 
   def __str__(self):
@@ -43,12 +49,15 @@ class CPU(object):
     what = self.inst[self.pc]
 
     if what is None:
-      # print('noop')
+      if self.verbose > 1:
+        print('noop')
       self.cycle += 1
       signal = self.cycle * self.x
       yield (self.cycle, signal, self.x)
       return
 
+    if self.verbose > 1:
+      print("ADDX", what)
     self.cycle += 1
     signal = self.cycle * self.x
     yield (self.cycle, signal, self.x)
@@ -72,24 +81,12 @@ class day10(aoc.aoc):
     self.trace = True
     self.cpu = CPU()
 
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     self.cpu.add_inst(line)
 
-  def post_load(self):
-    # called after all input is read
-    pass
-
-
   def part1(self):
     print('===== Start part 1')
-    self.reset()
-    # print(self.cpu.inst)
-
     want = set([20, 60, 100, 140, 180, 220])
     ret = 0
     for i in range(250):
@@ -103,23 +100,28 @@ class day10(aoc.aoc):
   def part2(self):
     print('===== Start part 2')
     self.reset()
-    want = set([20, 60, 100, 140, 180, 220])
+    self.cpu.reset()
+    self.cpu.verbose = 0
     ret = 0
-    row = ['.'] * 40
+    row = ['  '] * 40
     pos = 0
-    for i in range(250):
+    for i in range(200):
       for (cycle, s, x) in self.cpu.do_inst():
-        if cycle < 20:
-          print('pos: %3d, cycle: %3d, x: %4d:, %s' % (
-              pos, cycle, x, ''.join(row)))
+        if cycle > 250:
+          break
+        #if cycle < 20:
+        #  print('pos: %3d, cycle: %3d, x: %3d: %s' % (
+        #      pos, cycle, x, ''.join(row)))
+        #else:
+        #  self.cpu.verbose = 0
         if x-1 <= pos and pos <= x+1:
-          row[pos % 40] = '#'
-        if pos % 40 == 0:
-          print(''.join(row))
+          row[pos % 40] = '##'
         pos += 1
+        if pos % 40 == 0:
+          print('%3d' % pos, ''.join(row))
+          row = ['  '] * 40
+          pos = 0
     return ret
-
-    return 42
 
 
 day10.sample_test("""
@@ -273,4 +275,4 @@ noop
 
 
 if __name__ == '__main__':
-  day10.run_and_check('input.txt', expect1=14520, expect2=None)
+  day10.run_and_check('input.txt', expect1=14520, expect2='PZBGZEKB')
