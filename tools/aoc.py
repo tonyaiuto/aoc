@@ -10,7 +10,7 @@ def run_func(func, expect=None, tag=None):
   t_start = time.perf_counter()
   res = func()
   t_end = time.perf_counter()
-  print('%s:  %-15s   solve: %.5fms' % (tag, str(res), 1000*(t_end-t_start)))
+  print('SUCCESS: %s:  %-15s   solve: %.5fms' % (tag, str(res), 1000*(t_end-t_start)))
   if expect and  expect != res:
     print('FAIL: %s:' % tag, 'expect', expect, 'got', res)
     sys.exit(1)

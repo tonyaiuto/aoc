@@ -9,21 +9,42 @@ import math
 
 from tools import aoc
 from tools import gridutils
+from tools import intcode
 
 
-class CPU(object):
+class Ins(object):
 
-  def __init__(self):
+  NOOP=0
+  ADDX=1
+
+  def __init__(self, opcode, arg=None):
+    self.opcode = opcode
+    self.arg = arg
+
+  def  __repr__(self):
+    return '%s %d' % (self.opcode, self.arg)
+
+
+class CPU(intcode.Intcode):
+
+  def __init__(self, **kwargs):
+    super(CPU, self).__init__(
+        registers=('x'),
+        **kwargs)
+    self.reset()
+
     self.verbose = 0
     self.inst = []
     self.cycle = 0
-    self.pc = -1 
+    self.pc = 0 
     self.x = 1
 
   def reset(self):
+    super(CPU, self).reset()
     self.cycle = 0
-    self.pc = -1
+    self.pc = 0 
     self.x = 1
+    self.registers['x'] = 1
 
   def __str__(self):
     return str(self)
@@ -32,23 +53,23 @@ class CPU(object):
     x = line.split(' ')
     if x[0] == 'addx':
       arg = int(x[1])
-      self.inst.append(arg)
+      self.inst.append(Ins(Ins.ADDX, arg))
       if arg == 0: 
         print('watch out for zero', line)
     elif x[0] == 'noop':
-      self.inst.append(None)
+      self.inst.append(Ins(Ins.NOOP))
     else:
       print('WTF:', line)
       sys.exit(0)
 
   def do_inst(self):
-    self.pc += 1
     if self.pc >= len(self.inst):
-      print("==== LOOP")
+      # print("==== LOOP")
       self.pc = 0
     what = self.inst[self.pc]
+    self.pc += 1
 
-    if what is None:
+    if what.opcode == Ins.NOOP:
       if self.verbose > 1:
         print('noop')
       self.cycle += 1
@@ -57,7 +78,7 @@ class CPU(object):
       return
 
     if self.verbose > 1:
-      print("ADDX", what)
+      print("ADDX", what.arg)
     self.cycle += 1
     signal = self.cycle * self.x
     yield (self.cycle, signal, self.x)
@@ -65,7 +86,7 @@ class CPU(object):
     self.cycle += 1
     signal = self.cycle * self.x
     yield (self.cycle, signal, self.x)
-    self.x += what
+    self.x += what.arg
 
 
 class day10(aoc.aoc):
@@ -89,7 +110,7 @@ class day10(aoc.aoc):
     print('===== Start part 1')
     want = set([20, 60, 100, 140, 180, 220])
     ret = 0
-    for i in range(250):
+    for i in range(200):
       for (c, s, x) in self.cpu.do_inst():
         if c in want:
           print(c, s, x)
@@ -105,7 +126,7 @@ class day10(aoc.aoc):
     ret = 0
     row = ['  '] * 40
     pos = 0
-    for i in range(200):
+    for i in range(len(self.all_input)):
       for (cycle, s, x) in self.cpu.do_inst():
         if cycle > 250:
           break

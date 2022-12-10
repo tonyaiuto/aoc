@@ -5,6 +5,10 @@ import sys
 _DEFAULT_TRACE = False
 
 class Ins(object):
+  """A dummy instruction set.
+
+  Used for testing Intcode.
+  """
 
   def __init__(self, opcode, arg):
     self.opcode = opcode
@@ -18,12 +22,15 @@ class Intcode(object):
 
   def __init__(self, trace=False, registers=None,
                input=None, get_input=None,
-               terminate_on_end_of_input=False):
+               terminate_on_end_of_input=False,
+               max_cycles = 1000):
     self.mem = []
     self.pc = 0
     self.acc = 0
     self.trace = trace or _DEFAULT_TRACE
     self.halted = False
+    self.cycle = 0
+    self.max_cycles = max_cycles
 
     self.input = input or []
     self.terminate_on_end_of_input = terminate_on_end_of_input
@@ -62,6 +69,7 @@ class Intcode(object):
 
   def reset(self):
     self.halted = False
+    self.cycle = 0
     self.pc = 0
     self.acc = 0
     for r in self.register_names:
@@ -109,15 +117,15 @@ class Intcode(object):
   def run(self, loop_detect=False):
     self.pc = 0
     self.acc = 0
-    n_cycles = 0
+    self.cycles = 0
     if loop_detect:
       seen = set()
     while self.pc < len(self.mem):
       if self.is_halted:
         break
-      n_cycles += 1
-      if n_cycles > 1000:
-        # print('====== infinite loop')
+      self.cycles += 1
+      if self.cycles > self.max_cycles:
+        print('Possible infinite loop. More than %d cycles. Use max_cycles= to change.' % self.max_cycles)
         return 'loop'
       if loop_detect:
         if self.pc in seen:
