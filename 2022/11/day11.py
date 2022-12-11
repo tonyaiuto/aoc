@@ -14,6 +14,8 @@ MONKEYS = {}
 
 class Monkey(object):
 
+  lcm = 1
+
   def __init__(self, lines):
     assert lines[0].startswith('Monkey ')
     self.monkey = int(lines[0][7:-1])
@@ -45,6 +47,7 @@ class Monkey(object):
     assert self.true_to != self.monkey
     assert self.false_to != self.monkey
     MONKEYS[self.monkey] = self
+    Monkey.lcm *= self.div
     print(self)
 
   def __str__(self):
@@ -68,10 +71,13 @@ class Monkey(object):
         item = item * item
       if not round2:
         item = item // 3
+
       if item % self.div == 0:
-        MONKEYS[self.true_to].items.append(item)
+        mt = MONKEYS[self.true_to]
       else:
-        MONKEYS[self.false_to].items.append(item)
+        mt = MONKEYS[self.false_to]
+      mt.items.append(item % Monkey.lcm)
+      # mt.items.append(item)
     self.items = []
 
 
@@ -97,9 +103,6 @@ class day11(aoc.aoc):
     self.monkeys.append(Monkey(group))
     pass
 
-  def post_load(self):
-    # called after all input is read
-    pass
 
   def part1(self):
     print('===== Start part 1')
@@ -155,8 +158,8 @@ Monkey 3:
   Test: divisible by 17
     If true: throw to monkey 0
     If false: throw to monkey 1
-""", expect1=10605, expect2=None)
+""", expect1=10605, expect2=2713310158)
 
 
 if __name__ == '__main__':
-  day11.run_and_check('input.txt', expect1=108240, expect2=None)
+  day11.run_and_check('input.txt', expect1=108240, expect2=25712998901)
