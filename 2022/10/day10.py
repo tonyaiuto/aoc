@@ -31,13 +31,8 @@ class CPU(intcode.Intcode):
     super(CPU, self).__init__(
         registers=('x'),
         **kwargs)
-    self.reset()
-
     self.verbose = 0
-    self.inst = []
-    self.cycle = 0
-    self.pc = 0 
-    self.x = 1
+    self.reset()
 
   def reset(self):
     super(CPU, self).reset()
@@ -53,20 +48,20 @@ class CPU(intcode.Intcode):
     x = line.split(' ')
     if x[0] == 'addx':
       arg = int(x[1])
-      self.inst.append(Ins(Ins.ADDX, arg))
+      self.mem_append(Ins(Ins.ADDX, arg))
       if arg == 0: 
         print('watch out for zero', line)
     elif x[0] == 'noop':
-      self.inst.append(Ins(Ins.NOOP))
+      self.mem_append(Ins(Ins.NOOP))
     else:
       print('WTF:', line)
       sys.exit(0)
 
   def do_inst(self):
-    if self.pc >= len(self.inst):
+    if self.pc >= len(self.mem):
       # print("==== LOOP")
       self.pc = 0
-    what = self.inst[self.pc]
+    what = self.mem[self.pc]
     self.pc += 1
 
     if what.opcode == Ins.NOOP:

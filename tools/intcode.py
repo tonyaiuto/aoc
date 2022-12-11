@@ -24,6 +24,7 @@ class Intcode(object):
                input=None, get_input=None,
                terminate_on_end_of_input=False,
                max_cycles = 1000):
+    # These are considered public to subclasses
     self.mem = []
     self.pc = 0
     self.acc = 0
