@@ -160,7 +160,7 @@ class Grid(object):
 
   @property
   def width(self):
-    return self.max_x - self.min_x
+    return self.max_x - self.min_x + 1
 
   @property
   def height(self):
