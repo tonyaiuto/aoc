@@ -92,29 +92,37 @@ class day12(aoc.aoc):
     if self.height < 10:
       self.mm.print()
     self.shortest_path = self.width * self.height + 1
-    self.mm.shortest_path = self.shortest_path
-
-    costs = []
-    for r in range(self.mm.height):
-      costs.append([-1] * self.width)
-    costs[self.start.r][self.start.c] = 0
     print("W, H", self.width,self.height)
     print('start', self.start)
     print('END', self.end)
 
-    self.s1bfs(costs, self.start, self.end, visited=set())
+    self.s1bfs(self.start, self.end, visited=set())
     return self.shortest_path
 
   def part2(self):
     print('===== Start part 2')
     self.reset()
+    if self.height < 10:
+      self.mm.print()
+    self.shortest_path = self.width * self.height + 1
+    print("W, H", self.width,self.height)
+    print('END', self.end)
 
-    return 42
+    for r in range(self.height):
+      for c in range(self.width):
+        if self.rows[r][c] == 'a':
+          self.start = Point(r, c)
+          print('start', self.start)
+          self.s1bfs(self.start, self.end, visited=set())
+
+    return self.shortest_path
 
 
-  def s1bfs(self, costs, start, end, visited, tag=''):
-    if len(visited) >= self.shortest_path:
-      return -1
+  def s1bfs(self, start, end, visited, tag=''):
+    costs = []
+    for r in range(self.height):
+      costs.append([-1] * self.width)
+    costs[self.start.r][self.start.c] = 0
 
     frontier = set()
     visited = set([start])
@@ -122,7 +130,7 @@ class day12(aoc.aoc):
     self.expand_frontier(start, costs, frontier, visited)
 
     while len(frontier) > 0:
-      print('Cur frontier', [str(s) for s in frontier])
+      # print('Cur frontier', [str(s) for s in frontier])
       if len(frontier) > 100:
          print("CRAP")
          return
@@ -146,7 +154,7 @@ class day12(aoc.aoc):
     sh = ord(x)
     # visited.add(at)
     to_visit = self.neighbors(at)
-    print('at', at, '(%c)' % x, 'cost', cost_at, [str(v) for v in to_visit])
+    # print('at', at, '(%c)' % x, 'cost', cost_at, [str(v) for v in to_visit])
     for vv in to_visit:
       if vv in visited:
         continue
@@ -158,9 +166,8 @@ class day12(aoc.aoc):
       costs[vv.r][vv.c] = cost_at + 1
       frontier.add(vv)
 
-
   def s1dfs(self, mm, costs, at, end, visited, tag=''):
-    if len(visited) >= mm.shortest_path:
+    if len(visited) >= self.shortest_path:
       return -1
     x = self.rows[at.r][at.c]
     cost_at = costs[at.r][at.c]
@@ -189,9 +196,9 @@ class day12(aoc.aoc):
       lpath = self.s1dfs(mm, costs, vv, end, set(visited), tag=tag+' ')
       if lpath < 0:
         continue
-      if 0 < lpath and lpath < mm.shortest_path:
+      if 0 < lpath and lpath < self.shortest_path:
         print("new short path", lpath)
-        mm.shortest_path = lpath
+        self.shortest_path = lpath
     return lpath
 
 
@@ -201,8 +208,8 @@ abcryxxl
 accszExk
 acctuvwj
 abdefghi
-""", expect1=31, expect2=None)
+""", expect1=31, expect2=29)
 
 
 if __name__ == '__main__':
-  day12.run_and_check('input.txt', expect1=528, expect2=None)
+  day12.run_and_check('input.txt', expect1=528, expect2=522)
