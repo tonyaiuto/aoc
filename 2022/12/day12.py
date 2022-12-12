@@ -20,20 +20,6 @@ class Foo(object):
     return str(self)
 
 
-def neighbors(mm, p):
-  ret = []
-  r = p[0]
-  c = p[1]
-  if r > 0:
-    ret.append((r-1, c))
-  if r < mm.width-1:
-    ret.append((r+1, c))
-  if c > 0:
-    ret.append((r, c-1))
-  if c < mm.height-1:
-    ret.append((r, c+1))
-  return ret
-
 class day12(aoc.aoc):
 
   def __init__(self):
@@ -46,6 +32,7 @@ class day12(aoc.aoc):
         })
     self.trace = True
     self.mm = gridutils.Grid()
+    self.rows = []
 
   def reset(self):
     # for future use
@@ -55,33 +42,54 @@ class day12(aoc.aoc):
     # called for each line of input
     s = line.find('S')
     if s >= 0:
-      self.start = (s, self.mm.height)
+      self.start = (len(self.rows), s)
       print('start at', self.start)
       line = line[0:s] + 'a' + line[s+1:]
     e = line.find('E')
     if e >= 0:
-      self.end = (e, self.mm.height)
+      self.end = (len(self.rows), e)
       print('end at', self.end)
       line = line[0:e] + 'z' + line[e+1:]
     self.mm.add_row(line)
-    pass
+    self.rows.append(line)
 
   def post_load(self):
     # called after all input is read
-    pass
+    self.height = len(self.rows)
+    self.width = len(self.rows[0])
+
+  def neighbors(self, p):
+    ret = []
+    r = p[0]
+    c = p[1]
+    if r > 0:
+      ret.append((r-1, c))
+    if r < self.height-1:
+      ret.append((r+1, c))
+    if c > 0:
+      ret.append((r, c-1))
+    if c < self.width-1:
+      ret.append((r, c+1))
+    return ret
 
 
   def part1(self):
     print('===== Start part 1')
     self.reset()
-    if self.mm.height < 10:
+    if self.height < 10:
       self.mm.print()
+    self.mm.shortest_path = self.width * self.height + 1
 
-    print("W, H", self.mm.width,self.mm.height)
+    costs = []
+    for r in range(self.mm.height):
+      costs.append([-1] * self.width)
+    costs[self.start[0]][self.start[1]] = 0
+    print(costs)
 
-    self.mm.shortest_path = self.mm.width * self.mm.height
+    print("W, H", self.width,self.height)
+
     print('END', self.end)
-    ret = s1(self.mm, self.start, self.end, visited=set())
+    _ = self.s1(self.mm, costs, self.start, self.end, visited=set())
     return self.mm.shortest_path
 
   def part2(self):
@@ -91,32 +99,42 @@ class day12(aoc.aoc):
     return 42
 
 
-def s1(mm, at, end, visited, tag=''):
-  if at == end:
-    # print("AT END", end)
-    return len(visited)
-  if len(visited) >= mm.shortest_path:
-    return -1
-  x = mm.get(at[0], at[1])
-  sh = ord(x)
-  visited.add(at)
-  to_visit = neighbors(mm, at)
-  # print(tag, 'at', at, x, to_visit)
-  sh = ord(mm.get(at[0], at[1]))
-  lpath = -1
-  for vv in to_visit:
-    if vv in visited:
-      continue
-    h = ord(mm.get(vv[0], vv[1]))
-    if h > sh + 1:
-      continue
-    lpath = s1(mm, vv, end, set(visited), tag=tag+' ')
-    if lpath < 0:
-      continue
-    if mm.shortest_path < 0 or lpath < mm.shortest_path:
-      print("new short path", lpath)
-      mm.shortest_path = lpath
-  return lpath
+  def s1(self, mm, costs, at, end, visited, tag=''):
+    if at == end:
+      print("AT END", end, 'cost=', costs[at[0]][at[1]])
+      return len(visited)
+    if len(visited) >= mm.shortest_path:
+      return -1
+    x = self.rows[at[0]][at[1]]
+    cost_at = costs[at[0]][at[1]]
+    sh = ord(x)
+    visited.add(at)
+    to_visit = self.neighbors(at)
+    print(tag, 'at', at, '(%c)' % x, 'cost', cost_at, to_visit)
+    lpath = -1
+    for vv in to_visit:
+      if vv in visited:
+        continue
+      h = ord(self.rows[vv[0]][vv[1]])
+      if h > sh + 1:
+        continue
+  
+      # print(vv)
+      if costs[vv[0]][vv[1]] < 0 or costs[vv[0]][vv[1]] > cost_at + 1:
+        costs[vv[0]][vv[1]] = cost_at + 1
+      #else:
+      #  continue
+  
+      # lpath = s1(mm, costs, vv, end, set(visited), tag=tag+' ')
+      # sv.add(vv)
+      sv = set(visited)
+      lpath = self.s1(mm, costs, vv, end, sv, tag=tag+' ')
+      if lpath < 0:
+        continue
+      if 0 < lpath and lpath < mm.shortest_path:
+        print("new short path", lpath)
+        mm.shortest_path = lpath
+    return lpath
 
 
 day12.sample_test("""
