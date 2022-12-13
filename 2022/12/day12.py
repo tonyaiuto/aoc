@@ -49,10 +49,6 @@ class day12(aoc.aoc):
     self.mm = gridutils.Grid()
     self.rows = []
 
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     s = line.find('S')
@@ -88,7 +84,6 @@ class day12(aoc.aoc):
 
   def part1(self):
     print('===== Start part 1')
-    self.reset()
     if self.height < 10:
       self.mm.print()
     self.shortest_path = self.width * self.height + 1
@@ -101,9 +96,6 @@ class day12(aoc.aoc):
 
   def part2(self):
     print('===== Start part 2')
-    self.reset()
-    if self.height < 10:
-      self.mm.print()
     self.shortest_path = self.width * self.height + 1
     print("W, H", self.width,self.height)
     print('END', self.end)
@@ -112,7 +104,7 @@ class day12(aoc.aoc):
       for c in range(self.width):
         if self.rows[r][c] == 'a':
           self.start = Point(r, c)
-          print('start', self.start)
+          # print('start', self.start)
           self.s1bfs(self.start, self.end, visited=set())
 
     return self.shortest_path
