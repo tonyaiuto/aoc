@@ -58,10 +58,10 @@ class VisualizerCore(object):
       cell_width = 5
     self.canvas.make_grid(height=height, width=width, cell_width=cell_width)
 
-  def draw_cell(self, x, y, v, **kwargs):
+  def draw_cell(self, x, y, v, fill=None):
     if self.verbose > 0:
-      print('draw_cell', x, y, v)
-    self.canvas.draw_cell(x, y, v)
+      print('draw_cell', x, y, v, fill)
+    self.canvas.draw_cell(x, y, v, fill)
 
   def demo_arc1(self):
      coord = 10, 10, 300, 300
@@ -123,8 +123,9 @@ class Canvas(threading.Thread):
     print('call resize', height*cell_width, width*cell_width)
     self.resize(height=height*cell_width, width=width*cell_width)
 
-  def draw_cell(self, x, y, v):
-    fill = self.foreground if v == 1 else self.background
+  def draw_cell(self, x, y, v, fill, **kwargs):
+    if not fill:
+      fill = self.foreground if v == 1 else self.background
     x_pos = x * self.cell_width + self.padding + 1
     y_pos = y * self.cell_width + self.padding + 1
     cell = self.cells.get((x,y))
