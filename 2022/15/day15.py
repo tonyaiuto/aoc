@@ -12,17 +12,24 @@ from tools import gridutils
 from tools import qparser
 
 
+def man_d(x, y, bx, by):
+  return abs(x - bx) + abs(y - by)
+
+
 class Sensor(object):
 
   def __init__(self):
-    pass
-    #self.x = x
-    #self.y = y
-    #self.bx = bx
-    #self.by = by
+    self.x = 0
+    self.y = 0
+    self.bx = 0
+    self.by = 0
+    self.dist = 0
+
+  def reset(self):
+    self.dist = man_d(self.x, self.y, self.bx, self.by)
 
   def __str__(self):
-    return '(%d, %d) -> %d,%d' % (self.x, self.y, self.bx, self.by)
+    return '(%d, %d) =%d=> %d,%d' % (self.x, self.y, self.dist, self.bx, self.by)
 
 
 
@@ -47,6 +54,7 @@ class day15(aoc.aoc):
         qparser.Literal(', y='),
         qparser.Number('by'),
         ])
+    self.sensors = []
 
   def reset(self):
     # for future use
@@ -55,18 +63,27 @@ class day15(aoc.aoc):
   def do_line(self, line):
     # called for each line of input
     # Sensor at x=2, y=18: closest beacon is at x=-2, y=15
+    if line.startswith("Row"):
+      self.target_row = int(line.split()[1])
+      return
     s = Sensor()
     self.parser.parse(s, line)
+    s.reset()
     print(s)
+    self.sensors.append(s)
 
   def post_load(self):
     # called after all input is read
-    pass
+    self.min_x = min([min(s.x, s.bx) for s in self.sensors])
+    self.max_x = max([max(s.x, s.bx) for s in self.sensors])
+    self.min_y = min([min(s.y, s.by) for s in self.sensors])
+    self.max_y = max([max(s.y, s.by) for s in self.sensors])
 
 
   def part1(self):
     print('===== Start part 1')
     self.reset()
+    print('check row', self.target_row, 'from', self.min_x, self.max_x)
 
     return 42
 
@@ -93,6 +110,7 @@ Sensor at x=17, y=20: closest beacon is at x=21, y=22
 Sensor at x=16, y=7: closest beacon is at x=15, y=3
 Sensor at x=14, y=3: closest beacon is at x=15, y=3
 Sensor at x=20, y=1: closest beacon is at x=15, y=3
+Row 10
 """, expect1=26, expect2=None)
 
 
