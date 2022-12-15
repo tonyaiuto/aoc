@@ -8,9 +8,12 @@ import itertools
 import jsonrpclib
 import math
 import time
+import tkinter
 
 from tools import aoc
 from tools import gridutils
+
+import textgrid
 
 class Foo(object):
 
@@ -41,9 +44,11 @@ class day14(aoc.aoc):
     if day14.animate:
       host = '10.0.0.135'
       host = 'localhost'
-      self.visualizer = jsonrpclib.Server('http://%s:8888' % host)
+      # self.canvas = jsonrpclib.Server('http://%s:8888' % host)
+      self.tk_root = tkinter.Tk()
+      self.canvas = textgrid.Canvas(self.tk_root)
     else:
-      self.visualizer = None
+      self.canvas = None
 
   @classmethod
   def set_animate(cls, animate):
@@ -83,10 +88,10 @@ class day14(aoc.aoc):
     self.setup_anim()
 
   def setup_anim(self):
-    if not self.visualizer:
+    if not self.canvas:
       return
     self.v_xoff = max(0, self.min_x - self.bottom - 10)
-    res = self.visualizer.grid(width=500, height=self.bottom+1, cell_width=2)
+    res = self.canvas.grid(width=500, height=self.bottom+1, cell_width=2)
     print('grid =>', res)
     for line in self.endpoints:
       sx = line[0][0]
@@ -96,10 +101,10 @@ class day14(aoc.aoc):
       pound = ord('#')
       if sx == ex:
         for i in aoc.visit_range(sy, ey):
-          self.visualizer.draw_cell(sx-self.v_xoff, i, 1)
+          self.canvas.draw_cell(sx-self.v_xoff, i, 1)
       else:
         for i in aoc.visit_range(sx, ex):
-          self.visualizer.draw_cell(i-self.v_xoff, sy, 1)
+          self.canvas.draw_cell(i-self.v_xoff, sy, 1)
 
   def part1(self):
     print('===== Start part 1')
@@ -130,8 +135,8 @@ class day14(aoc.aoc):
         y = y + 1
       else:
         self.grid.set(x, y, 'o')
-        if self.visualizer:
-          self.visualizer.draw_cell(x, y, 1, 'pink')
+        if self.canvas:
+          self.canvas.draw_cell(x, y, 1, 'pink')
           # time.sleep(.005)
         return True
 
