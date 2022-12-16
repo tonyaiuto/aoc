@@ -11,6 +11,12 @@ from tools import aoc
 from tools import gridutils
 
 
+def valve_names(set_of_valves):
+   return ','.join(sorted([v.name for v in set_of_valves]))
+
+def names(set_of_strings):
+   return ','.join(sorted(set_of_strings))
+
 class State(object):
 
   def __init__(self, valve, visited=None, opened=None):
@@ -36,6 +42,7 @@ class State(object):
     return ret
 
   def open_valve(self):
+    assert self.valve.rate > 0
     ret = State(self.valve, visited=set(self.visited), opened=set(self.opened))
     ret.minute = self.minute
     ret.rate = self.rate
@@ -52,7 +59,11 @@ class State(object):
      return ','.join([v.name for v in self.opened])
 
   def trace(self, tag=None):
-    print(tag or '', '== minute %d,' % self.minute, 'release:', self.pressure, 'opened:', self.onames())
+    print(tag or '',
+          '== minute %d,' % self.minute,
+          'at', self.valve.name,
+           'release:', self.pressure,
+           'opened:', self.onames())
 
 
 class Valve(object):
@@ -74,30 +85,37 @@ class Valve(object):
     return Valve.name_to_valve[name]
 
   def comp_dist_to(self, name, visited=None):
+    if not visited:
+      visited = set()
     # print('comp', self.name, 'to', name)
     if name == self.name:
       return 0
+    # memoized
     ret = self.costs.get(name)
     if ret > 0:
       return ret
+    target_valve = Valve.get(name)
     if name in self.tunnels:
-      t = Valve.get(name)
       self.costs[name] = 1
-      t.costs[self.name] = 1
+      target_valve.costs[self.name] = 1
       return 1
-    for tname in self.tunnels:
-      t = Valve.get(tname)
-      tc = t.costs.get(name) or -1
-      if tc > 0:
-        self.costs[name] = tc + 1
-        return tc + 1
 
-    for vn in Valve.name_to_valve.keys():
-      ret = self.costs.get(vn)
-      if ret > 0:
-        return ret
-      v = Valve.get(vn)
-      dist = v.comp_dist_to(name)
+    # Ask my directly connected ones for the distance?
+    visited.add(self.name)
+    for t in self.tun:
+      dist = t.costs.get(name) or -1
+      if dist > 0:
+        self.costs[name] = dist + 1
+        target_valve.costs[self.name] = dist + 1
+        return dist+1
+
+      if name not in visited:
+        print("ASKING CHILD", t.name, 'dist to', target_valve.name)
+        dist = t.comp_dist_to(name, visited=visited)
+        assert dist > 0
+        self.costs[name] = dist + 1
+        target_valve.costs[self.name] = dist + 1
+        return dist+1
 
 
 class day16(aoc.aoc):
@@ -139,20 +157,40 @@ class day16(aoc.aoc):
         self.can_open.add(valve)
     self.max_open = len(self.can_open)
 
-    # self.compute_travel_costs()
+    self.compute_travel_costs()
 
   def compute_travel_costs(self):
-    valve_names = [v.name for v in self.valves]
+    all_valve_names = [v.name for v in self.valves]
+    # baseline table
     for valve in self.valves:
-      for vname in valve_names:
+      valve.to_get_dist = set(all_valve_names)
+      valve.to_get_dist.remove(valve.name)
+      for vname in all_valve_names:
         valve.costs[vname] = 0
+      for v in valve.tun:
+        valve.to_get_dist.remove(v.name)
+        valve.costs[v.name] = 1
+        # remove?
+        v.costs[valve.name] = 1
 
-    for valve in self.valves:
-      for name in valve_names:
-        valve.comp_dist_to(name)
+    did_something = False
+    i = 0
+    while not did_something:
+      i += 1
+      assert i < 20
+      did_something = False
+      for valve in self.valves:
+        # print('LOOP', i, valve.name, 'get', names(valve.to_get_dist))
+        for name in set(valve.to_get_dist):
+          for v in valve.tun:
+            dist = v.costs.get(name, -1)
+            if dist > 0:
+              # print('  can reach', name, 'via', v.name)
+              valve.to_get_dist.remove(name)
+              valve.costs[name] = dist + 1
+              did_something = True
+              break
 
-    for valve in self.valves:
-      print(valve, 'costs:', valve.costs)
 
 
   def part1(self):
@@ -166,12 +204,12 @@ class day16(aoc.aoc):
     state.pressure = 0
     state.visited.add(AA)
 
-    ret = self.do_turn(state)
+    ret = self.do_turn(state, depth=1)
     return ret
 
-  def do_turn(self, state):
+  def do_turn(self, state, depth):
     assert state.minute <= 30
-    state.trace()
+    state.trace(tag=(' ' * depth))
 
     if len(state.opened) == self.max_open:
       state.trace()
@@ -185,23 +223,23 @@ class day16(aoc.aoc):
     best = 0
     if state.can_open(state.valve):
       ns = state.open_valve()
-      p = self.do_turn(ns)
+      p = self.do_turn(ns, depth=depth+1)
       if p > best:
         best = p
 
-    p = self.visit_children(state)
+    p = self.visit_children(state, depth=depth+1)
     if p > best:
       best = p
     return best
  
-  def visit_children(self, state):
+  def visit_children(self, state, depth):
     best = 0
     print('Visiting', state.valve.name, ', visited=', state.vnames())
     for tunnel in state.valve.tun:
-      #if tunnel in state.visited:
-      #   continue
+      if tunnel in state.visited:
+         continue
       ns = state.move_to(tunnel)
-      p = self.do_turn(ns)
+      p = self.do_turn(ns, depth=depth+1)
       if p > best:
         best = p
     return best
