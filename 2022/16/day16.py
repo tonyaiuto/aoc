@@ -29,27 +29,33 @@ class State(object):
     return valve.rate > 0 and valve not in self.opened
 
   def clock_tick(self):
+    # self.trace()
     self.minute += 1
     # increase pressure at old rate
     self.pressure += self.rate
 
-  def move_to(self, tunnel):
-    ret = State(tunnel, set(self.visited))
+  def clone_to(self, valve):
+    ret = State(valve, visited=set(self.visited), opened=set(self.opened))
     ret.minute = self.minute
     ret.rate = self.rate
-    ret.clock_tick()
-    ret.visited.add(tunnel)
+    ret.pressure = self.pressure
+    return ret
+
+  def move_to(self, valve):
+    ret = self.clone_to(valve)
+    # ret.trace(tag='Moving to')
+    for i in range(self.valve.costs[valve.name]):
+      ret.clock_tick()
+    ret.visited.add(valve)
     return ret
 
   def open_valve(self):
     assert self.valve.rate > 0
-    ret = State(self.valve, visited=set(self.visited), opened=set(self.opened))
-    ret.minute = self.minute
-    ret.rate = self.rate
+    ret = self.clone_to(self.valve)
     ret.clock_tick()
     ret.rate = self.rate + self.valve.rate
     ret.opened.add(self.valve)
-    ret.trace(tag='open_valve')
+    # ret.trace(tag='open_valve')
     return ret
 
   def vnames(self):
@@ -62,7 +68,7 @@ class State(object):
     print(tag or '',
           '== minute %d,' % self.minute,
           'at', self.valve.name,
-           'release:', self.pressure,
+           'released:', self.pressure,
            'opened:', self.onames())
 
 
@@ -149,15 +155,25 @@ class day16(aoc.aoc):
     self.valves.append(v)
 
   def post_load(self):
+    self.valves = sorted(self.valves, key=lambda x: x.name)
     # turn tunnel names into pointers
-    self.can_open = set()
+    can_open = set()
     for valve in self.valves:
       valve.tun = [Valve.get(tunnel) for tunnel in valve.tunnels]
       if valve.rate > 0:
-        self.can_open.add(valve)
+        can_open.add(valve)
+    self.can_open = sorted(can_open, key=lambda x: -x.rate)
     self.max_open = len(self.can_open)
+    print('GOOD VALVES', ','.join([v.name for v in self.can_open]))
 
     self.compute_travel_costs()
+    # Sanity check the costs
+    for valve in self.valves:
+      for vname,cost in valve.costs.items():
+        if vname != valve.name:
+          # print(valve, vname, cost)
+          assert cost > 0
+
 
   def compute_travel_costs(self):
     all_valve_names = [v.name for v in self.valves]
@@ -173,10 +189,10 @@ class day16(aoc.aoc):
         # remove?
         v.costs[valve.name] = 1
 
-    did_something = False
+    did_something = True
     i = 0
-    while not did_something:
-      i += 1
+    while did_something:
+      i = i + 1
       assert i < 20
       did_something = False
       for valve in self.valves:
@@ -188,6 +204,8 @@ class day16(aoc.aoc):
               # print('  can reach', name, 'via', v.name)
               valve.to_get_dist.remove(name)
               valve.costs[name] = dist + 1
+              vv = Valve.get(name)
+              vv.costs[valve.name] = dist + 1
               did_something = True
               break
 
@@ -204,12 +222,15 @@ class day16(aoc.aoc):
     state.pressure = 0
     state.visited.add(AA)
 
-    ret = self.do_turn(state, depth=1)
+    ret = self.do_turn(state, depth=0)
     return ret
 
   def do_turn(self, state, depth):
-    assert state.minute <= 30
-    state.trace(tag=(' ' * depth))
+    if state.minute > 30:
+      print('++++++ too far')
+      state.trace(tag=(' ' * depth)+'do_turn')
+      return -1
+    # state.trace(tag=(' ' * depth)+'do_turn')
 
     if len(state.opened) == self.max_open:
       state.trace()
@@ -219,6 +240,7 @@ class day16(aoc.aoc):
 
     if state.minute == 30:
       return state.pressure
+    assert state.minute < 30
 
     best = 0
     if state.can_open(state.valve):
@@ -227,12 +249,29 @@ class day16(aoc.aoc):
       if p > best:
         best = p
 
-    p = self.visit_children(state, depth=depth+1)
+    p = self.visit_valves(state, depth=depth+1)
     if p > best:
       best = p
     return best
- 
-  def visit_children(self, state, depth):
+
+  def visit_valves(self, state, depth):
+    best = 0
+    # print('Visiting', state.valve.name, ', visited=', state.vnames())
+    for valve in self.can_open:
+      if valve in state.visited:
+         continue
+      move_cost = state.valve.costs[valve.name]
+      if state.minute + move_cost >= 30:
+        p = state.pressure + (30 - state.minute) * state.rate
+        print('RUN OUT CLOCK =>', p, 'or maybe', p + state.rate)
+      else:
+        ns = state.move_to(valve)
+        p = self.do_turn(ns, depth=depth+1)
+      if p > best:
+        best = p
+    return best
+
+  def visit_children(self, state, depth):  # OBS
     best = 0
     print('Visiting', state.valve.name, ', visited=', state.vnames())
     for tunnel in state.valve.tun:
@@ -266,4 +305,5 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 
 
 if __name__ == '__main__':
+  # 1503  to low
   day16.run_and_check('input.txt', expect1=None, expect2=None)
