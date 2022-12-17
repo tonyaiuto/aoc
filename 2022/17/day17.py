@@ -105,31 +105,27 @@ class day17(aoc.aoc):
     self.reset()
 
     n_rocks = 0
-    for i in range(20):  # 2022
+    for i in range(2022):  # 2022
       rock, y = self.drop_rock()
       x = 2
       print('----- new rock', rock.id)
-      self.show_grid(rock, x, y)
+      # self.show_grid(rock, x, y)
 
       while True:
         puff = self.get_puff()
         x, y = self.puff_rock(puff, rock, x, y)
-        self.show_grid(rock, x, y)
+        # self.show_grid(rock, x, y)
 
         # drop it
         if self.collision(rock, x, y-1):
           self.place_rock(rock, x, y)
-          self.show_grid(rock, x, y)
+          # self.show_grid(rock, x, y)
           break
         y = y - 1
-        #if y - rock.height < 0:
-        #  self.place_rock(rock, x, y)
-        #  self.show_grid(rock, x, y)
-        #  break
-        print('drop')
-        self.show_grid(rock, x, y)
+        # print('drop')
+        # self.show_grid(rock, x, y)
 
-    return 42
+    return self.top
 
   def puff_rock(self, puff, rock, x, y):
     # Puffs rock and returns new x, y
@@ -161,7 +157,7 @@ class day17(aoc.aoc):
 
   def drop_rock(self):
     rock = ROCKS[self.rock]
-    self.rock = (self.rock + 1) % 4
+    self.rock = (self.rock + 1) % 5
     # rock & 
     return rock, self.top + 3 + rock.height - 1
 
