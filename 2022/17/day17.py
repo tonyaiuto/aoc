@@ -78,7 +78,7 @@ class day17(aoc.aoc):
 
   def post_load(self):
     # called after all input is read
-    self._puffs = self.all_input[0]
+    self._puffs = self.all_input[0].strip()
     self._next_puff = 0
 
   def get_puff(self):
@@ -109,13 +109,17 @@ class day17(aoc.aoc):
   def part1(self):
     print('===== Start part 1')
     self.reset()
-
+    return self.run_for(2022)
+  
+  def run_for(self, limit):
     n_rocks = 0
-    for i in range(2022):  # 2022
+    for i in range(limit):
+      if i % 1000 == 0:
+        print('rock', i)
       rock, y = self.drop_rock()
       x = 2
-      print('----- new rock', rock.id)
-      self.show_grid(rock, x, y)
+      # print('----- new rock', rock.id)
+      # self.show_grid(rock, x, y)
 
       while True:
         puff = self.get_puff()
@@ -128,14 +132,14 @@ class day17(aoc.aoc):
           # self.show_grid(rock, x, y)
           break
         y = y - 1
-        print('drop to', y)
+        # print('drop to', y)
         # self.show_grid(rock, x, y)
 
     return self.top
 
   def puff_rock(self, puff, rock, x, y):
     # Puffs rock and returns new x, y
-    print('puff', puff, 'at', x, y, rock.id)
+    # print('puff', puff, 'at', x, y, rock.id)
     if puff == '<':
       if x == 0 or self.collision(rock, x-1, y):
         return x, y
@@ -157,7 +161,7 @@ class day17(aoc.aoc):
       return True
     for c in rock.coords:
       if self.grid.get(x + c[0], y + c[1]) == '#':
-        print("COLLIDE")
+        # print("COLLIDE")
         return True
     return False
 
@@ -171,13 +175,23 @@ class day17(aoc.aoc):
   def part2(self):
     print('===== Start part 2')
     self.reset()
+    # return self.run_for(1000000) 
 
-    return 42
+    goal = 1000000000000
+    cycle = len(self._puffs) * 5
+    rock = ROCKS[0]
+
+    for i in range(5):
+      ret = self.run_for(cycle)
+      print('cycle', cycle, 'top', self.top, 'npuffs', len(self._puffs))
+      self.show_grid(rock, 2, self.top+3)
+
+    return ret
 
 
 day17.sample_test("""
 >>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>
-""", expect1=3068, expect2=None)
+""", expect1=3068, expect2=1514285714288)
 
 
 if __name__ == '__main__':
