@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+3179#!/usr/bin/env python3
 "AOC 2021: day 17"
 
 from collections import defaultdict
@@ -87,8 +87,14 @@ class day17(aoc.aoc):
     return ret
 
   def show_grid(self, rock, x, y):
+    if not self.trace:
+      return
     start = max(y, self.top+3)
+    i = 0
     for row in aoc.visit_range(start, 0):
+      i = i + 1
+      if i > 20:
+        return
       rc = [self.grid.get(x, row) for x in range(7)]
       if row <= y and row > y-rock.height:
         # maybe splice in some of the rock
@@ -109,7 +115,7 @@ class day17(aoc.aoc):
       rock, y = self.drop_rock()
       x = 2
       print('----- new rock', rock.id)
-      # self.show_grid(rock, x, y)
+      self.show_grid(rock, x, y)
 
       while True:
         puff = self.get_puff()
@@ -122,7 +128,7 @@ class day17(aoc.aoc):
           # self.show_grid(rock, x, y)
           break
         y = y - 1
-        # print('drop')
+        print('drop to', y)
         # self.show_grid(rock, x, y)
 
     return self.top
@@ -143,7 +149,7 @@ class day17(aoc.aoc):
   def place_rock(self, rock, x, y):
     for c in rock.coords:
       self.grid.set(x + c[0], y + c[1], '#')
-    self.top = y + 1
+    self.top = max(self.top, y + 1)
 
   def collision(self, rock, x, y):
     if y - rock.height + 1 < 0:
@@ -175,4 +181,4 @@ day17.sample_test("""
 
 
 if __name__ == '__main__':
-  day17.run_and_check('input.txt', expect1=None, expect2=None)
+  day17.run_and_check('input.txt', expect1=3179, expect2=None)
