@@ -69,6 +69,7 @@ class State(object):
           '== minute %d,' % self.minute,
           'at', self.valve.name,
            'released:', self.pressure,
+           'rate:', self.rate,
            'opened:', self.onames())
 
 
@@ -89,6 +90,10 @@ class Valve(object):
   @staticmethod
   def get(name):
     return Valve.name_to_valve[name]
+
+  @staticmethod
+  def reset():
+    Valve.name_to_valve = {}
 
   def comp_dist_to(self, name, visited=None):
     if not visited:
@@ -136,6 +141,7 @@ class day16(aoc.aoc):
         })
     self.trace = True
     self.valves = []
+    Valve.reset()
 
   def reset(self):
     # for future use
@@ -243,8 +249,24 @@ class day16(aoc.aoc):
     assert state.minute < 30
 
     best = 0
+
+    """
+    states = [state]
     if state.can_open(state.valve):
       ns = state.open_valve()
+      ns.trace('    just opened')
+      states = [ns, state]
+
+    for s in states:
+      p = self.visit_valves(s, depth=depth+1)
+      if p > best:
+        best = p
+    return best
+    """
+
+    if state.can_open(state.valve):
+      ns = state.open_valve()
+      # ns.trace('    just opened')
       p = self.do_turn(ns, depth=depth+1)
       if p > best:
         best = p
@@ -253,6 +275,7 @@ class day16(aoc.aoc):
     if p > best:
       best = p
     return best
+
 
   def visit_valves(self, state, depth):
     best = 0
@@ -263,7 +286,7 @@ class day16(aoc.aoc):
       move_cost = state.valve.costs[valve.name]
       if state.minute + move_cost >= 30:
         p = state.pressure + (30 - state.minute) * state.rate
-        print('RUN OUT CLOCK =>', p, 'or maybe', p + state.rate)
+        # print('RUN OUT CLOCK =>', p, 'or maybe', p + state.rate)
       else:
         ns = state.move_to(valve)
         p = self.do_turn(ns, depth=depth+1)
@@ -305,5 +328,6 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 
 
 if __name__ == '__main__':
-  # 1503  to low
+  # part1: 1503  to low
+  # part1: 1611  to low
   day16.run_and_check('input.txt', expect1=None, expect2=None)
