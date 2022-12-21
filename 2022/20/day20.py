@@ -3,21 +3,18 @@
 
 from collections import defaultdict
 import copy
-import heapq
 import itertools
-import math
 
 from tools import aoc
-from tools import gridutils
 
 
-class Foo(object):
 
-  def __init__(self):
-    pass
-
-  def __str__(self):
-    return str(self)
+def order_to_list(order):
+  v_p = [(v, p)
+         for v, positions in order.items()
+         for p in positions]
+  print(v_p)
+  return [x[0] for x in sorted(v_p, key=lambda v: v[1])]
 
 
 
@@ -33,18 +30,25 @@ class day20(aoc.aoc):
         })
     self.trace = True
     self.initial = []
-    self.at = {}
+    self.pos = []
+    self.at = defaultdict(list)
     self.values = set()
 
   def reset(self):
     # for future use
     pass
 
+  def pos_to_list(self, order):
+    p_v = [(p, self.initial[p]) for p in order]
+    return [x[1] for x in sorted(p_v)]
+
   def do_line(self, line):
     # called for each line of input
     v = int(line)
+    self.pos.append(len(self.initial))
     self.initial.append(v)
-    self.at[v] = len(self.initial) - 1
+
+    self.at[v].append(len(self.initial) - 1)
     if v in self.values:
       print("Duplicate", v)
     assert v not in self.values
@@ -61,11 +65,13 @@ class day20(aoc.aoc):
     self.reset()
     b = list(self.initial)
     order = self.mix(b)
-    plist = sorted([(pos, v) for v, pos in order.items()])
-    res = [v[1] for v in plist]
+    print('new order', self.pos_to_list(order))
+    # plist = sorted([(pos, v) for v, pos in order.items()])
+    # res = [v[1] for v in plist]
     print('final', res)
 
     zero_pos = order[0]
+    print('zero at', zero_pos)
     a = res[(zero_pos + 1000) % self.size]
     b = res[(zero_pos + 2000) % self.size]
     c = res[(zero_pos + 3000) % self.size]
@@ -77,16 +83,16 @@ Then, the grove coordinates can be found by looking at the 1000th, 2000th, and 3
 """
 
   def mix(self, b):
-    order = self.at
+    order = dict(self.at)
 
     print('order', order)
-    for v in self.initial:
+    positions = list(self.pos)
+    for thing in range(self.size):
+      v = self.initial[thing]
+      pos = positions[thing]
       if v == 0:
         continue
 
-      # print('order', order)
-      # print('')
-      pos = order[v]
       if v > 0:
         np = pos + v
         if np >= self.size:
@@ -96,7 +102,8 @@ Then, the grove coordinates can be found by looking at the 1000th, 2000th, and 3
         #if pos + v == 0:
         # we should be at the end
         n_pos = (pos + v - 1) % self.size
-      # print('  move %3d' % v, 'from', pos, 'to', n_pos)
+      print('')
+      print('  move %3d' % v, 'from', pos, 'to', n_pos)
 
       # compute range to decrement or increment
       if pos < n_pos:
@@ -105,22 +112,34 @@ Then, the grove coordinates can be found by looking at the 1000th, 2000th, and 3
         r_high = n_pos
       else:
         disp = 1
-        r_low = n_pos
+        r_low = n_pos + 1
         r_high = pos
-      # print("  adjust range:", r_low, r_high, disp)
- 
-      # res = {v: n_pos}
-      order[v] = n_pos
-      for ov, opos in order.items():
-        if ov == v:
-          continue
-        if opos >= r_low and opos <= r_high:
-          order[ov] = opos + disp
-        #print('    ', '%3d' % ov, 'from', opos, 'to', order[ov])
 
-      # plist = sorted([(pos, v) for v, pos in order.items()])
-      # print([v[1] for v in plist])
-    return order
+      for pi, opos in enumerate(positions):
+        if opos == pos:
+          # print('    ', '%3d' % ov, 'from', opos, 'to', opos+disp)
+          print('    self to', n_pos)
+          positions[pi] = n_pos
+        if opos >= r_low and opos <= r_high:
+          positions[pi] = opos + disp
+          ov = self.initial[pi]
+          print('    ', '%3d' % ov, 'from', opos, 'to', opos+disp)
+
+      """
+      # print("  adjust range:", r_low, r_high, disp)
+      for ov, opositions in order.items():
+        order[ov] = []
+        for opos in opositions:
+          if ov == v and pos == opos:
+            # print("DO NOT MOVE SELF")
+            order[ov].append(n_pos)
+            continue
+          if opos >= r_low and opos <= r_high:
+            order[ov].append(opos + disp)
+            print('    ', '%3d' % ov, 'from', opos, 'to', opos+disp)
+      print(order_to_list(order))
+      """
+    return positions
 
   def part2(self):
     print('===== Start part 2')
