@@ -10,6 +10,7 @@ import math
 from tools import aoc
 from tools import gridutils
 
+TRACE_LEVEL = 0
 
 def valve_names(set_of_valves):
    return ','.join(sorted([v.name for v in set_of_valves]))
@@ -21,9 +22,33 @@ class State(object):
 
   def __init__(self, valve, visited=None, opened=None):
     self.valve = valve
+    self.pressure = 0
     self.visited = visited or set()
     self.opened = opened or set()
-    self.pressure = 0
+
+  def __hash__(self):
+    ret = self.minute
+    ret = ret * 37 + self.valve.__hash__()
+    ret = ret * 37 + self.pressue.__hash__()
+    ret = ret * 37 + self.visited.__hash__()
+    ret = ret * 37 + self.opened.__hash__()
+    return ret
+
+  def __eq__(self, other):
+    return (self.minute == other.minute
+            and self.valve == other.valve
+            and self.pressure == other.pressure
+            and self.visited == other.visited
+            and self.opened == other.opened)
+
+  def __str__(self):
+    return ', '.join([
+        '== minute %d' % self.minute,
+        'at ' + self.valve.name,
+        'released: %d' % self.pressure,
+        'rate: %d' % self.rate,
+        'opened:' + self.onames(),
+        ])
 
   def can_open(self, valve):
     return valve.rate > 0 and valve not in self.opened
@@ -64,17 +89,14 @@ class State(object):
   def onames(self):
      return ','.join([v.name for v in self.opened])
 
-  def trace(self, tag=None):
-    print(tag or '',
-          '== minute %d,' % self.minute,
-          'at', self.valve.name,
-           'released:', self.pressure,
-           'rate:', self.rate,
-           'opened:', self.onames())
+  def trace(self, tag=None, level=-1):
+    if level < TRACE_LEVEL:
+      return
+    print(tag or '', str(self))
 
 
 class Valve(object):
-  
+
   name_to_valve = {}
 
   def __init__(self, name, rate, tunnels):
@@ -215,6 +237,11 @@ class day16(aoc.aoc):
               did_something = True
               break
 
+    print('= Costs')
+    print('    ', ' '.join([vname for vname in all_valve_names]))
+    for valve in self.valves:
+      print(' ', valve.name,
+            ' '.join(['%2d' % valve.costs[vname] for vname in all_valve_names]))
 
 
   def part1(self):
@@ -239,9 +266,10 @@ class day16(aoc.aoc):
     # state.trace(tag=(' ' * depth)+'do_turn')
 
     if len(state.opened) == self.max_open:
-      state.trace()
       final = state.pressure + (30 - state.minute) * state.rate
-      print('     final', final)
+      if TRACE_LEVEL > -10:
+        # state.trace()
+        print('     final %6d' % final, state)
       return final
 
     if state.minute == 30:
@@ -249,27 +277,14 @@ class day16(aoc.aoc):
     assert state.minute < 30
 
     best = 0
-
-    """
-    states = [state]
-    if state.can_open(state.valve):
-      ns = state.open_valve()
-      ns.trace('    just opened')
-      states = [ns, state]
-
-    for s in states:
-      p = self.visit_valves(s, depth=depth+1)
-      if p > best:
-        best = p
-    return best
-    """
-
     if state.can_open(state.valve):
       ns = state.open_valve()
       # ns.trace('    just opened')
+      # try again with the valve open
       p = self.do_turn(ns, depth=depth+1)
       if p > best:
         best = p
+      return best  # XXX
 
     p = self.visit_valves(state, depth=depth+1)
     if p > best:
@@ -330,4 +345,4 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 if __name__ == '__main__':
   # part1: 1503  to low
   # part1: 1611  to low
-  day16.run_and_check('input.txt', expect1=None, expect2=None)
+  day16.run_and_check('input.txt', expect1=111, expect2=None)
