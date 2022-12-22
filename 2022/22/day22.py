@@ -56,6 +56,12 @@ class day22(aoc.aoc):
         break
     if self.trace_sample:
       print('start at', self.start_x, self.start_y)
+    self.x = self.start_x
+    self.y = self.start_y
+    #  0
+    # 3 1
+    #  2
+    self.dir = 1
 
     self.path = []
     n = 0
@@ -69,19 +75,18 @@ class day22(aoc.aoc):
         n = n * 10 + ord(c) - ord('0')
     self.path.append(n)
     if self.trace_sample:
-      print(self.path)
+      print('Path:', self.path)
+    self.path_i = 0
+
+    self.box_2_face = []
+    self.cell_size = int(self.all_input[2][0])
+    for box_row in self.all_input[2][1:]:
+      self.box_2_face.append([int(x) for x in box_row.split(' ')])
+    print('Box to face:', self.cell_size, 'X', self.box_2_face)
 
   def part1(self):
     print('===== Start part 1')
     self.reset()
-
-    #  0
-    # 3 1
-    #  2
-    self.x = self.start_x
-    self.y = self.start_y
-    self.dir = 1
-    self.path_i = 0
 
     self.grid.set(self.x, self.y, 'v')
     for i in range(len(self.path)):
@@ -153,8 +158,82 @@ class day22(aoc.aoc):
     print('===== Start part 2')
     self.reset()
 
-    return 42
+    self.path_i = 0
 
+    self.cell_rot = [
+      [0],
+    ]
+
+    self.grid.set(self.x, self.y, 'v')
+    # for i in range(len(self.path)):
+    for i in range(20):
+      self.move2()
+      if self.trace_sample:
+        self.grid.set(self.x, self.y, 'v')
+        self.grid.print(show_row_numbers=True)
+
+    print(self.x, self.y, self.dir)
+    return 1000 * (self.y + 1) + 4 * (self.x + 1) + (self.dir - 1) % 4
+
+
+  def move2(self):
+    fx = self.x
+    fy = self.y
+    what = self.path[self.path_i]
+    if self.trace_sample:
+      print('path[%d]: %s' % (self.path_i, str(what)))
+
+    self.path_i += 1
+    if what == 'L':
+      self.dir = (self.dir - 1) % 4
+      return
+    if what == 'R':
+      self.dir = (self.dir + 1) % 4
+      return
+
+    for move_i in range(what):
+      nx = self.x + XDISP[self.dir]
+      ny = self.y + YDISP[self.dir]
+      next_cell = self.grid.get(nx, ny)
+      if next_cell == '#':
+        if self.trace_sample:
+          print('Move from', fx, fy, 'to', self.x, self.y)
+        return
+      if next_cell in ('.', 'v'):
+        self.x = nx
+        self.y = ny
+        continue
+      if next_cell != ' ':
+        print("WTF", nx, ny, next_cell)
+        assert next_cell == 42
+
+      # What CELL am I in
+
+      # wrap it
+      if dir == 0 or dir == 2:
+        max_scan = self.grid.max_y
+      else:
+        max_scan = self.grid.max_x
+      # print('start wrap', nx, ny, '(%s)' % next_cell)
+      for s in range(max_scan):
+        nx = (nx + XDISP[self.dir]) % (self.grid.max_x + 1)
+        ny = (ny + YDISP[self.dir]) % (self.grid.max_y + 1)
+        next_cell = self.grid.get(nx, ny)
+        # print('Try wrap', nx, ny, '(%s)' % next_cell)
+        if next_cell == ' ':
+          continue
+        if next_cell == '#':
+          if self.trace_sample:
+            print('Move from', fx, fy, 'to', self.x, self.y)
+          return
+        if next_cell in ('.', 'v'):
+          if self.trace_sample:
+            print("Wrap dir", self.dir, 'from', self.x, self.y, 'to', nx, ny) 
+          self.x = nx
+          self.y = ny
+          break
+        print("Wrap FAIL", 'c=(%s)'%next_cell, 'dir', self.dir, 'from', self.x, self.y, 'to', nx, ny) 
+    # done
 
 #0123456789 1
 day22.sample_test("""
@@ -172,6 +251,11 @@ day22.sample_test("""
         ......#.
 
 10R5L5R10L4R5L5
+
+4
+0 0 1 0
+2 3 4 0
+0 0 5 6
 """, expect1=6032, expect2=None)
 
 
