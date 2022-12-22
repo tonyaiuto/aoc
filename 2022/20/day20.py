@@ -3,7 +3,6 @@
 
 from collections import defaultdict
 import copy
-import itertools
 
 from tools import aoc
 
@@ -35,6 +34,7 @@ class day20(aoc.aoc):
     self.pos = []
     self.at = defaultdict(list)
     self.values = set()
+    self.key = 1
 
   def reset(self):
     # for future use
@@ -70,12 +70,13 @@ class day20(aoc.aoc):
   def part1(self):
     print('===== Start part 1')
     self.reset()
-    b = list(self.initial)
-    order = self.mix(b)
-    mixed = self.pos_to_list(order)
+    b = list(self.pos)
+    positions = list(self.pos)
+    new_order = self.mix(positions)
+    mixed = self.pos_to_list(new_order)
     print('mixed=', mixed[0:20])
 
-    zero_pos = order[self.zero]
+    zero_pos = new_order[self.zero]
     print('zero moves from ', self.zero, 'to', zero_pos)
     assert mixed[zero_pos] == 0
 
@@ -85,14 +86,8 @@ class day20(aoc.aoc):
     print('a b c', a, b, c)
     return a + b + c
 
-    """
-Then, the grove coordinates can be found by looking at the 1000th, 2000th, and 3000th numbers after the value 0, wrapping around the list as necessary. In the above example, the 1000th number after 0 is 4, the 2000th is -3, and the 3000th is 2; adding these together produces 3.
-"""
 
-  def mix(self, b):
-    # order = dict(self.at)
-
-    positions = list(self.pos)
+  def mix(self, positions):
     for thing in range(self.size):
       v = self.initial[thing]
       pos = positions[thing]
@@ -101,15 +96,17 @@ Then, the grove coordinates can be found by looking at the 1000th, 2000th, and 3
 
       if v > 0:
         np = pos + v
-        if np >= self.size:
-          np += 1
-        n_pos = np % self.size
+        # Not quite
+        #if np >= self.size:
+        #  np += 1
+        #n_pos = np % self.size
+        n_pos = np % (self.size - 1)
       else:
         np = pos + v
         if np <= 0:
           np -= 1
         # n_pos = (pos + v - 1) % self.size
-        n_pos = np % self.size
+        n_pos = (pos + v) % (self.size - 1)
 
       # compute range to decrement or increment
       if pos < n_pos:
@@ -139,26 +136,31 @@ Then, the grove coordinates can be found by looking at the 1000th, 2000th, and 3
         # print('   >positions', positions)
         print('   >', self.pos_to_list(positions))
 
-      """
-      for ov, opositions in order.items():
-        order[ov] = []
-        for opos in opositions:
-          if ov == v and pos == opos:
-            # print("DO NOT MOVE SELF")
-            order[ov].append(n_pos)
-            continue
-          if opos >= r_low and opos <= r_high:
-            order[ov].append(opos + disp)
-            print('    ', '%3d' % ov, 'from', opos, 'to', opos+disp)
-      print(order_to_list(order))
-      """
     return positions
 
   def part2(self):
     print('===== Start part 2')
     self.reset()
+    self.key = 811589153
+    for i in range(self.size):
+      self.initial[i] = self.initial[i] * 811589153
 
-    return 42
+
+    positions = list(self.pos)
+    for i in range(10):
+      new_order = self.mix(positions)
+      mixed = self.pos_to_list(new_order)
+      print('mixed=', mixed[0:20])
+
+    zero_pos = new_order[self.zero]
+    print('zero moves from ', self.zero, 'to', zero_pos)
+    assert mixed[zero_pos] == 0
+    a = mixed[(zero_pos + 1000) % self.size]
+    b = mixed[(zero_pos + 2000) % self.size]
+    c = mixed[(zero_pos + 3000) % self.size]
+    print('a b c', a, b, c)
+    return a + b + c
+
 
 
 day20.sample_test("""
@@ -169,10 +171,10 @@ day20.sample_test("""
 -2
 0
 4
-""", expect1=3, expect2=None)
+""", expect1=3, expect2=1623178306)
 
 TRACE=0
 
 if __name__ == '__main__':
-  # part1: not -9746, -5555
-  day20.run_and_check('input.txt', expect1=None, expect2=None)
+  # part1: not -9746, -5555, 9517
+  day20.run_and_check('input.txt', expect1=18257, expect2=4148032160983)
