@@ -181,10 +181,12 @@ class day17(aoc.aoc):
     cycle = len(self._puffs) * 5
     rock = ROCKS[0]
 
-    for i in range(5):
+    for i in range(goal):
+      if i % 100000 == 0:
+        print(i)
       ret = self.run_for(cycle)
       print('cycle', cycle, 'top', self.top, 'npuffs', len(self._puffs))
-      self.show_grid(rock, 2, self.top+3)
+      # self.show_grid(rock, 2, self.top+3)
 
     return ret
 

@@ -33,7 +33,10 @@ class StringReader(Reader):
 
   def __init__(self, inp, **kwargs):
     super(StringReader, self).__init__(**kwargs)
-    self.inp = inp.strip()
+    if self._strip_lines:
+      self.inp = inp.strip()
+    else:
+      self.inp = inp
 
   def next(self):
     if not self._by_group:

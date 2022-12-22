@@ -182,14 +182,18 @@ class Grid(object):
         yield (x, y)
 
     
-  def print(self, margin=1, from_x=-1, to_x=-1):
+  def print(self, margin=1, from_x=-1, to_x=-1, show_row_numbers=False):
     if from_x < 0:
       from_x = self.min_x - margin
     if to_x < 0:
       to_x = self.max_x + margin + 1
     for y in range(self.min_y-margin, self.max_y+margin+1):
-      print(''.join([self.points.get((x, y), self.default_cell)
-                     for x in range(from_x, to_x)]))
+      line = []
+      if show_row_numbers:
+        line.append('%3d' % y)
+      line.append(''.join([self.points.get((x, y), self.default_cell)
+                           for x in range(from_x, to_x)]))
+      print(''.join(line))
 
 
 
