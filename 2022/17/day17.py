@@ -114,8 +114,8 @@ class day17(aoc.aoc):
   def run_for(self, limit):
     n_rocks = 0
     for i in range(limit):
-      if i % 1000 == 0:
-        print('rock', i)
+      #if self.trace_sample and i % 1000 == 0:
+      #  print('rock', i)
       rock, y = self.drop_rock()
       x = 2
       # print('----- new rock', rock.id)
@@ -134,8 +134,13 @@ class day17(aoc.aoc):
         y = y - 1
         # print('drop to', y)
         # self.show_grid(rock, x, y)
-
     return self.top
+
+  def has_cycle(self):
+    if self.top % 2 == 1:
+      return false
+    h = self.top // 2
+
 
   def puff_rock(self, puff, rock, x, y):
     # Puffs rock and returns new x, y
@@ -181,14 +186,71 @@ class day17(aoc.aoc):
     cycle = len(self._puffs) * 5
     rock = ROCKS[0]
 
-    for i in range(goal):
-      if i % 100000 == 0:
+    last_top = self.top
+    drop = 0
+    self.drop_2_delta = {}
+    self.delta_2_drop = defaultdict(list)
+    self.cycle = cycle
+    drop_2_top = {}
+    for i in range(100):
+      if i % 1000 == 0:
         print(i)
-      ret = self.run_for(cycle)
-      print('cycle', cycle, 'top', self.top, 'npuffs', len(self._puffs))
-      # self.show_grid(rock, 2, self.top+3)
+      ret = self.run_for(self.cycle)
+      drop += self.cycle
+      drop_2_top[drop] = self.top
+      delta = self.top - last_top
+      self.drop_2_delta[drop] = delta
+      self.delta_2_drop[delta].append(drop)
 
+      print('cycle', self.cycle, 'drop', drop, 'top', self.top, 'delta', delta)
+      # self.show_grid(rock, 2, self.top+3)
+      last_top = self.top
+
+      back_cycles, loop_size = self.found_loop(drop)
+      if back_cycles:
+        print("Found loop over ", back_cycles, 'cycles, height', loop_size)
+        base_drop = drop - self.cycle * back_cycles
+        base_high = drop_2_top[base_drop]
+        assert base_high + loop_size == drop_2_top[drop]
+        break
+
+    print('Starting at drop', drop, 'with height', self.top)
+    need_cycles = (goal - drop) // back_cycles
+    print('Needs', need_cycles, 'cycles to reach goal', goal)
+    h = self.top + need_cycles * loop_size
+    # got = drop + need_cycles * 
+    
     return ret
+
+  def found_loop(self, drop):
+    delta = self.drop_2_delta[drop]
+    possible_matches = self.delta_2_drop[delta]
+    # print(possible_matches)
+    if len(possible_matches) < 2:
+      return None, None
+    for nback in range(2, len(possible_matches)+1):
+      back_drop = possible_matches[-nback]
+      if back_drop + self.cycle == drop:
+        continue
+      print("=== Check", drop, 'back to', back_drop)
+      target, lspan = self.sum_span(drop, back_drop)
+      print('  ', lspan, 'cycles back from drop', drop, 'sums', target)
+      next_back, ls2 = self.sum_span(back_drop, back_drop-self.cycle*lspan)
+      print('  ', ls2, 'cycles back from drop', back_drop, 'sums', next_back)
+      if target == next_back and lspan == ls2:
+        print("WINNER")
+        return lspan, target
+    return None, None
+
+  def sum_span(self, drop, back_to_drop):
+    ret = 0
+    lspan = 0
+    while drop > back_to_drop and drop > 0:
+      ret += self.drop_2_delta[drop]
+      drop -= self.cycle
+      lspan += 1
+    return ret, lspan
+
 
 
 day17.sample_test("""
