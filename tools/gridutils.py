@@ -136,11 +136,12 @@ def min_max(positions):
 
 class Grid(object):
 
-  def __init__(self, base_x=0, base_y=0, default_cell=' ', in_map=None):
+  def __init__(self, base_x=0, base_y=0, default_cell=' ', ignore=None, in_map=None):
     self.base_x = base_x
     self.base_y = base_y
     self.default_cell = default_cell
     self.in_map = in_map
+    self.ignore = ignore
 
     self.points = {}
     self.min_x = self.base_x
@@ -153,6 +154,8 @@ class Grid(object):
     for i, c in enumerate(row):
       if self.in_map:
         c = self.in_map.get(c) or c
+      if self.ignore and c == self.ignore:
+        continue
       self.points[(self.base_x + i, self.base_y + self.n_rows)] = c
     self.n_rows += 1
     self.max_x = max(self.max_x, self.base_x + len(row) - 1) 
@@ -175,13 +178,18 @@ class Grid(object):
     self.min_y = min(self.min_y, y)
     self.max_y = max(self.max_y, y)
     self.points[(x, y)] = value
+
+  def unset(self, x, y):
+    del self.points[(x, y)]
  
   def coords(self):
     for y in range(self.min_y, self.max_y+1):
       for x in range(self.min_x, self.max_x+1):
         yield (x, y)
 
-    
+  def live_cells(self):
+    return self.points.keys()
+
   def print(self, margin=1, from_x=-1, to_x=-1, show_row_numbers=False):
     if from_x < 0:
       from_x = self.min_x - margin
