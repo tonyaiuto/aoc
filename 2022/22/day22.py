@@ -311,37 +311,6 @@ class day22(aoc.aoc):
       self.y = ny
       self.dir = new_dir
       self.grid.set(self.x, self.y, 'o')
-
-
-      """
-      # wrap it
-      if new_dir == 0 or new_dir == 2:
-        max_scan = self.grid.max_y
-      else:
-        max_scan = self.grid.max_x
-
-      # print('start wrap', nx, ny, '(%s)' % next_cell)
-      for s in range(max_scan):
-        if s > 0:
-          nx = (nx + XDISP[self.dir]) % (self.grid.max_x + 1)
-          ny = (ny + YDISP[self.dir]) % (self.grid.max_y + 1)
-        next_cell = self.grid.get(nx, ny)
-
-        # print('Try wrap', nx, ny, '(%s)' % next_cell)
-        if next_cell == ' ':
-          continue
-        if next_cell == '#':
-          if self.trace_sample:
-            print('Move from', fx, fy, 'to', self.x, self.y)
-          return
-        if next_cell in ('.', 'v'):
-          if self.trace_sample:
-            print("Wrap dir", self.dir, 'from', self.x, self.y, 'to', nx, ny) 
-          self.x = nx
-          self.y = ny
-          break
-        print("Wrap FAIL", 'c=(%s)'%next_cell, 'dir', self.dir, 'from', self.x, self.y, 'to', nx, ny) 
-      """
     # done
 
   def new_pos(self, old_face, new_face, new_dir, relx, rely):
@@ -351,7 +320,10 @@ class day22(aoc.aoc):
 
     if new_dir in (DIR_DOWN, DIR_UP):
       if SAME:
-        retx = self.cell_size - 1 - relx
+        if self.dir == new_dir:
+          retx = relx
+        else:
+          retx = self.cell_size - 1 - relx
       elif CLOCKWISE:
         retx = self.cell_size - 1 - rely
       elif ANTICLOCK:
@@ -362,7 +334,10 @@ class day22(aoc.aoc):
         rety = self.cell_size - 1
     elif new_dir in (DIR_LEFT, DIR_RIGHT):
       if SAME:
-        rety = self.cell_size - 1 - rely
+        if self.dir == new_dir:
+          rety = rely
+        else:
+          rety = self.cell_size - 1 - rely
       elif CLOCKWISE:
         rety = relx
       elif ANTICLOCK:
@@ -408,4 +383,5 @@ if __name__ == '__main__':
   # too high: 127118
   # part2: 52368 is wrong, because it is the folding from sample
   # 87260
-  day22.run_and_check('input.txt', expect1=67390, expect2=None)
+  # 87321 Low
+  day22.run_and_check('input.txt', expect1=67390, expect2=95291)
