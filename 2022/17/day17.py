@@ -1,4 +1,4 @@
-3179#!/usr/bin/env python3
+#!/usr/bin/env python3
 "AOC 2021: day 17"
 
 from collections import defaultdict
@@ -6,6 +6,7 @@ import copy
 import heapq
 import itertools
 import math
+import sys
 
 from tools import aoc
 from tools import gridutils
@@ -166,7 +167,7 @@ class day17(aoc.aoc):
     self.top = max(self.top, y + 1)
     for row in to_compute:
       n = 0
-      for col in range(7):
+      for col in range(8):
         b = 1 if (self.grid.get(col, row) == '#') else 0
         n = n << 1 | b
       self.row_value[row] = n
@@ -195,16 +196,17 @@ class day17(aoc.aoc):
     # return self.run_for(1000000) 
 
     goal = 1000000000000
+    cycle = len(self._puffs)
     cycle = len(self._puffs) * 5
     rock = ROCKS[0]
 
-    last_top = self.top
+    last_top = 0
     drop = 0
     self.drop_2_delta = {}
     self.delta_2_drop = defaultdict(list)
     self.cycle = cycle
     self.drop_2_top = {}
-    for i in range(10000000):
+    for i in range(200000):
       if i % 1000 == 0:
         print(i)
       ret = self.run_for(self.cycle)
@@ -220,16 +222,13 @@ class day17(aoc.aoc):
       self.drop_2_delta[drop] = delta
       self.delta_2_drop[delta].append(drop)
 
-      print('cycle', self.cycle, 'drop', drop, 'top', self.top, 'delta', delta)
-      # self.show_grid(rock, 2, self.top+3)
+      print('cycle', self.cycle, 'drop', drop, 'top', actual_top, 'delta', delta)
+      # self.show_grid(rock, 2, actual_top+1)
 
       loop_len, loop_height = self.found_loop(drop)
       if loop_len and loop_len > 0:
+        print("LOOP AT", drop, 'len', loop_len)
         break
-
-      if drop > 4000:
-        break
-
 
     drops_per_loop = self.cycle*loop_len
     print('At', drop, 'found loop over ', loop_len, 'cycles', '(of %d drops)' % drops_per_loop, 'height', loop_height)
@@ -239,19 +238,16 @@ class day17(aoc.aoc):
     assert base_high + loop_height == self.drop_2_top[drop]
 
     # SMOKE TEST
-    actual_top = self.top-1
-    while self.row_value.get(actual_top, 0) == 0:
-      actual_top -= 1
-    print('cur_top', self.top, 'acutual', actual_top)
+    print('cur_top', self.top, 'actual', actual_top)
     for row in range(8):
       v = self.row_value.get(actual_top - row, 'na')
       print(''.join([self.grid.get(col, actual_top-row) for col in range(7)]), v)
-    print('back_top')
+    print('back_top', base_high)
     for row in range(8):
       v = self.row_value.get(base_high - row, 'na')
       print(''.join([self.grid.get(col, base_high-row) for col in range(7)]), v)
 
-    print('== Starting at drop', drop, 'with height', self.top)
+    print('== Starting at drop', drop, 'with height', actual_top)
 
     need_loops = (goal - drop) // drops_per_loop
     print('Needs', need_loops, 'loopcycles to near goal of', goal)
@@ -311,6 +307,8 @@ class day17(aoc.aoc):
         if same:
           print("WINNER")
           return lspan, target
+        if not self.trace_sample:
+          sys.exit(1)
        
         """
         # make sure 3 in a row match
