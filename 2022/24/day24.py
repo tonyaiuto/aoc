@@ -3,12 +3,18 @@
 
 from collections import defaultdict
 import copy
-import heapq
 import itertools
-import math
 
 from tools import aoc
 from tools import gridutils
+
+
+class State(object):
+
+  def __init__(self, x, y, turn):
+    self.x = x
+    self.y = y
+    self.turn = turn
 
 
 class Blizzard(object):
@@ -53,6 +59,8 @@ class day24(aoc.aoc):
     self.n_rows = 0
     self.x = 1
     self.y = 0
+    self.places = {}
+    self.move = 0
 
   def reset(self):
     # for future use
@@ -89,6 +97,7 @@ class day24(aoc.aoc):
     g.print()
 
   def move_all(self):
+    occupied = set()
     for b in self.bliz:
       if b.dir == '<':
         b.x -= 1
@@ -106,17 +115,36 @@ class day24(aoc.aoc):
         b.y += 1
         if b.y == self.bottom:
           b.y = 1
+    occupied.add((b.x, b.y))
 
   def part1(self):
     print('===== Start part 1')
     self.reset()
 
+    self.places[(1, 0)] = 0
+
     for i in range(5):
-      self.move_all()
+      self.move += 1
+      occupied = self.move_all()
+      np = {}
+      for pos in self.places:
+        x = pos[0]
+        y = pos[1]
+        for off_x, off_y in [(0, -1), (1, 0), (0, 1), (-1, 0)]:
+          x1 = x + off_x
+          y1 = y + off_y
+          if x1 == 0 or y1 == 0:
+            continue
+          if x1 == self.right or y1 == self.right:
+            continue
+          np = (x1, y1)
+          if np in occupied:
+            continue
+          np[(x1, y1)] = self.move
+ 
       self.show()
 
     return 42
-
 
   def part2(self):
     print('===== Start part 2')
