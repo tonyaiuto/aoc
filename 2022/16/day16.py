@@ -29,9 +29,9 @@ class State(object):
   def __hash__(self):
     ret = self.minute
     ret = ret * 37 + self.valve.__hash__()
-    ret = ret * 37 + self.pressue.__hash__()
-    ret = ret * 37 + self.visited.__hash__()
-    ret = ret * 37 + self.opened.__hash__()
+    ret = ret * 73 + self.pressue.__hash__()
+    ret = ret * 101 + self.visited.__hash__()
+    ret = ret * 19 + self.opened.__hash__()
     return ret
 
   def __eq__(self, other):
@@ -183,6 +183,7 @@ class day16(aoc.aoc):
     self.valves.append(v)
 
   def post_load(self):
+    all_valve_names = [v.name for v in self.valves]
     self.valves = sorted(self.valves, key=lambda x: x.name)
     # turn tunnel names into pointers
     can_open = set()
@@ -201,7 +202,12 @@ class day16(aoc.aoc):
         if vname != valve.name:
           # print(valve, vname, cost)
           assert cost > 0
-
+    if self.trace_sample:
+      print('= Costs')
+      print('    ', ' '.join([vname for vname in all_valve_names]))
+      for valve in self.valves:
+        print(' ', valve.name,
+              ' '.join(['%2d' % valve.costs[vname] for vname in all_valve_names]))
 
   def compute_travel_costs(self):
     all_valve_names = [v.name for v in self.valves]
@@ -214,8 +220,7 @@ class day16(aoc.aoc):
       for v in valve.tun:
         valve.to_get_dist.remove(v.name)
         valve.costs[v.name] = 1
-        # remove?
-        v.costs[valve.name] = 1
+        # XXX v.costs[valve.name] = 1
 
     did_something = True
     i = 0
@@ -228,21 +233,15 @@ class day16(aoc.aoc):
         for name in set(valve.to_get_dist):
           for v in valve.tun:
             dist = v.costs.get(name, -1)
-            if dist > 0:
+            # if dist > 0:
+            if dist == i:
               # print('  can reach', name, 'via', v.name)
               valve.to_get_dist.remove(name)
               valve.costs[name] = dist + 1
               vv = Valve.get(name)
-              vv.costs[valve.name] = dist + 1
+              # vv.costs[valve.name] = dist + 1
               did_something = True
               break
-
-    if self.trace_sample:
-      print('= Costs')
-      print('    ', ' '.join([vname for vname in all_valve_names]))
-      for valve in self.valves:
-        print(' ', valve.name,
-              ' '.join(['%2d' % valve.costs[vname] for vname in all_valve_names]))
 
 
   def part1(self):
@@ -299,7 +298,7 @@ class day16(aoc.aoc):
 
   def visit_valves(self, state, depth):
     best = 0
-    print('Visiting', state.valve.name, ', visited=', state.vnames(), 'can open:', valve_names(self.can_open))
+    # print('Visiting', state.valve.name, ', visited=', state.vnames(), 'can open:', valve_names(self.can_open))
     #for valve in self.can_open:
     for valve in self.valves:
       if valve.rate <= 0:
@@ -308,7 +307,7 @@ class day16(aoc.aoc):
         continue
       move_cost = state.valve.costs[valve.name]
       if state.minute + move_cost > 30:
-        p = state.pressure + (31 - state.minute) * state.rate
+        p = state.pressure + (30 - state.minute) * state.rate
         # print('RUN OUT CLOCK =>', p, 'or maybe', p + state.rate)
       else:
         ns = state.move_to(valve)
@@ -335,6 +334,14 @@ class day16(aoc.aoc):
     print('===== Start part 2')
     self.reset()
 
+    self.global_best = 0
+    AA = Valve.get('AA')
+    state = State(AA)
+    state.minute = 4
+    state.rate = 0
+    state.pressure = 0
+    state.visited.add(AA)
+
     return 42
 
 
@@ -349,10 +356,9 @@ Valve GG has flow rate=0; tunnels lead to valves FF, HH
 Valve HH has flow rate=22; tunnel leads to valve GG
 Valve II has flow rate=0; tunnels lead to valves AA, JJ
 Valve JJ has flow rate=21; tunnel leads to valve II
-""", expect1=1651, expect2=None)
+""", expect1=1651, expect2=1707)
 
 
 if __name__ == '__main__':
-  # part1: 1503  to low
-  # part1: 1611  to low
-  day16.run_and_check('input.txt', expect1=42, expect2=None)
+  # part1: 1503 1611  <   X   < 2191
+  day16.run_and_check('input.txt', expect1=2056, expect2=None)
