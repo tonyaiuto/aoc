@@ -23,7 +23,7 @@ class State(object):
   def __init__(self, valve, visited=None, opened=None):
     self.valve = valve
     self.pressure = 0
-    self.visited = visited or set()
+    self.visited = visited or set([valve])
     self.opened = opened or set()
 
   def __hash__(self):
@@ -50,14 +50,8 @@ class State(object):
         'opened:' + self.onames(),
         ])
 
-  def can_open(self, valve):
-    return valve.rate > 0 and valve not in self.opened
-
-  def clock_tick(self):
-    # self.trace()
-    self.minute += 1
-    # increase pressure at old rate
-    self.pressure += self.rate
+  def can_open_self(self):
+    return self.valve.rate > 0 and self.valve not in self.opened
 
   def clone_to(self, valve):
     ret = State(valve, visited=set(self.visited), opened=set(self.opened))
@@ -65,6 +59,11 @@ class State(object):
     ret.rate = self.rate
     ret.pressure = self.pressure
     return ret
+
+  def clock_tick(self):
+    # self.trace()
+    self.minute += 1
+    self.pressure += self.rate
 
   def move_to(self, valve):
     ret = self.clone_to(valve)
@@ -76,6 +75,7 @@ class State(object):
 
   def open_valve(self):
     assert self.valve.rate > 0
+    assert self.valve not in self.opened
     ret = self.clone_to(self.valve)
     ret.clock_tick()
     ret.rate = self.rate + self.valve.rate
@@ -237,17 +237,18 @@ class day16(aoc.aoc):
               did_something = True
               break
 
-    print('= Costs')
-    print('    ', ' '.join([vname for vname in all_valve_names]))
-    for valve in self.valves:
-      print(' ', valve.name,
-            ' '.join(['%2d' % valve.costs[vname] for vname in all_valve_names]))
+    if self.trace_sample:
+      print('= Costs')
+      print('    ', ' '.join([vname for vname in all_valve_names]))
+      for valve in self.valves:
+        print(' ', valve.name,
+              ' '.join(['%2d' % valve.costs[vname] for vname in all_valve_names]))
 
 
   def part1(self):
     print('===== Start part 1')
     self.reset()
-
+    self.global_best = 0
     AA = Valve.get('AA')
     state = State(AA)
     state.minute = 0
@@ -256,7 +257,7 @@ class day16(aoc.aoc):
     state.visited.add(AA)
 
     ret = self.do_turn(state, depth=0)
-    return ret
+    return self.global_best
 
   def do_turn(self, state, depth):
     if state.minute > 30:
@@ -267,6 +268,7 @@ class day16(aoc.aoc):
 
     if len(state.opened) == self.max_open:
       final = state.pressure + (30 - state.minute) * state.rate
+      self.global_best = max(self.global_best, final)
       if TRACE_LEVEL > -10:
         # state.trace()
         print('     final %6d' % final, state)
@@ -277,16 +279,19 @@ class day16(aoc.aoc):
     assert state.minute < 30
 
     best = 0
-    if state.can_open(state.valve):
+    if state.can_open_self():
       ns = state.open_valve()
+      assert not ns.can_open_self()
       # ns.trace('    just opened')
       # try again with the valve open
       p = self.do_turn(ns, depth=depth+1)
+      self.global_best = max(self.global_best, p)
       if p > best:
         best = p
       return best  # XXX
 
     p = self.visit_valves(state, depth=depth+1)
+    self.global_best = max(self.global_best, p)
     if p > best:
       best = p
     return best
@@ -294,17 +299,21 @@ class day16(aoc.aoc):
 
   def visit_valves(self, state, depth):
     best = 0
-    # print('Visiting', state.valve.name, ', visited=', state.vnames())
-    for valve in self.can_open:
+    print('Visiting', state.valve.name, ', visited=', state.vnames(), 'can open:', valve_names(self.can_open))
+    #for valve in self.can_open:
+    for valve in self.valves:
+      if valve.rate <= 0:
+        continue
       if valve in state.visited:
-         continue
+        continue
       move_cost = state.valve.costs[valve.name]
-      if state.minute + move_cost >= 30:
-        p = state.pressure + (30 - state.minute) * state.rate
+      if state.minute + move_cost > 30:
+        p = state.pressure + (31 - state.minute) * state.rate
         # print('RUN OUT CLOCK =>', p, 'or maybe', p + state.rate)
       else:
         ns = state.move_to(valve)
         p = self.do_turn(ns, depth=depth+1)
+      self.global_best = max(self.global_best, p)
       if p > best:
         best = p
     return best
@@ -317,6 +326,7 @@ class day16(aoc.aoc):
          continue
       ns = state.move_to(tunnel)
       p = self.do_turn(ns, depth=depth+1)
+      self.global_best = max(self.global_best, p)
       if p > best:
         best = p
     return best
@@ -345,4 +355,4 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 if __name__ == '__main__':
   # part1: 1503  to low
   # part1: 1611  to low
-  day16.run_and_check('input.txt', expect1=111, expect2=None)
+  day16.run_and_check('input.txt', expect1=42, expect2=None)
