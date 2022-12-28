@@ -95,6 +95,23 @@ class State(object):
   def can_open_self(self):
     return self.valve.rate > 0 and self.valve not in self.opened
 
+  def can_open(self, ri):
+    if self.moving_to[ri]:  # can not open while moving
+      return False
+    vroom = self.rooms[ri]
+    if vroom.rate == 0 or vroom in self.opened:
+      return False
+    return True
+
+  def start_open(self, ri):
+    assert not self.opening[ri]
+    ret = self.clone()
+    vroom = self.rooms[ri]
+    ret.opening[ri] = vroom
+    if TRACE_LEVEL > -1:
+      print('=== TO OPEN', vroom.name, ret)
+    return ret
+
   def clone_to(self, valve, rooms=None):
     ret = State(valve, visited=set(self.visited), opened=set(self.opened))
     ret.minute = self.minute
@@ -390,7 +407,8 @@ class day16(aoc.aoc):
 
     self.global_best = 0
     states = [state]
-    for i in range(26):
+    for i in range(4, 8):
+      print('####################################### minute', i)
       states = self.do_turn2(states)
     return self.global_best
 
@@ -403,20 +421,21 @@ class day16(aoc.aoc):
 
     best = 0
     new_states = []
+    # Initial states can split to up to 4 states
     for state in states:
       if self.is_final(state):
         continue
-      new_states.append(state)
-      for i, valve_room in enumerate(state.rooms):
-        opn = list(state.opening)
-        if (valve_room.rate > 0
-            and valve_room not in state.visited
-            and valve_room not in opn):
-          ns = state.clone()
-          ns.opening[i] = valve_room
-          opn.append(valve_room)
-          print('=== TO OPEN', valve_room.name, ns)
-          new_states.append(ns)
+      assert not state.opening[0] and not state.opening[1]
+
+      new_states = [state]  # The "do nothing" option
+      if state.can_open(0):
+        open0 = state.start_open(0)
+        new_states.append(open0)
+        if open0.can_open(1):
+          new_states.append(open0.start_open(1))
+      if state.can_open(1):
+        new_states.append(state.start_open(1))
+    print('GOT NEWSTATES', len(new_states))
 
     state = new_states
     new_states = []
@@ -448,10 +467,10 @@ class day16(aoc.aoc):
         for valve in new_moves:
           if not ns.moving_to[0] and not ns.opening[0]:
             ns.moving_to[0] = valve
-            ns.cost_left[0] = ns.rooms[i].costs[valve.name]
+            ns.cost_left[0] = ns.rooms[0].costs[valve.name]
           elif not ns.moving_to[1] and not ns.opening[1]:
             ns.moving_to[1] = valve
-            ns.cost_left[1] = ns.rooms[i].costs[valve.name]
+            ns.cost_left[1] = ns.rooms[1].costs[valve.name]
           else:
             print('More valves than slots', [x.name for x in new_moves], ns)
         new_states.append(ns)
