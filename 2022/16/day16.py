@@ -13,18 +13,35 @@ from tools import gridutils
 TRACE_LEVEL = 0
 
 def valve_names(set_of_valves):
-   return ','.join(sorted([v.name for v in set_of_valves]))
+   return ','.join(sorted([v.name if v else '.' for v in set_of_valves]))
 
 def names(set_of_strings):
    return ','.join(sorted(set_of_strings))
 
 class State(object):
 
-  def __init__(self, valve, visited=None, opened=None):
+  def __init__(self, valve=None, rooms=None, visited=None, opened=None):
+    self.minute = 0
     self.valve = valve
     self.pressure = 0
+    self.rate = 0
     self.visited = visited or set([valve])
     self.opened = opened or set()
+    self.rooms = rooms or []
+    self.moving_to = [0] * len(self.rooms)
+    self.cost_left = [0] * len(self.rooms)
+    self.opening = [0] * len(self.rooms)
+
+  def clone(self):
+    ret = State(rooms=self.rooms, visited=set(self.visited), opened=set(self.opened))
+    ret.minute = self.minute
+    ret.valve = self.valve
+    ret.pressure = self.pressure
+    ret.rate = self.rate
+    ret.moving_to = list(self.moving_to)
+    ret.cost_left = list(self.cost_left)
+    ret.opening = list(self.opening)
+    return ret
 
   def __hash__(self):
     ret = self.minute
@@ -32,6 +49,10 @@ class State(object):
     ret = ret * 73 + self.pressue.__hash__()
     ret = ret * 101 + self.visited.__hash__()
     ret = ret * 19 + self.opened.__hash__()
+    ret = ret * 37 + self.rooms.__hash__()
+    ret = ret * 37 + self.moving_to.__hash__()
+    ret = ret * 37 + self.cost_left.__hash__()
+    ret = ret * 37 + self.opening.__hash__()
     return ret
 
   def __eq__(self, other):
@@ -39,21 +60,42 @@ class State(object):
             and self.valve == other.valve
             and self.pressure == other.pressure
             and self.visited == other.visited
-            and self.opened == other.opened)
+            and self.opened == other.opened
+            and self.rooms == other.rooms
+            and self.moving_to == other.moving_to
+            and self.cost_left == other.cost_left
+            and self.opening == other.opening
+           )
+
+  def can_move(self):
+    ret = 0
+    for i in range(2):
+      if not self.moving_to[i] and not self.opening[i]:
+        ret += 1
+    return ret
 
   def __str__(self):
-    return ', '.join([
+    ret = [
         '== minute %d' % self.minute,
-        'at ' + self.valve.name,
+    ]
+    if self.rooms:
+        ret.append('at ' + ','.join([v.name for v in self.rooms]))
+    else:
+        ret.append('at ' + self.valve.name)
+    ret.extend([
         'released: %d' % self.pressure,
         'rate: %d' % self.rate,
         'opened:' + self.onames(),
         ])
+    return ', '.join(ret)
+
+  def dump(self):
+    print(str(self), 'Moving to:', valve_names(self.moving_to), self.cost_left, valve_names(self.opening))
 
   def can_open_self(self):
     return self.valve.rate > 0 and self.valve not in self.opened
 
-  def clone_to(self, valve):
+  def clone_to(self, valve, rooms=None):
     ret = State(valve, visited=set(self.visited), opened=set(self.opened))
     ret.minute = self.minute
     ret.rate = self.rate
@@ -258,24 +300,28 @@ class day16(aoc.aoc):
     ret = self.do_turn(state, depth=0)
     return self.global_best
 
-  def do_turn(self, state, depth):
+  def is_final(self, state, depth=0):
     if state.minute > 30:
       print('++++++ too far')
       state.trace(tag=(' ' * depth)+'do_turn')
-      return -1
+      return True
     # state.trace(tag=(' ' * depth)+'do_turn')
-
     if len(state.opened) == self.max_open:
       final = state.pressure + (30 - state.minute) * state.rate
       self.global_best = max(self.global_best, final)
       if TRACE_LEVEL > -10:
         # state.trace()
         print('     final %6d' % final, state)
-      return final
-
+      return True
     if state.minute == 30:
-      return state.pressure
+      self.global_best = max(self.global_best, state.pressure)
+      return True
     assert state.minute < 30
+    return False
+
+  def do_turn(self, state, depth):
+    if self.is_final(state, depth):
+      return 0
 
     best = 0
     if state.can_open_self():
@@ -299,8 +345,8 @@ class day16(aoc.aoc):
   def visit_valves(self, state, depth):
     best = 0
     # print('Visiting', state.valve.name, ', visited=', state.vnames(), 'can open:', valve_names(self.can_open))
-    #for valve in self.can_open:
-    for valve in self.valves:
+    # for valve in self.valves:
+    for valve in self.can_open:
       if valve.rate <= 0:
         continue
       if valve in state.visited:
@@ -317,7 +363,7 @@ class day16(aoc.aoc):
         best = p
     return best
 
-  def visit_children(self, state, depth):  # OBS
+  def XXXvisit_children(self, state, depth):  # OBS
     best = 0
     print('Visiting', state.valve.name, ', visited=', state.vnames())
     for tunnel in state.valve.tun:
@@ -333,16 +379,121 @@ class day16(aoc.aoc):
   def part2(self):
     print('===== Start part 2')
     self.reset()
+    # return 1707
 
-    self.global_best = 0
     AA = Valve.get('AA')
-    state = State(AA)
+    state = State(rooms=[AA, AA])
     state.minute = 4
     state.rate = 0
     state.pressure = 0
     state.visited.add(AA)
 
-    return 42
+    self.global_best = 0
+    states = [state]
+    for i in range(26):
+      states = self.do_turn2(states)
+    return self.global_best
+
+  def do_turn2(self, states, depth=0):
+
+    # create new states
+    # clock tick each
+    #   update minute
+    #   resolve stuff
+
+    best = 0
+    new_states = []
+    for state in states:
+      if self.is_final(state):
+        continue
+      new_states.append(state)
+      for i, valve_room in enumerate(state.rooms):
+        opn = list(state.opening)
+        if (valve_room.rate > 0
+            and valve_room not in state.visited
+            and valve_room not in opn):
+          ns = state.clone()
+          ns.opening[i] = valve_room
+          opn.append(valve_room)
+          print('=== TO OPEN', valve_room.name, ns)
+          new_states.append(ns)
+
+    state = new_states
+    new_states = []
+    n_can_move = 0
+    for state in states:
+      n_can_move = state.can_move()
+      if n_can_move == 0:
+        # print('Can not move from', state)
+        state.dump()
+        new_states.append(state)
+        continue
+
+      # state.dump()
+
+      # p = self.visit_valves2(state, depth=depth+1)
+      vlist = []
+      for valve in self.can_open:
+        if valve.rate <= 0 or valve in state.visited:
+          continue
+        if valve in state.opening or valve in state.moving_to:
+          continue
+        # print("  We could move to valve", valve)
+        vlist.append(valve)
+
+      for new_moves in itertools.permutations(vlist, n_can_move):
+        print('Assigning', [x.name for x in new_moves])
+
+        ns = state.clone()
+        for valve in new_moves:
+          if not ns.moving_to[0] and not ns.opening[0]:
+            ns.moving_to[0] = valve
+            ns.cost_left[0] = ns.rooms[i].costs[valve.name]
+          elif not ns.moving_to[1] and not ns.opening[1]:
+            ns.moving_to[1] = valve
+            ns.cost_left[1] = ns.rooms[i].costs[valve.name]
+          else:
+            print('More valves than slots', [x.name for x in new_moves], ns)
+        new_states.append(ns)
+
+    for state in new_states:
+      state.minute += 1
+      state.pressure += state.rate
+      self.global_best = max(self.global_best, state.pressure)
+      for i in range(2):
+        open_valve = state.opening[i]
+        if open_valve:
+          state.opened.add(open_valve)
+          state.rate += open_valve.rate
+          state.opening[i] = None
+          print('=== opened', open_valve.name)
+        move_to = state.moving_to[i]
+        if move_to:
+          state.cost_left[i] -= 1
+          if state.cost_left[i] == 0:
+            state.rooms[i] = move_to
+            state.visited.add(move_to)
+            state.moving_to[i] = None
+            print('=== reached', move_to.name, 'rate, p', state.rate, state.pressure)
+
+    return new_states
+
+  def visit_valves2(self, state, depth):
+    best = 0
+    # print('Visiting', state.valve.name, ', visited=', state.vnames(), 'can open:', valve_names(self.can_open))
+
+    """
+      if state.minute + move_cost > 30:
+        p = state.pressure + (30 - state.minute) * state.rate
+        # print('RUN OUT CLOCK =>', p, 'or maybe', p + state.rate)
+      else:
+        ns = state.move_to(valve)
+        p = self.do_turn2(ns, depth=depth+1)
+      self.global_best = max(self.global_best, p)
+      if p > best:
+        best = p
+    """
+    return best
 
 
 day16.sample_test("""
