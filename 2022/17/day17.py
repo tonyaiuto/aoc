@@ -230,6 +230,12 @@ class day17(aoc.aoc):
         print("LOOP AT", drop, 'len', loop_len)
         break
 
+      loop_len, loop_height = self.find_loop2(drop)
+      if loop_len and loop_len > 0:
+        print("LOOP2 AT", drop, 'len', loop_len)
+        break
+
+
     drops_per_loop = self.cycle*loop_len
     print('At', drop, 'found loop over ', loop_len, 'cycles', '(of %d drops)' % drops_per_loop, 'height', loop_height)
     # The top of the previous cycle end
@@ -299,7 +305,7 @@ class day17(aoc.aoc):
         top1 = self.drop_2_top[drop] - target
         top2 = self.drop_2_top[back_drop] - target 
         same = True
-        for ri in range(target):
+        for ri in range(min(target, 100000)):
           if self.row_value[top1 + ri] != self.row_value[top2 + ri]:
             print("Stacks not the same at", top1+ri)
             same = False
@@ -349,6 +355,27 @@ class day17(aoc.aoc):
       lspan += 1
     return ret, lspan
 
+  def find_loop2(self, drop):
+    if drop < self.cycle * 3:
+      return None, None
+
+    for nc in range(1, 100):
+      if drop < nc * self.cycle * 3:
+        return None, None
+
+      offset = nc * self.cycle
+      print('Trying for loop over', nc, 'cycles')
+      for i in range(self.cycle):  # ?? offset?
+        test_top = drop - 1
+        if self.vec_match(test_top - offset, test_top - 2 * offset, offset):
+          print('## matched', offset, 'rows at', test_top - offset)
+    return None, None
+
+  def vec_match(self, p1, p2, nv):
+    for i in range(nv):
+      if self.row_value[p1 + i] != self.row_value[p2 + i]:
+        return False
+    return True
 
 
 day17.sample_test("""
