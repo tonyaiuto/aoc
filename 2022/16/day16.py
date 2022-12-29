@@ -20,7 +20,11 @@ def names(set_of_strings):
 
 class State(object):
 
+  id = 0
+
   def __init__(self, valve=None, rooms=None, visited=None, opened=None):
+    State.id += 1
+    self.id = State.id
     self.minute = 0
     self.valve = valve
     self.pressure = 0
@@ -51,7 +55,7 @@ class State(object):
     ret = ret * 37 + self.valve.__hash__()
     ret = ret * 73 + self.pressure * self.rate
     ret = ret * 101 + valve_names(self.visited).__hash__()
-    ret = ret * 19 + valve_names(self.opened).__hash__()
+    ret = ret * 19 + self.onames().__hash__()
     foo = '|'.join(['%s,%s,%s,%d' % (
         self.rooms[i].name if self.rooms[i] else '',
         self.opening[i].name if self.opening[i] else '',
@@ -59,12 +63,13 @@ class State(object):
         self.cost_left[i])
         for i in range(len(self.rooms))
         ])
-    ret = ret * 37 + foo.__hash__()
+    ret = ret * 17 + foo.__hash__()
     return ret
 
   def __eq__(self, other):
     return (self.minute == other.minute
             and self.valve == other.valve
+            and self.rate == other.rate
             and self.pressure == other.pressure
             and self.visited == other.visited
             and self.opened == other.opened
@@ -76,7 +81,8 @@ class State(object):
 
   def __str__(self):
     ret = [
-        '== minute %d' % self.minute,
+        '=st %d:' % self.id,
+        'min:%d' % self.minute,
     ]
     if self.rooms:
         ret.append('at ' + ','.join([v.name for v in self.rooms]))
@@ -104,6 +110,7 @@ class State(object):
   def can_open(self, ri):
     if self.moving_to[ri]:  # can not open while moving
       return False
+    assert not self.opening[ri]
     vroom = self.rooms[ri]
     if vroom.rate == 0 or vroom in self.opened:
       return False
@@ -239,11 +246,7 @@ class day16(aoc.aoc):
         })
     self.trace = True
     self.valves = []
-    Valve.reset()
-
-  def reset(self):
-    # for future use
-    pass
+    # Valve.reset()
 
   def do_line(self, line):
     # called for each line of input
@@ -322,7 +325,6 @@ class day16(aoc.aoc):
 
   def part1(self):
     print('===== Start part 1')
-    self.reset()
     self.global_best = 0
     AA = Valve.get('AA')
     state = State(AA)
@@ -348,9 +350,9 @@ class day16(aoc.aoc):
         print('#     final %6d' % final, state)
       return True
     # This might be too early
-    #if state.minute == 30:
-    #  self.global_best = max(self.global_best, state.pressure)
-    #  return True
+    if state.minute == 30:
+      self.global_best = max(self.global_best, state.pressure)
+      return True
     assert state.minute < 30
     return False
 
@@ -401,8 +403,6 @@ class day16(aoc.aoc):
 
   def part2(self):
     print('===== Start part 2')
-    self.reset()
-    # return 1707
 
     AA = Valve.get('AA')
     state = State(rooms=[AA, AA])
@@ -413,7 +413,7 @@ class day16(aoc.aoc):
 
     self.global_best = 0
     states = [state]
-    for i in range(5, 31):
+    for i in range(5, 30):
       print('####################################### minute', i, len(states), 'states')
       states = self.do_turn2(states)
     return self.global_best
@@ -464,13 +464,24 @@ class day16(aoc.aoc):
           continue
         # print("  We could move to valve", valve)
         vlist.append(valve)
+      if len(states) == 1:
+        print("  Frontier", valve_names(vlist))
+
+      if len(vlist) == 0 and (any(state.moving_to) or any(state.opening)):
+        if self.trace_sample:
+          print("NO FRONTIER", state)
+        new_states.append(state)
+        continue
 
       combo_func = itertools.permutations
       if state.rooms[0] == state.rooms[1]:
         print(state)
         assert state.rooms[0].name == 'AA'
         combo_func = itertools.combinations
+
       for new_moves in combo_func(vlist, n_can_move):
+        if len(states) == 1:
+          print("  Moves", valve_names(new_moves))
         ns = state.clone()
         for valve in new_moves:
           if not ns.is_busy(0):
@@ -531,6 +542,7 @@ Valve II has flow rate=0; tunnels lead to valves AA, JJ
 Valve JJ has flow rate=21; tunnel leads to valve II
 """, expect1=1651, expect2=1707)
 
+# optimal2 = DD 2, JJ 3, BB, 7, HH 7, CC 9, EE 11
 
 if __name__ == '__main__':
   # part1: 1503 1611  <   X   < 2191
