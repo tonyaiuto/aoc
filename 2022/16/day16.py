@@ -26,7 +26,7 @@ class State(object):
     self.pressure = 0
     self.rate = 0
     self.visited = visited or (set([valve]) if valve else set())
-    self.opened = opened or set()
+    self.opened = list(opened) if opened else []
     if rooms:
       self.rooms = list(rooms)
     else:
@@ -36,7 +36,7 @@ class State(object):
     self.cost_left = [0] * len(self.rooms)
 
   def clone(self):
-    ret = State(rooms=self.rooms, visited=set(self.visited), opened=set(self.opened))
+    ret = State(rooms=self.rooms, visited=set(self.visited), opened=self.opened)
     ret.minute = self.minute
     ret.valve = self.valve
     ret.pressure = self.pressure
@@ -52,10 +52,14 @@ class State(object):
     ret = ret * 73 + self.pressure * self.rate
     ret = ret * 101 + valve_names(self.visited).__hash__()
     ret = ret * 19 + valve_names(self.opened).__hash__()
-    ret = ret * 37 + valve_names(self.rooms).__hash__()
-    ret = ret * 37 + valve_names(self.opening).__hash__()
-    ret = ret * 37 + valve_names(self.moving_to).__hash__()
-    ret = ret * 37 + sum(self.cost_left)
+    foo = '|'.join(['%s,%s,%s,%d' % (
+        self.rooms[i].name if self.rooms[i] else '',
+        self.opening[i].name if self.opening[i] else '',
+        self.moving_to[i].name if self.moving_to[i] else '',
+        self.cost_left[i])
+        for i in range(len(self.rooms))
+        ])
+    ret = ret * 37 + foo.__hash__()
     return ret
 
   def __eq__(self, other):
@@ -110,15 +114,19 @@ class State(object):
     ret = self.clone()
     vroom = self.rooms[ri]
     ret.opening[ri] = vroom
-    if TRACE_LEVEL > -1:
+    if TRACE_LEVEL > 1:
       print('=== start open', vroom.name, ret)
     return ret
 
+  def is_busy(self, ri):
+    return self.moving_to[ri] or self.opening[ri]
+
   def can_move(self):
     ret = 0
-    for i in range(2):
-      if not self.moving_to[i] and not self.opening[i]:
-        ret += 1
+    if not self.is_busy(0):
+      ret += 1
+    if not self.is_busy(1):
+      ret += 1
     return ret
 
   def clone_to(self, valve, rooms=None):
@@ -147,7 +155,7 @@ class State(object):
     ret = self.clone_to(self.valve)
     ret.clock_tick()
     ret.rate = self.rate + self.valve.rate
-    ret.opened.add(self.valve)
+    ret.opened.append(self.valve)
     # ret.trace(tag='open_valve')
     return ret
 
@@ -337,11 +345,12 @@ class day16(aoc.aoc):
       self.global_best = max(self.global_best, final)
       if TRACE_LEVEL > -10:
         # state.trace()
-        print('     final %6d' % final, state)
+        print('#     final %6d' % final, state)
       return True
-    if state.minute == 30:
-      self.global_best = max(self.global_best, state.pressure)
-      return True
+    # This might be too early
+    #if state.minute == 30:
+    #  self.global_best = max(self.global_best, state.pressure)
+    #  return True
     assert state.minute < 30
     return False
 
@@ -389,18 +398,6 @@ class day16(aoc.aoc):
         best = p
     return best
 
-  def XXXvisit_children(self, state, depth):  # OBS
-    best = 0
-    print('Visiting', state.valve.name, ', visited=', state.vnames())
-    for tunnel in state.valve.tun:
-      if tunnel in state.visited:
-         continue
-      ns = state.move_to(tunnel)
-      p = self.do_turn(ns, depth=depth+1)
-      self.global_best = max(self.global_best, p)
-      if p > best:
-        best = p
-    return best
 
   def part2(self):
     print('===== Start part 2')
@@ -416,13 +413,12 @@ class day16(aoc.aoc):
 
     self.global_best = 0
     states = [state]
-    for i in range(4, 31):
+    for i in range(5, 31):
       print('####################################### minute', i, len(states), 'states')
       states = self.do_turn2(states)
     return self.global_best
 
   def do_turn2(self, states, depth=0):
-
     # create new states
     # clock tick each
     #   update minute
@@ -454,59 +450,70 @@ class day16(aoc.aoc):
       n_can_move = state.can_move()
       if n_can_move == 0:
         # print('Can not move from', state)
-        state.dump()
+        # state.dump()
         new_states.append(state)
         continue
 
-      # state.dump()
-
+      # what rooms can we move to
       vlist = []
       for valve in self.can_open:
-        if valve.rate <= 0 or valve in state.visited:
+        if valve.rate <= 0 or valve in state.visited or valve in state.opened:
           continue
+        # if valve in state.opening:
         if valve in state.opening or valve in state.moving_to:
           continue
         # print("  We could move to valve", valve)
         vlist.append(valve)
 
-      for new_moves in itertools.permutations(vlist, n_can_move):
-
+      combo_func = itertools.permutations
+      if state.rooms[0] == state.rooms[1]:
+        print(state)
+        assert state.rooms[0].name == 'AA'
+        combo_func = itertools.combinations
+      for new_moves in combo_func(vlist, n_can_move):
         ns = state.clone()
         for valve in new_moves:
-          if not ns.moving_to[0] and not ns.opening[0]:
+          if not ns.is_busy(0):
             ns.moving_to[0] = valve
             ns.cost_left[0] = ns.rooms[0].costs[valve.name]
-          elif not ns.moving_to[1] and not ns.opening[1]:
+          elif not ns.is_busy(1):
             ns.moving_to[1] = valve
             ns.cost_left[1] = ns.rooms[1].costs[valve.name]
           else:
             print('More valves than slots', [x.name for x in new_moves], ns)
+            sys.exit(1)
         # print('Assigning', [x.name for x in new_moves], ns)
         new_states.append(ns)
 
     for state in new_states:
       state.minute += 1
-      if BB in state.rooms:
-        print('==== clock tick', state)
+      #if BB in state.rooms:
+      #  print('==== clock tick', state)
       state.pressure += state.rate
       self.global_best = max(self.global_best, state.pressure)
       for i in range(2):
         open_valve = state.opening[i]
         if open_valve and open_valve.name == 'BB':
-          print('========', state)
+          print('===open BB=====', state)
         if open_valve:
-          state.opened.add(open_valve)
+          if open_valve in state.opened:
+            print('==== WTF already opened', state)
+          assert open_valve not in state.opened
+          state.opened.append(open_valve)
           state.rate += open_valve.rate
           state.opening[i] = None
-          print('=== opened', open_valve.name)
+          if self.trace_sample:
+            print('=== opened', open_valve.name, state)
         move_to = state.moving_to[i]
+        assert not (open_valve and move_to)
         if move_to:
           state.cost_left[i] -= 1
           if state.cost_left[i] == 0:
             state.rooms[i] = move_to
             state.visited.add(move_to)
             state.moving_to[i] = None
-            print('=== reached', move_to.name, 'rate, p', state.rate, state.pressure)
+            if self.trace_sample:
+              print('=== reached', move_to.name, state)
 
     return list(set(new_states))
 
