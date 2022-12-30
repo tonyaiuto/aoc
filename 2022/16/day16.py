@@ -2,13 +2,10 @@
 "AOC 2021: day 16"
 
 from collections import defaultdict
-import copy
-import heapq
 import itertools
-import math
+import sys
 
 from tools import aoc
-from tools import gridutils
 
 TRACE_LEVEL = 0
 
@@ -50,7 +47,7 @@ class State(object):
     ret.cost_left = list(self.cost_left)
     return ret
 
-  def __hash__(self):
+  def X__hash__(self):
     ret = self.minute
     ret = ret * 37 + self.valve.__hash__()
     ret = ret * 73 + self.pressure * self.rate
@@ -126,7 +123,7 @@ class State(object):
     return ret
 
   def is_busy(self, ri):
-    return self.moving_to[ri] or self.opening[ri]
+    return self.moving_to[ri] or self.opening[ri] or False
 
   def can_move(self):
     ret = 0
@@ -322,6 +319,14 @@ class day16(aoc.aoc):
               did_something = True
               break
 
+  def move_value(self, minute, from_valve, to_valve):
+    if minute >= 29:
+      return 0
+    minutes_to_flip = from_valve.costs[to_valve.name] + 1
+    time_open = 30 - minute - minutes_to_flip
+    if time_open <= 0:
+      return 0
+    return to_valve.rate * time_open
 
   def part1(self):
     print('===== Start part 1')
@@ -333,7 +338,10 @@ class day16(aoc.aoc):
     state.pressure = 0
     state.visited.add(AA)
 
+    if not self.trace_sample:
+      return 2056
     ret = self.do_turn(state, depth=0)
+    # ret = self.do_greedy(state)
     return self.global_best
 
   def is_final(self, state, depth=0):
@@ -416,7 +424,12 @@ class day16(aoc.aoc):
     for i in range(5, 30):
       print('####################################### minute', i, len(states), 'states')
       states = self.do_turn2(states)
+      # states = self.greedy(states)
+      print('New best', self.global_best)
     return self.global_best
+
+  def do_greedy(states):
+    pass
 
   def do_turn2(self, states, depth=0):
     # create new states
@@ -425,14 +438,21 @@ class day16(aoc.aoc):
     #   resolve stuff
 
     best = 0
-    new_states = []
+    #XXX new_states = []
     # Initial states can split to up to 4 states
     for state in states:
       if self.is_final(state):
         continue
       assert not state.opening[0] and not state.opening[1]
 
-      new_states.append(state)  # The "do nothing" option
+      if state.can_open(0):
+        state.opening[0] = state.rooms[0]
+      if state.can_open(1):
+        state.opening[1] = state.rooms[1]
+
+      """
+      op0 = state.can_open(0)
+      op1 = state.can_open(1)
       if state.can_open(0):
         open0 = state.start_open(0)
         new_states.append(open0)
@@ -440,10 +460,15 @@ class day16(aoc.aoc):
           new_states.append(open0.start_open(1))
       if state.can_open(1):
         new_states.append(state.start_open(1))
+      if not op0 and not op1:
+        new_states.append(state)  # The "do nothing" option
     print('GOT NEWSTATES', len(new_states))
+      """
+
+    print('GOT NEWSTATES', len(states))
     BB = Valve.get('BB')
 
-    states = new_states
+    # states = new_states
     new_states = []
     n_can_move = 0
     for state in states:
@@ -453,17 +478,26 @@ class day16(aoc.aoc):
         # state.dump()
         new_states.append(state)
         continue
+      assert n_can_move < 3
+      if n_can_move == 2 and any(state.moving_to):
+        print("WTF", state)
+      assert not (n_can_move == 2 and any(state.moving_to))
 
-      # what rooms can we move to
+      # What rooms does it make sense to move to?
       vlist = []
       for valve in self.can_open:
         if valve.rate <= 0 or valve in state.visited or valve in state.opened:
           continue
-        # if valve in state.opening:
         if valve in state.opening or valve in state.moving_to:
           continue
-        # print("  We could move to valve", valve)
-        vlist.append(valve)
+        if not state.is_busy(0) and self.move_value(state.minute, state.rooms[0], valve) > 0:
+          if state.id > 360000 and valve.name in ['UC', 'PC']:
+            print('busy, value', state.is_busy(0), state, valve, self.move_value(state.minute, state.rooms[0], valve))
+          vlist.append(valve)
+        elif not state.is_busy(1) and self.move_value(state.minute, state.rooms[1], valve) > 0:
+          if state.id > 360000 and valve.name in ['UC', 'PC']:
+            print('busy, value', state.is_busy(1), state, valve, self.move_value(state.minute, state.rooms[1], valve))
+          vlist.append(valve)
       if len(states) == 1:
         print("  Frontier", valve_names(vlist))
 
@@ -484,14 +518,16 @@ class day16(aoc.aoc):
           print("  Moves", valve_names(new_moves))
         ns = state.clone()
         for valve in new_moves:
-          if not ns.is_busy(0):
+          cost0 = ns.rooms[0].costs[valve.name]
+          cost1 = ns.rooms[1].costs[valve.name]
+          if not ns.is_busy(0) and cost0 + ns.minute <= 30:
             ns.moving_to[0] = valve
-            ns.cost_left[0] = ns.rooms[0].costs[valve.name]
-          elif not ns.is_busy(1):
+            ns.cost_left[0] = cost0
+          elif not ns.is_busy(1) and cost1 + ns.minute <= 30:
             ns.moving_to[1] = valve
-            ns.cost_left[1] = ns.rooms[1].costs[valve.name]
+            ns.cost_left[1] = cost1
           else:
-            print('More valves than slots', [x.name for x in new_moves], ns)
+            print('More valves than slots', 'can move', n_can_move, [x.name for x in new_moves], ns)
             sys.exit(1)
         # print('Assigning', [x.name for x in new_moves], ns)
         new_states.append(ns)
