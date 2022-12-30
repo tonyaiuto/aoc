@@ -19,19 +19,23 @@ class State(object):
 
   id = 0
 
-  def __init__(self, valve=None, rooms=None, visited=None, opened=None):
+  def __init__(self, rooms=None, visited=None, opened=None):
     State.id += 1
     self.id = State.id
     self.minute = 0
-    self.valve = valve
     self.pressure = 0
     self.rate = 0
-    self.visited = visited or (set([valve]) if valve else set())
     self.opened = list(opened) if opened else []
     if rooms:
       self.rooms = list(rooms)
     else:
       self.rooms = []
+    # self.visited = visited or (set([valve]) if valve else set())
+    if visited:
+      self.visited = visited
+    else:
+      self.visited = set(self.rooms)
+
     self.opening = [0] * len(self.rooms)
     self.moving_to = [0] * len(self.rooms)
     self.cost_left = [0] * len(self.rooms)
@@ -39,7 +43,6 @@ class State(object):
   def clone(self):
     ret = State(rooms=self.rooms, visited=set(self.visited), opened=self.opened)
     ret.minute = self.minute
-    ret.valve = self.valve
     ret.pressure = self.pressure
     ret.rate = self.rate
     ret.opening = list(self.opening)
@@ -47,9 +50,8 @@ class State(object):
     ret.cost_left = list(self.cost_left)
     return ret
 
-  def X__hash__(self):
+  def __hash__(self):
     ret = self.minute
-    ret = ret * 37 + self.valve.__hash__()
     ret = ret * 73 + self.pressure * self.rate
     ret = ret * 101 + valve_names(self.visited).__hash__()
     ret = ret * 19 + self.onames().__hash__()
@@ -65,7 +67,6 @@ class State(object):
 
   def __eq__(self, other):
     return (self.minute == other.minute
-            and self.valve == other.valve
             and self.rate == other.rate
             and self.pressure == other.pressure
             and self.visited == other.visited
@@ -81,10 +82,7 @@ class State(object):
         '=st %d:' % self.id,
         'min:%d' % self.minute,
     ]
-    if self.rooms:
-        ret.append('at ' + ','.join([v.name for v in self.rooms]))
-    else:
-        ret.append('at ' + self.valve.name)
+    ret.append('at ' + ','.join([v.name for v in self.rooms]))
     ret.extend([
         'released: %d' % self.pressure,
         'rate: %d' % self.rate,
@@ -102,7 +100,7 @@ class State(object):
     print(str(self), 'Moving to:', valve_names(self.moving_to), self.cost_left, valve_names(self.opening))
 
   def can_open_self(self):
-    return self.valve.rate > 0 and self.valve not in self.opened
+    return self.rooms[0].rate > 0 and self.rooms[0] not in self.opened
 
   def can_open(self, ri):
     if self.moving_to[ri]:  # can not open while moving
@@ -134,7 +132,7 @@ class State(object):
     return ret
 
   def clone_to(self, valve, rooms=None):
-    ret = State(valve, visited=set(self.visited), opened=set(self.opened))
+    ret = State(rooms=[valve], visited=set(self.visited), opened=set(self.opened))
     ret.minute = self.minute
     ret.rate = self.rate
     ret.pressure = self.pressure
@@ -148,18 +146,18 @@ class State(object):
   def move_to(self, valve):
     ret = self.clone_to(valve)
     # ret.trace(tag='Moving to')
-    for i in range(self.valve.costs[valve.name]):
+    for i in range(self.rooms[0].costs[valve.name]):
       ret.clock_tick()
     ret.visited.add(valve)
     return ret
 
   def open_valve(self):
-    assert self.valve.rate > 0
-    assert self.valve not in self.opened
-    ret = self.clone_to(self.valve)
+    assert self.rooms[0].rate > 0
+    assert self.rooms[0] not in self.opened
+    ret = self.clone_to(self.rooms[0])
     ret.clock_tick()
-    ret.rate = self.rate + self.valve.rate
-    ret.opened.append(self.valve)
+    ret.rate = self.rate + self.rooms[0].rate
+    ret.opened.append(self.rooms[0])
     # ret.trace(tag='open_valve')
     return ret
 
@@ -332,13 +330,13 @@ class day16(aoc.aoc):
     print('===== Start part 1')
     self.global_best = 0
     AA = Valve.get('AA')
-    state = State(AA)
+    state = State(rooms=[AA])
     state.minute = 0
     state.rate = 0
     state.pressure = 0
     state.visited.add(AA)
 
-    if not self.trace_sample:
+    if False and not self.trace_sample:
       return 2056
     ret = self.do_turn(state, depth=0)
     # ret = self.do_greedy(state)
@@ -389,14 +387,14 @@ class day16(aoc.aoc):
 
   def visit_valves(self, state, depth):
     best = 0
-    # print('Visiting', state.valve.name, ', visited=', state.vnames(), 'can open:', valve_names(self.can_open))
+    # print('Visiting', state.rooms[0].name, ', visited=', state.vnames(), 'can open:', valve_names(self.can_open))
     # for valve in self.valves:
     for valve in self.can_open:
       if valve.rate <= 0:
         continue
       if valve in state.visited:
         continue
-      move_cost = state.valve.costs[valve.name]
+      move_cost = state.rooms[0].costs[valve.name]
       if state.minute + move_cost > 30:
         p = state.pressure + (30 - state.minute) * state.rate
         # print('RUN OUT CLOCK =>', p, 'or maybe', p + state.rate)
@@ -491,12 +489,12 @@ class day16(aoc.aoc):
         if valve in state.opening or valve in state.moving_to:
           continue
         if not state.is_busy(0) and self.move_value(state.minute, state.rooms[0], valve) > 0:
-          if state.id > 360000 and valve.name in ['UC', 'PC']:
-            print('busy, value', state.is_busy(0), state, valve, self.move_value(state.minute, state.rooms[0], valve))
+          #if state.id > 360000 and valve.name in ['UC', 'PC']:
+          #  print('busy, value', state.is_busy(0), state, valve, self.move_value(state.minute, state.rooms[0], valve))
           vlist.append(valve)
         elif not state.is_busy(1) and self.move_value(state.minute, state.rooms[1], valve) > 0:
-          if state.id > 360000 and valve.name in ['UC', 'PC']:
-            print('busy, value', state.is_busy(1), state, valve, self.move_value(state.minute, state.rooms[1], valve))
+          #if state.id > 360000 and valve.name in ['UC', 'PC']:
+          #  print('busy, value', state.is_busy(1), state, valve, self.move_value(state.minute, state.rooms[1], valve))
           vlist.append(valve)
       if len(states) == 1:
         print("  Frontier", valve_names(vlist))
