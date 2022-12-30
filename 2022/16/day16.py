@@ -52,9 +52,9 @@ class State(object):
 
   def __hash__(self):
     ret = self.minute
-    ret = ret * 73 + self.pressure * self.rate
-    ret = ret * 101 + valve_names(self.visited).__hash__()
-    ret = ret * 19 + self.onames().__hash__()
+    ret = (ret << 17) + self.pressure * self.rate
+    ret = (ret << 11) + valve_names(self.visited).__hash__()
+    ret = (ret << 19) + self.onames().__hash__()
     foo = '|'.join(['%s,%s,%s,%d' % (
         self.rooms[i].name if self.rooms[i] else '',
         self.opening[i].name if self.opening[i] else '',
@@ -62,11 +62,11 @@ class State(object):
         self.cost_left[i])
         for i in range(len(self.rooms))
         ])
-    ret = ret * 17 + foo.__hash__()
+    ret = (ret << 17) + foo.__hash__()
     return ret
 
   def __eq__(self, other):
-    return (self.minute == other.minute
+    eq = (self.minute == other.minute
             and self.rate == other.rate
             and self.pressure == other.pressure
             and self.visited == other.visited
@@ -76,6 +76,7 @@ class State(object):
             and self.moving_to == other.moving_to
             and self.cost_left == other.cost_left
            )
+    assert eq == (self.__hash__() == other.__hash__())
 
   def __str__(self):
     ret = [
@@ -336,7 +337,7 @@ class day16(aoc.aoc):
     state.pressure = 0
     state.visited.add(AA)
 
-    if False and not self.trace_sample:
+    if True and not self.trace_sample:
       return 2056
     ret = self.do_turn(state, depth=0)
     # ret = self.do_greedy(state)
@@ -479,7 +480,7 @@ class day16(aoc.aoc):
       assert n_can_move < 3
       if n_can_move == 2 and any(state.moving_to):
         print("WTF", state)
-      assert not (n_can_move == 2 and any(state.moving_to))
+      assert not (n_can_move == 2 and any(state.moving_to) and any(state.opening))
 
       # What rooms does it make sense to move to?
       vlist = []
@@ -518,10 +519,12 @@ class day16(aoc.aoc):
         for valve in new_moves:
           cost0 = ns.rooms[0].costs[valve.name]
           cost1 = ns.rooms[1].costs[valve.name]
-          if not ns.is_busy(0) and cost0 + ns.minute <= 30:
+          # if not ns.is_busy(0) and cost0 + ns.minute <= 30:
+          if not ns.is_busy(0):
             ns.moving_to[0] = valve
             ns.cost_left[0] = cost0
-          elif not ns.is_busy(1) and cost1 + ns.minute <= 30:
+          elif not ns.is_busy(1):
+            #elif not ns.is_busy(1) and cost1 + ns.minute <= 30:
             ns.moving_to[1] = valve
             ns.cost_left[1] = cost1
           else:
@@ -579,5 +582,5 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 # optimal2 = DD 2, JJ 3, BB, 7, HH 7, CC 9, EE 11
 
 if __name__ == '__main__':
-  # part1: 1503 1611  <   X   < 2191
+  # Trui: 1503 1611  <   X   < 2191
   day16.run_and_check('input.txt', expect1=2056, expect2=None)
