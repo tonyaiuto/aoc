@@ -25,16 +25,15 @@ class State(object):
     self.minute = 0
     self.pressure = 0
     self.rate = 0
-    self.opened = list(opened) if opened else []
     if rooms:
       self.rooms = list(rooms)
     else:
       self.rooms = []
-    # self.visited = visited or (set([valve]) if valve else set())
     if visited:
       self.visited = visited
     else:
       self.visited = set(self.rooms)
+    self.opened = list(opened) if opened else []
 
     self.opening = [0] * len(self.rooms)
     self.moving_to = [0] * len(self.rooms)
@@ -437,7 +436,6 @@ class day16(aoc.aoc):
     #   resolve stuff
 
     best = 0
-    #XXX new_states = []
     # Initial states can split to up to 4 states
     for state in states:
       if self.is_final(state):
@@ -450,6 +448,8 @@ class day16(aoc.aoc):
         state.opening[1] = state.rooms[1]
 
       """
+      This seemed like a good idea at the time, but it makes no sense
+      to visit a room and then not open the valve.
       op0 = state.can_open(0)
       op1 = state.can_open(1)
       if state.can_open(0):
@@ -461,13 +461,10 @@ class day16(aoc.aoc):
         new_states.append(state.start_open(1))
       if not op0 and not op1:
         new_states.append(state)  # The "do nothing" option
-    print('GOT NEWSTATES', len(new_states))
       """
 
     print('GOT NEWSTATES', len(states))
-    BB = Valve.get('BB')
 
-    # states = new_states
     new_states = []
     n_can_move = 0
     for state in states:
@@ -484,6 +481,8 @@ class day16(aoc.aoc):
 
       # What rooms does it make sense to move to?
       vlist = []
+      move0 = False
+      move1 = False
       for valve in self.can_open:
         if valve.rate <= 0 or valve in state.visited or valve in state.opened:
           continue
@@ -493,10 +492,12 @@ class day16(aoc.aoc):
           #if state.id > 360000 and valve.name in ['UC', 'PC']:
           #  print('busy, value', state.is_busy(0), state, valve, self.move_value(state.minute, state.rooms[0], valve))
           vlist.append(valve)
+          move0 = True
         elif not state.is_busy(1) and self.move_value(state.minute, state.rooms[1], valve) > 0:
           #if state.id > 360000 and valve.name in ['UC', 'PC']:
           #  print('busy, value', state.is_busy(1), state, valve, self.move_value(state.minute, state.rooms[1], valve))
           vlist.append(valve)
+          move1 = True
       if len(states) == 1:
         print("  Frontier", valve_names(vlist))
 
@@ -504,6 +505,20 @@ class day16(aoc.aoc):
         if self.trace_sample:
           print("NO FRONTIER", state)
         new_states.append(state)
+        continue
+
+      if n_can_move == 1:
+        if move0:
+          ri = 0
+        else:
+          ri = 1
+        for valve in vlist:
+          ns = state.clone()
+          cost = ns.rooms[ri].costs[valve.name]
+          assert not ns.moving_to[ri] and not ns.opening[ri]
+          ns.moving_to[ri] = valve
+          ns.cost_left[ri] = cost
+          new_states.append(ns)
         continue
 
       combo_func = itertools.permutations
@@ -516,33 +531,27 @@ class day16(aoc.aoc):
         if len(states) == 1:
           print("  Moves", valve_names(new_moves))
         ns = state.clone()
+        ns0 = ns.clone()
         for valve in new_moves:
-          cost0 = ns.rooms[0].costs[valve.name]
-          cost1 = ns.rooms[1].costs[valve.name]
-          # if not ns.is_busy(0) and cost0 + ns.minute <= 30:
-          if not ns.is_busy(0):
+          if not ns.is_busy(0) and self.move_value(state.minute, state.rooms[0], valve) > 0:
             ns.moving_to[0] = valve
-            ns.cost_left[0] = cost0
-          elif not ns.is_busy(1):
-            #elif not ns.is_busy(1) and cost1 + ns.minute <= 30:
+            ns.cost_left[0] = ns.rooms[0].costs[valve.name]
+          elif (not ns.is_busy(1)) and self.move_value(state.minute, state.rooms[1], valve) > 0:
             ns.moving_to[1] = valve
-            ns.cost_left[1] = cost1
+            ns.cost_left[1] = ns.rooms[1].costs[valve.name]
           else:
-            print('More valves than slots', 'can move', n_can_move, [x.name for x in new_moves], ns)
-            sys.exit(1)
+            if self.trace_sample:
+              print('More valves than slots', 'can move', n_can_move, [x.name for x in new_moves], ns)
+              print('Original was', ns0)
         # print('Assigning', [x.name for x in new_moves], ns)
         new_states.append(ns)
 
     for state in new_states:
       state.minute += 1
-      #if BB in state.rooms:
-      #  print('==== clock tick', state)
       state.pressure += state.rate
       self.global_best = max(self.global_best, state.pressure)
       for i in range(2):
         open_valve = state.opening[i]
-        if open_valve and open_valve.name == 'BB':
-          print('===open BB=====', state)
         if open_valve:
           if open_valve in state.opened:
             print('==== WTF already opened', state)
