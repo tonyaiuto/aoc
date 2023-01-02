@@ -339,7 +339,6 @@ class day16(aoc.aoc):
     if True and not self.trace_sample:
       return 2056
     ret = self.do_turn(state, depth=0)
-    # ret = self.do_greedy(state)
     return self.global_best
 
   def is_final(self, state, depth=0):
@@ -350,7 +349,9 @@ class day16(aoc.aoc):
     # state.trace(tag=(' ' * depth)+'do_turn')
     if len(state.opened) == self.max_open:
       final = state.pressure + (30 - state.minute) * state.rate
-      self.global_best = max(self.global_best, final)
+      if self.global_best < final:
+        print('#   new best', final)
+        self.global_best = final
       if TRACE_LEVEL > -10:
         # state.trace()
         print('#     final %6d' % final, state)
@@ -416,6 +417,7 @@ class day16(aoc.aoc):
     state.rate = 0
     state.pressure = 0
     state.visited.add(AA)
+    self.greedy = True
 
     self.global_best = 0
     states = [state]
@@ -429,7 +431,7 @@ class day16(aoc.aoc):
   def do_greedy(states):
     pass
 
-  def do_turn2(self, states, depth=0):
+  def do_turn2(self, states):
     # create new states
     # clock tick each
     #   update minute
@@ -462,8 +464,7 @@ class day16(aoc.aoc):
       if not op0 and not op1:
         new_states.append(state)  # The "do nothing" option
       """
-
-    print('GOT NEWSTATES', len(states))
+    # print('GOT NEWSTATES', len(states))
 
     new_states = []
     n_can_move = 0
@@ -480,7 +481,7 @@ class day16(aoc.aoc):
       assert not (n_can_move == 2 and any(state.moving_to) and any(state.opening))
 
       # What rooms does it make sense to move to?
-      vlist = []
+      vlist = set()
       move0 = False
       move1 = False
       for valve in self.can_open:
@@ -489,17 +490,11 @@ class day16(aoc.aoc):
         if valve in state.opening or valve in state.moving_to:
           continue
         if not state.is_busy(0) and self.move_value(state.minute, state.rooms[0], valve) > 0:
-          #if state.id > 360000 and valve.name in ['UC', 'PC']:
-          #  print('busy, value', state.is_busy(0), state, valve, self.move_value(state.minute, state.rooms[0], valve))
-          vlist.append(valve)
+          vlist.add(valve)
           move0 = True
-        elif not state.is_busy(1) and self.move_value(state.minute, state.rooms[1], valve) > 0:
-          #if state.id > 360000 and valve.name in ['UC', 'PC']:
-          #  print('busy, value', state.is_busy(1), state, valve, self.move_value(state.minute, state.rooms[1], valve))
-          vlist.append(valve)
+        if not state.is_busy(1) and self.move_value(state.minute, state.rooms[1], valve) > 0:
+          vlist.add(valve)
           move1 = True
-      if len(states) == 1:
-        print("  Frontier", valve_names(vlist))
 
       if len(vlist) == 0 and (any(state.moving_to) or any(state.opening)):
         if self.trace_sample:
@@ -512,13 +507,27 @@ class day16(aoc.aoc):
           ri = 0
         else:
           ri = 1
-        for valve in vlist:
-          ns = state.clone()
-          cost = ns.rooms[ri].costs[valve.name]
-          assert not ns.moving_to[ri] and not ns.opening[ri]
-          ns.moving_to[ri] = valve
-          ns.cost_left[ri] = cost
-          new_states.append(ns)
+        if self.greedy:
+          max_value = 0
+          max_value_valve = None
+          for valve in vlist:
+             v = self.move_value(state.minute, state.rooms[1], valve)
+             if v > max_value:
+               max_value = v
+               max_value_valve = valve
+          if max_value_valve:
+            ns = state.clone()
+            assert not ns.moving_to[ri] and not ns.opening[ri]
+            ns.moving_to[ri] = max_value_valve
+            ns.cost_left[ri] = ns.rooms[ri].costs[max_value_valve.name]
+            new_states.append(ns)
+        else:
+          for valve in vlist:
+            ns = state.clone()
+            assert not ns.moving_to[ri] and not ns.opening[ri]
+            ns.moving_to[ri] = valve
+            ns.cost_left[ri] = ns.rooms[ri].costs[valve.name]
+            new_states.append(ns)
         continue
 
       combo_func = itertools.permutations
@@ -531,12 +540,11 @@ class day16(aoc.aoc):
         if len(states) == 1:
           print("  Moves", valve_names(new_moves))
         ns = state.clone()
-        ns0 = ns.clone()
         for valve in new_moves:
-          if not ns.is_busy(0) and self.move_value(state.minute, state.rooms[0], valve) > 0:
+          if not ns.is_busy(0) and self.move_value(ns.minute, ns.rooms[0], valve) > 0:
             ns.moving_to[0] = valve
             ns.cost_left[0] = ns.rooms[0].costs[valve.name]
-          elif (not ns.is_busy(1)) and self.move_value(state.minute, state.rooms[1], valve) > 0:
+          elif (not ns.is_busy(1)) and self.move_value(ns.minute, ns.rooms[1], valve) > 0:
             ns.moving_to[1] = valve
             ns.cost_left[1] = ns.rooms[1].costs[valve.name]
           else:
@@ -591,5 +599,6 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 # optimal2 = DD 2, JJ 3, BB, 7, HH 7, CC 9, EE 11
 
 if __name__ == '__main__':
-  # Trui: 1503 1611  <   X   < 2191
+  # part1: 1503 1611  <   X   < 2191
+  # part2: initial greedy: 2219    <  x  < ?
   day16.run_and_check('input.txt', expect1=2056, expect2=None)
