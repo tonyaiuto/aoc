@@ -276,12 +276,23 @@ class day16(aoc.aoc):
         if vname != valve.name:
           # print(valve, vname, cost)
           assert cost > 0
+
     if self.trace_sample:
       print('= Costs')
       print('    ', ' '.join([vname for vname in all_valve_names]))
       for valve in self.valves:
         print(' ', valve.name,
               ' '.join(['%2d' % valve.costs[vname] for vname in all_valve_names]))
+    else:
+      good_valve_names = sorted(['AA'] + [valve.name for valve in self.can_open])
+      print('= Costs')
+      print('    ', ' '.join([vname for vname in good_valve_names]))
+      AA = Valve.get('AA')
+      for valve in [AA] + sorted(self.can_open, key=lambda x: x.name):
+        print(' ', valve.name,
+              ' '.join(['%2d' % valve.costs[vname] for vname in good_valve_names]))
+
+
 
   def compute_travel_costs(self):
     all_valve_names = [v.name for v in self.valves]
@@ -516,9 +527,6 @@ class day16(aoc.aoc):
         assert not state.moving_to[ri] and not state.opening[ri]
         if self.greedy:
           vm = []
-          #for valve in vlist:
-          #   value = self.move_value(state.minute, state.rooms[1], valve)
-          #   vm.append((value, valve))
           for top in sorted(ranks[ri], key=lambda x: -x[0])[0:1]:
             ns = state.clone()
             ns.moving_to[ri] = top[1]
@@ -539,7 +547,7 @@ class day16(aoc.aoc):
         combo_func = itertools.combinations
 
       for new_moves in combo_func(vlist, n_can_move):
-        if len(states) == 1:
+        if TRACE_LEVEL > 1 and len(states) == 1:
           print("  Moves", valve_names(new_moves))
         ns = state.clone()
         for valve in new_moves:
