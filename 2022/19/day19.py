@@ -6,8 +6,10 @@ This does it mostly brute force, by running out lots of states and finding the b
 A better solution would figure out the recurrence relation and compute what is possible.
 """
 
-from tools import aoc
+import heapq
 
+from tools import aoc
+import expectations
 
 class Blueprint(object):
 
@@ -35,7 +37,9 @@ class Blueprint(object):
 
 
 class State(object):
-   
+
+  fuzzy_hash = True
+
   def __init__(self, clone=None):
     self.future_ore = 0
     self.future_clay = 0
@@ -63,25 +67,74 @@ class State(object):
     self.bot_geode = 0
 
   def __hash__(self):
-    # ret = ((min(self.n_ore, 1500) * 23 + min(self.n_clay, 1500)) * 37 + self.n_obs) * 37 + self.n_geode
-    ret = (((self.minute * 37 + self.n_ore) * 23 + self.n_clay) * 37 + self.n_obs) * 37 + self.n_geode
+    if State.fuzzy_hash:
+      ret = ((min(self.n_ore, 1500) * 23 + min(self.n_clay, 1500)) * 37 + self.n_obs) * 37 + self.n_geode
+    else:
+      ret = (((self.minute * 37 + self.n_ore) * 23 + self.n_clay) * 37 + self.n_obs) * 37 + self.n_geode
     ret = (((        ret * 37 + self.bot_ore) *23 + self.bot_clay) * 37 + self.bot_obs) * 37 + self.bot_geode
     return ret
 
   def __eq__(self, other):
+    if State.fuzzy_hash:
+      if(min(self.n_ore, 1500) != min(other.n_ore, 1500)
+         or min(self.n_clay, 1500) != min(other.n_clay, 1500)):
+        return False
+    else:
+      if (self.n_ore != other.n_ore) or (self.n_clay != other.n_clay):
+        return False
     return (
-        # self.minute == other.minute
-        #min(self.n_ore, 1500) == min(other.n_ore, 1500)
-        #and min(self.n_clay, 1500) == min(other.n_clay, 1500)
-        self.n_ore == other.n_ore
-        and self.n_clay == other.n_clay
-        and self.n_obs == other.n_obs
+        self.n_obs == other.n_obs
         and self.n_geode == other.n_geode
         and self.bot_ore == other.bot_ore
         and self.bot_clay == other.bot_clay
         and self.bot_obs == other.bot_obs
         and self.bot_geode == other.bot_geode
         )
+
+  def __lt__(self, other):
+    v = self.n_geode - other.n_geode
+    if v < 0:
+      return True
+    if v != 0:
+      return False
+    v = self.bot_geode - other.bot_geode
+    if v < 0:
+      return True
+    if v != 0:
+      return False
+    v = self.n_obs - other.n_obs
+    if v < 0:
+      return True
+    if v != 0:
+      return False
+    v = self.bot_obs - other.bot_obs
+    if v < 0:
+      return True
+    if v != 0:
+      return False
+    v = self.n_clay - other.n_clay
+    if v < 0:
+      return True
+    if v != 0:
+      return False
+    v = self.bot_clay - other.bot_clay
+    if v < 0:
+      return True
+    if v != 0:
+      return False
+    v = self.n_ore - other.n_ore
+    if v < 0:
+      return True
+    if v != 0:
+      return False
+    v = self.bot_ore - other.bot_ore
+    if v < 0:
+      return True
+    if v != 0:
+      return False
+    if self.minute < other.minute:
+      return True
+    return False
 
   def __str__(self):
     return ', '.join([
@@ -108,7 +161,7 @@ class State(object):
     self.n_geode += self.bot_geode
     if trace:
       print('   =>', self)
- 
+
   def can_make_ore_bot(self, bp):
     return self.n_ore >= bp.ore_ore
 
@@ -135,6 +188,7 @@ class day19(aoc.aoc):
     self.trace = True
     self.blueprints = []
     self.max_minute = 24
+    self.use_scores = True
 
   def do_line(self, line):
     # called for each line of input
@@ -167,26 +221,36 @@ class day19(aoc.aoc):
   def part1(self):
     print('===== Start part 1')
 
+    expect = expectations.EXPECT_SAMPLE_1 if self.doing_sample else expectations.EXPECT_1
     ret = 0
-    for bp in self.blueprints:
+    start_here = 0
+    if not self.doing_sample:
+      start_here = 10
+    for bp in self.blueprints[start_here:]:
       bp.max_g = 0
+      print('>>>blueprint', bp.id, 'start')
       self.do_blueprint(bp)
-      print('blueprint', bp.id, 'max g', bp.max_g)
+      print('>>>blueprint', bp.id, 'max g', bp.max_g)
+      if bp.max_g != expect[bp.id - 1][1]:
+        print('blueprint', bp.id, 'got maxg:', bp.max_g, ' expected:', expect[bp.id - 1][1])
+        break
       quality = bp.id * bp.max_g
       ret += quality
     return ret
 
   def do_blueprint(self, bp):
     future_states = set([State()])
+    top_score = 0
+    start_scoring = False
     for i in range(self.max_minute):
       f_new = []
       print('=#### minute', i+1, ', %d future states' % len(future_states))
       max_ore = max_clay = max_obs = max_geode = 0
+      can_score = start_scoring
       for i, state in enumerate(future_states):
-        #if i % 5000 == 0:
-        #  print("  > future state", i)
         fs = self.do_minute(bp, state)
         for f in fs:
+          score = self.score_state(bp, f)
           # print(f)
           if f.n_obs > max_obs:
             max_obs = f.n_obs
@@ -206,9 +270,31 @@ class day19(aoc.aoc):
             continue
           if f.n_obs < max_obs - 10 and f.bot_geode == 0:
             continue
-          f_new.append(f)
+          if can_score and self.use_scores:
+            heapq.heappush(f_new, (-score, f))
+          else:
+            f_new.append(f)
+          if f.n_obs > 3:
+            start_scoring = True
         # print('f_new len', len(f_new))
-      future_states = set(f_new)
+      if can_score and self.use_scores:
+        tier = 1
+        first_score = f_new[0][0]
+        future_states = set()
+        while f_new:
+          top = heapq.heappop(f_new)
+          assert top[0] >= first_score
+          if top[0] > first_score:
+            if tier > 3:  # Can we fiddle with this?
+              break
+            first_score = top[0]
+            tier += 1
+          future_states.add(top[1])
+          if first_score < 0 and tier > 1 and len(future_states) > 50000:
+            break
+        print('top score', first_score, '# states', len(future_states))
+      else:
+        future_states = set(f_new)
 
 
   def do_minute(self, bp, state):
@@ -269,19 +355,8 @@ class day19(aoc.aoc):
         if clay_s.future_clay > 0:
           continue
 
-        """ Unused
-        if clay_s.can_make_geode_bot(bp):
-          geode_s = State(clone=clay_s)
-          future_states.append(geode_s)
-          assert geode_s.n_obs >= bp.geode_obs
-          geode_s.n_ore -= bp.geode_ore
-          geode_s.n_obs -= bp.geode_obs
-          geode_s.future_geode = 1
-          continue
-        """
-
         if clay_s.n_obs >= bp.geode_obs:
-          # Stop making more of these
+          # Stop making more of these. We must need ore
           continue
 
         can_make_obs = min(clay_s.n_ore // bp.obs_ore, clay_s.n_clay // bp.obs_clay)
@@ -308,6 +383,28 @@ class day19(aoc.aoc):
     # print('generated future states', len(future_states), '=>', len(ret), 'unique.')
     return set(ret)
 
+  def score_state(self, bp, state):
+    left = self.max_minute - state.minute
+    """
+    score = state.bot_geode * left
+    # To make another: state.n_obs + state.bot_obs * N == bp.geode_obs
+    obs_time_to_next_obs = (bp.geode_obs - state.n_obs) // min(state.bot_obs, 1)
+    score = score + (left - obs_time_to_next_obs)
+    """
+    have_obs = state.n_obs
+    bot_obs = state.bot_obs
+    bot_geode = state.bot_geode
+    score = 0
+    # presume we can make an obs every minute
+    for t in range(left):
+      score += bot_geode
+      if have_obs >= bp.geode_obs:
+        have_obs -= bp.geode_obs
+        bot_geode += 1
+      else:
+        have_obs += bot_obs
+        bot_obs += 1
+    return score
 
   def part2(self):
     print('===== Start part 2')

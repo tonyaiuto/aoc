@@ -25,6 +25,7 @@ class aoc(object):
     self.result2 = None
     self.trace = False
     self.trace_sample = False
+    self.doing_sample = False
     self.all_input = None
     self.debug = 0
     self.reader_params = {
@@ -34,7 +35,7 @@ class aoc(object):
         'verbose': False,
     }
     self.reader_params.update(reader_params)
-  
+
   def dprint(self, *args, **kwargs):
     level = kwargs.get('level') or 0
     if level > self.debug:
@@ -99,6 +100,7 @@ class aoc(object):
   def sample_test(cls, input, expect1=None, expect2=None, tag=None, recreate=True, is_file=False):
     solver = cls()
     solver.trace_sample = True
+    solver.doing_sample = True
     tag = tag or (type(solver).__name__ + '.sample')
     if is_file:
       solver.load_file(input)
@@ -109,6 +111,7 @@ class aoc(object):
     if recreate:
       solver = cls()
       solver.trace_sample = True
+      solver.doing_sample = True
       if is_file:
         solver.load_file(input)
       else:
