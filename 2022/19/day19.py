@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-"AOC 2021: day 19"
+"""AOC 2021: day 19
 
-from collections import defaultdict
-import copy
-import heapq
-import itertools
-import math
+This does it mostly brute force, by running out lots of states and finding the best.
+
+A better solution would figure out the recurrence relation and compute what is possible.
+"""
 
 from tools import aoc
-from tools import gridutils
 
 
 class Blueprint(object):
@@ -66,16 +64,8 @@ class State(object):
     self.bot_geode = 0
 
   def __hash__(self):
-    ret = self.minute
-    ret = 0
-    ret = ret * 100 + self.n_ore
-    ret = ret * 100 + self.n_clay
-    ret = ret * 100 + self.n_obs
-    ret = ret * 100 + self.n_geode
-    ret = ret * 100 + self.bot_ore
-    ret = ret * 100 + self.bot_clay
-    ret = ret * 100 + self.bot_obs
-    ret = ret * 100 + self.bot_geode
+    ret = (((self.minute * 37 + self.n_ore) *23 + self.n_clay) * 37 + self.n_obs) * 37 + self.n_geode
+    ret = (((        ret * 37 + self.bot_ore) *23 + self.bot_clay) * 37 + self.bot_obs) * 37 + self.bot_geode
     return ret
 
   def __eq__(self, other):
@@ -144,10 +134,6 @@ class day19(aoc.aoc):
     self.blueprints = []
     self.max_minute = 24
 
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     blueprint = Blueprint.from_str(line)
@@ -156,7 +142,6 @@ class day19(aoc.aoc):
 
   def post_load(self):
     # called after all input is read
-
     for ore_rate in range(1, 6):
       n_ore = 1
       tot = 0
@@ -179,33 +164,50 @@ class day19(aoc.aoc):
 
   def part1(self):
     print('===== Start part 1')
-    self.reset()
 
-    best_geode = 0
-    best_id = -1
-    for bp in self.blueprints[0:1]:
+    ret = 0
+    for bp in self.blueprints:
       bp.max_g = 0
-      self.do_blue(bp)
-      if bp.max_g > best_geode:
-        best_geode = bp.max_g
-        best_id = bp.id
-
-    # blueprint id * max geodes
-    return best_id * best_geode
+      self.do_blueprint(bp)
+      print('blueprint', bp.id, 'max g', bp.max_g)
+      quality = bp.id * bp.max_g
+      ret += quality
+    return ret
 
 
-  def do_blue(self, bp):
+  def do_blueprint(self, bp):
     future_states = set([State()])
-    for i in range(25):
-      f_new = set()
-      print('=#### minute', i, ', %d future states' % len(future_states))
-      for state in future_states:
+    for i in range(self.max_minute):
+      f_new = []
+      print('=#### minute', i+1, ', %d future states' % len(future_states))
+      max_ore = max_clay = max_obs = max_geode = 0
+      for i, state in enumerate(future_states):
+        #if i % 5000 == 0:
+        #  print("  > future state", i)
         fs = self.do_minute(bp, state)
         for f in fs:
           # print(f)
-          f_new.add(f)
+          if f.n_obs > max_obs:
+            max_obs = f.n_obs
+            # print('Could have', max_obs, 'obsidian')
+          if f.n_geode  > bp.max_g:
+            bp.max_g = state.n_geode
+            print('Could have', bp.max_g, 'geodes')
+
+          # Do some heuristic pruning or we get too many states
+          if f.n_geode <= bp.max_g - 3:  # cull the laggards
+            continue
+          if f.n_obs > 2 * bp.geode_obs:  # Making obs, but no geodes?
+            continue
+          if f.n_clay > 2 * bp.obs_clay and f.n_obs == 0:  # Making clay, but no obs?
+            continue
+          if f.n_ore > 2 * bp.clay_ore and f.n_clay == 0 and f.n_obs == 0:  # Making only ore
+            continue
+          if f.n_obs < max_obs - 10 and f.bot_geode == 0:
+            continue
+          f_new.append(f)
         # print('f_new len', len(f_new))
-      future_states = f_new
+      future_states = set(f_new)
 
 
   def do_minute(self, bp, state):
@@ -214,6 +216,7 @@ class day19(aoc.aoc):
       print("BOTTOM")
       if state.n_geode  > bp.max_g:
         bp.max_g = state.n_geode
+        print('Could have', bp.max_g, 'geodes')
       return
 
     state.minute += 1
@@ -222,50 +225,58 @@ class day19(aoc.aoc):
     # spend first
 
     # future_states = set([state])
+    future_states = []
     future_states = [state]
-    can_ore = state.n_ore // bp.ore_ore
     interesting = False
+    can_ore = min(state.n_ore // bp.ore_ore, 1)
+    if state.n_ore > bp.clay_ore * bp.obs_clay:
+      # we are building up too many
+      can_ore = 0
+    # print('can make ore', can_ore)
     for make_ore in range(0, can_ore + 1):
-      # print('can make ore', can_ore)
       assert make_ore == 0 or state.can_make_ore_bot(bp)
       ore_s = State(clone=state)
       future_states.append(ore_s)
       ore_s.n_ore -= bp.ore_ore * make_ore
       ore_s.future_ore += make_ore
+      if ore_s.future_ore > 0:
+        continue
 
-      can_clay = ore_s.n_ore // bp.clay_ore
-      # print('can make clay', can_clay)
+      can_clay = min(ore_s.n_ore // bp.clay_ore, 1)
+      if state.n_clay > 3 * bp.obs_clay:
+        # we are building up too many
+        can_clay = 0
+        # print('can make clay', can_clay)
       for make_clay in range(0, can_clay + 1):
         clay_s = State(clone=ore_s)
         future_states.append(clay_s)
         clay_s.n_ore -= bp.clay_ore * make_clay
         clay_s.future_clay += make_clay
-
-        # If we can not make either obs or geode, do not create new spurious states
-        can_obs = min(clay_s.n_ore // bp.obs_ore, clay_s.n_clay // bp.obs_clay)
-        can_geode = min(clay_s.n_ore // bp.geode_ore, clay_s.n_clay // bp.geode_obs)
-        if can_obs == 0 and can_geode == 0:
+        if clay_s.future_clay > 0:
           continue
 
-        for make_obs in range(0, can_obs + 1):
+        if clay_s.can_make_geode_bot(bp):
+          geode_s = State(clone=clay_s)
+          future_states.append(geode_s)
+          assert geode_s.n_obs >= bp.geode_obs
+          geode_s.n_ore -= bp.geode_ore
+          geode_s.n_obs -= bp.geode_obs
+          geode_s.future_geode = 1
+          continue
+
+        if clay_s.n_obs > bp.geode_obs:
+          # Stop making more of these
+          continue
+
+        if clay_s.can_make_obs_bot(bp):
           obs_s = State(clone=clay_s)
           future_states.append(obs_s)
-          obs_s.n_ore -= bp.obs_ore * make_obs
-          obs_s.n_clay -= bp.obs_clay * make_obs
-          obs_s.future_obs += make_obs
+          obs_s.n_ore -= bp.obs_ore
+          obs_s.n_clay -= bp.obs_clay
+          obs_s.future_obs = 1
+          continue
 
-          # only create new states if you can make one
-          can_geode = min(obs_s.n_ore // bp.geode_ore, obs_s.n_obs // bp.geode_obs)
-          if can_geode > 0:
-            for make_geode in range(0, can_geode + 1):
-              geode_s = State(clone=obs_s)
-              future_states.append(geode_s)
-              assert geode_s.n_obs >= bp.geode_obs * make_geode
-              geode_s.n_ore -= bp.geode_ore * make_geode
-              geode_s.n_obs -= bp.geode_obs * make_geode
-              geode_s.future_geode += make_geode
-
-    ret = set()
+    ret = []
     for fs in future_states:
       # fs.mine(trace=fs.future_geode > 0)
       fs.mine()
@@ -275,41 +286,32 @@ class day19(aoc.aoc):
       fs.bot_geode += fs.future_geode
       #if fs.future_geode > 0:
       #  print('   f>', fs)
-
       fs.future_ore = 0
       fs.future_clay = 0
       fs.future_obs = 0
       fs.future_geode = 0
-      ret.add(fs)
+      ret.append(fs)
     # print('generated future states', len(future_states), '=>', len(ret), 'unique.')
-    return ret
-
-
-    """ XXXXX
-    while state.can_make_clay_bot(bp):
-      state.n_ore -= bp.clay
-      state.bot_clay += 1
-
-    while state.can_make_ore_bot(bp):
-      s = State(clone=state)
-      s.n_ore -= bp.clay
-      s.bot_ore += 1
-      r = self.dp_minute(bp, s)
-    """
+    return set(ret)
 
 
   def part2(self):
     print('===== Start part 2')
-    self.reset()
-
-    return 42
+    self.max_minute = 32
+    ret = 1
+    for bp in self.blueprints[0:3]:
+      bp.max_g = 0
+      self.do_blueprint(bp)
+      print('blueprint', bp.id, 'max g', bp.max_g)
+      ret *= bp.max_g
+    return ret
 
 
 day19.sample_test("""
 Blueprint 1: Each ore robot costs 4 ore.  Each clay robot costs 2 ore.  Each obsidian robot costs 3 ore and 14 clay.  Each geode robot costs 2 ore and 7 obsidian.
 Blueprint 2: Each ore robot costs 2 ore.  Each clay robot costs 3 ore.  Each obsidian robot costs 3 ore and 8 clay.  Each geode robot costs 3 ore and 12 obsidian.
-""", expect1=33, expect2=None)
+""", expect1=33, expect2=3472)
 
 
 if __name__ == '__main__':
-  day19.run_and_check('input.txt', expect1=None, expect2=None)
+  day19.run_and_check('input.txt', expect1=2193, expect2=7200)
