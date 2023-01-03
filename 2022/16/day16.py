@@ -321,7 +321,7 @@ class day16(aoc.aoc):
     if minute >= 29:
       return 0
     minutes_to_flip = from_valve.costs[to_valve.name] + 1
-    time_open = 30 - minute - minutes_to_flip
+    time_open = 31 - minute - minutes_to_flip
     if time_open <= 0:
       return 0
     return to_valve.rate * time_open
@@ -484,47 +484,49 @@ class day16(aoc.aoc):
       vlist = set()
       move0 = False
       move1 = False
+      ranks = [[], []]
       for valve in self.can_open:
         if valve.rate <= 0 or valve in state.visited or valve in state.opened:
           continue
         if valve in state.opening or valve in state.moving_to:
           continue
-        if not state.is_busy(0) and self.move_value(state.minute, state.rooms[0], valve) > 0:
+        value = self.move_value(state.minute, state.rooms[0], valve)
+        if not state.is_busy(0) and value > 0:
+          ranks[0].append((value, valve))
           vlist.add(valve)
           move0 = True
-        if not state.is_busy(1) and self.move_value(state.minute, state.rooms[1], valve) > 0:
+        value = self.move_value(state.minute, state.rooms[1], valve)
+        if not state.is_busy(1) and value > 0:
+          ranks[1].append((value, valve))
           vlist.add(valve)
           move1 = True
 
       if len(vlist) == 0 and (any(state.moving_to) or any(state.opening)):
-        if self.trace_sample:
-          print("NO FRONTIER", state)
+        #if self.trace_sample:
+        #  print("NO FRONTIER", state)
         new_states.append(state)
         continue
 
       if n_can_move == 1:
+        assert (move0 and not move1) or (not move0 and move1)
         if move0:
           ri = 0
         else:
           ri = 1
+        assert not state.moving_to[ri] and not state.opening[ri]
         if self.greedy:
-          max_value = 0
-          max_value_valve = None
-          for valve in vlist:
-             v = self.move_value(state.minute, state.rooms[1], valve)
-             if v > max_value:
-               max_value = v
-               max_value_valve = valve
-          if max_value_valve:
+          vm = []
+          #for valve in vlist:
+          #   value = self.move_value(state.minute, state.rooms[1], valve)
+          #   vm.append((value, valve))
+          for top in sorted(ranks[ri], key=lambda x: -x[0])[0:1]:
             ns = state.clone()
-            assert not ns.moving_to[ri] and not ns.opening[ri]
-            ns.moving_to[ri] = max_value_valve
-            ns.cost_left[ri] = ns.rooms[ri].costs[max_value_valve.name]
+            ns.moving_to[ri] = top[1]
+            ns.cost_left[ri] = ns.rooms[ri].costs[top[1].name]
             new_states.append(ns)
         else:
           for valve in vlist:
             ns = state.clone()
-            assert not ns.moving_to[ri] and not ns.opening[ri]
             ns.moving_to[ri] = valve
             ns.cost_left[ri] = ns.rooms[ri].costs[valve.name]
             new_states.append(ns)
@@ -600,5 +602,5 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 
 if __name__ == '__main__':
   # part1: 1503 1611  <   X   < 2191
-  # part2: initial greedy: 2219    <  x  < ?
+  # part2: initial greedy: 2219  2255  2281 <  x  < ?
   day16.run_and_check('input.txt', expect1=2056, expect2=None)
