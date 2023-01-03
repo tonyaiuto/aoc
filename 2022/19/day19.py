@@ -40,7 +40,6 @@ class State(object):
     self.future_ore = 0
     self.future_clay = 0
     self.future_obs = 0
-    self.future_geode = 0
     if clone:
       self.minute = clone.minute
       self.n_ore = clone.n_ore
@@ -64,13 +63,16 @@ class State(object):
     self.bot_geode = 0
 
   def __hash__(self):
-    ret = (((self.minute * 37 + self.n_ore) *23 + self.n_clay) * 37 + self.n_obs) * 37 + self.n_geode
+    # ret = ((min(self.n_ore, 1500) * 23 + min(self.n_clay, 1500)) * 37 + self.n_obs) * 37 + self.n_geode
+    ret = (((self.minute * 37 + self.n_ore) * 23 + self.n_clay) * 37 + self.n_obs) * 37 + self.n_geode
     ret = (((        ret * 37 + self.bot_ore) *23 + self.bot_clay) * 37 + self.bot_obs) * 37 + self.bot_geode
     return ret
 
   def __eq__(self, other):
     return (
         # self.minute == other.minute
+        #min(self.n_ore, 1500) == min(other.n_ore, 1500)
+        #and min(self.n_clay, 1500) == min(other.n_clay, 1500)
         self.n_ore == other.n_ore
         and self.n_clay == other.n_clay
         and self.n_obs == other.n_obs
@@ -174,7 +176,6 @@ class day19(aoc.aoc):
       ret += quality
     return ret
 
-
   def do_blueprint(self, bp):
     future_states = set([State()])
     for i in range(self.max_minute):
@@ -201,7 +202,7 @@ class day19(aoc.aoc):
             continue
           if f.n_clay > 2 * bp.obs_clay and f.n_obs == 0:  # Making clay, but no obs?
             continue
-          if f.n_ore > 2 * bp.clay_ore and f.n_clay == 0 and f.n_obs == 0:  # Making only ore
+          if f.n_ore > 2 * bp.clay_ore and f.bot_clay == 0 and f.bot_obs == 0:  # Making only ore
             continue
           if f.n_obs < max_obs - 10 and f.bot_geode == 0:
             continue
@@ -222,17 +223,30 @@ class day19(aoc.aoc):
     state.minute += 1
     # print('== minute', state.minute)
 
+    if state.can_make_geode_bot(bp):
+      state.n_ore -= bp.geode_ore
+      state.n_obs -= bp.geode_obs
+      state.mine()
+      state.bot_geode += 1
+      return [state]
+
+    """
+    # This results in only 54 from sample bp 1
+    if state.can_make_obs_bot(bp) and state.n_obs < bp.geode_obs:
+      state.n_ore -= bp.obs_ore
+      state.n_clay -= bp.obs_clay
+      state.mine()
+      state.bot_obs += 1
+      return [state]
+    """
+
     # spend first
 
-    # future_states = set([state])
-    future_states = []
     future_states = [state]
-    interesting = False
     can_ore = min(state.n_ore // bp.ore_ore, 1)
-    if state.n_ore > bp.clay_ore * bp.obs_clay:
+    if state.n_ore > 1.5 * bp.clay_ore * bp.obs_clay:
       # we are building up too many
       can_ore = 0
-    # print('can make ore', can_ore)
     for make_ore in range(0, can_ore + 1):
       assert make_ore == 0 or state.can_make_ore_bot(bp)
       ore_s = State(clone=state)
@@ -255,6 +269,7 @@ class day19(aoc.aoc):
         if clay_s.future_clay > 0:
           continue
 
+        """ Unused
         if clay_s.can_make_geode_bot(bp):
           geode_s = State(clone=clay_s)
           future_states.append(geode_s)
@@ -263,11 +278,15 @@ class day19(aoc.aoc):
           geode_s.n_obs -= bp.geode_obs
           geode_s.future_geode = 1
           continue
+        """
 
-        if clay_s.n_obs > bp.geode_obs:
+        if clay_s.n_obs >= bp.geode_obs:
           # Stop making more of these
           continue
 
+        can_make_obs = min(clay_s.n_ore // bp.obs_ore, clay_s.n_clay // bp.obs_clay)
+        if can_make_obs > 2 and clay_s.bot_geode == 0:
+          continue
         if clay_s.can_make_obs_bot(bp):
           obs_s = State(clone=clay_s)
           future_states.append(obs_s)
@@ -278,18 +297,13 @@ class day19(aoc.aoc):
 
     ret = []
     for fs in future_states:
-      # fs.mine(trace=fs.future_geode > 0)
       fs.mine()
       fs.bot_ore += fs.future_ore
       fs.bot_clay += fs.future_clay
       fs.bot_obs += fs.future_obs
-      fs.bot_geode += fs.future_geode
-      #if fs.future_geode > 0:
-      #  print('   f>', fs)
       fs.future_ore = 0
       fs.future_clay = 0
       fs.future_obs = 0
-      fs.future_geode = 0
       ret.append(fs)
     # print('generated future states', len(future_states), '=>', len(ret), 'unique.')
     return set(ret)
