@@ -2,6 +2,7 @@
 "AOC 2021: day 16"
 
 from collections import defaultdict
+import heapq
 import itertools
 import sys
 
@@ -76,6 +77,22 @@ class State(object):
             and self.cost_left == other.cost_left
            )
     assert eq == (self.__hash__() == other.__hash__())
+
+  def __lt__(self, other):
+    v = self.pressure - other.pressure
+    if v < 0:
+      return True
+    if v > 0:
+      return False
+    v = self.rate - other.rate
+    if v < 0:
+      return True
+    if v > 0:
+      return False
+    v = self.__hash__() - other.__hash__()
+    return v < 0
+
+
 
   def __str__(self):
     ret = [
@@ -171,6 +188,9 @@ class State(object):
     if level < TRACE_LEVEL:
       return
     print(tag or '', str(self))
+
+  def min_value(self):
+    return self.pressure + self.rate * (30 - self.minute)
 
 
 class Valve(object):
@@ -347,7 +367,7 @@ class day16(aoc.aoc):
     state.pressure = 0
     state.visited.add(AA)
 
-    if True and not self.trace_sample:
+    if False and not self.doing_sample:
       return 2056
     ret = self.do_turn(state, depth=0)
     return self.global_best
@@ -429,11 +449,13 @@ class day16(aoc.aoc):
     state.pressure = 0
     state.visited.add(AA)
     self.greedy = True
+    self.never_visit = [None, None]
 
     self.global_best = 0
+    self.min_best = 0
     states = [state]
-    for i in range(5, 30):
-      print('####################################### minute', i, len(states), 'states')
+    for i in range(5, 31):
+      print('####################################### start minute', i, len(states), 'states')
       states = self.do_turn2(states)
       # states = self.greedy(states)
       print('New best', self.global_best)
@@ -448,8 +470,7 @@ class day16(aoc.aoc):
     #   update minute
     #   resolve stuff
 
-    best = 0
-    # Initial states can split to up to 4 states
+    # Open them if we can
     for state in states:
       if self.is_final(state):
         continue
@@ -459,24 +480,9 @@ class day16(aoc.aoc):
         state.opening[0] = state.rooms[0]
       if state.can_open(1):
         state.opening[1] = state.rooms[1]
-
-      """
-      This seemed like a good idea at the time, but it makes no sense
-      to visit a room and then not open the valve.
-      op0 = state.can_open(0)
-      op1 = state.can_open(1)
-      if state.can_open(0):
-        open0 = state.start_open(0)
-        new_states.append(open0)
-        if open0.can_open(1):
-          new_states.append(open0.start_open(1))
-      if state.can_open(1):
-        new_states.append(state.start_open(1))
-      if not op0 and not op1:
-        new_states.append(state)  # The "do nothing" option
-      """
     # print('GOT NEWSTATES', len(states))
 
+    # Figure ouw 
     new_states = []
     n_can_move = 0
     for state in states:
@@ -506,11 +512,15 @@ class day16(aoc.aoc):
           ranks[0].append((value, valve))
           vlist.add(valve)
           move0 = True
+          #if state.rooms[0].name == 'AA':
+          #  self.never_visit[1] = valve
         value = self.move_value(state.minute, state.rooms[1], valve)
         if not state.is_busy(1) and value > 0:
           ranks[1].append((value, valve))
           vlist.add(valve)
           move1 = True
+          #if state.rooms[1].name == 'AA':
+          #  self.never_visit[0] = valve
 
       if len(vlist) == 0 and (any(state.moving_to) or any(state.opening)):
         #if self.trace_sample:
@@ -534,12 +544,15 @@ class day16(aoc.aoc):
             new_states.append(ns)
         else:
           for valve in vlist:
+            #if valve == self.never_visit[ri]:
+            #  continue
             ns = state.clone()
             ns.moving_to[ri] = valve
             ns.cost_left[ri] = ns.rooms[ri].costs[valve.name]
             new_states.append(ns)
         continue
 
+      # Do not go to both parts of each pair on the first move
       combo_func = itertools.permutations
       if state.rooms[0] == state.rooms[1]:
         print(state)
@@ -551,19 +564,25 @@ class day16(aoc.aoc):
           print("  Moves", valve_names(new_moves))
         ns = state.clone()
         for valve in new_moves:
-          if not ns.is_busy(0) and self.move_value(ns.minute, ns.rooms[0], valve) > 0:
+          if (not ns.is_busy(0)
+              and self.move_value(ns.minute, ns.rooms[0], valve) > 0
+              and valve != self.never_visit[0]):
             ns.moving_to[0] = valve
             ns.cost_left[0] = ns.rooms[0].costs[valve.name]
-          elif (not ns.is_busy(1)) and self.move_value(ns.minute, ns.rooms[1], valve) > 0:
+          elif (not ns.is_busy(1)
+                and self.move_value(ns.minute, ns.rooms[1], valve) > 0
+                and valve != self.never_visit[1]):
             ns.moving_to[1] = valve
             ns.cost_left[1] = ns.rooms[1].costs[valve.name]
           else:
             if self.trace_sample:
               print('More valves than slots', 'can move', n_can_move, [x.name for x in new_moves], ns)
-              print('Original was', ns0)
+              print('Original was', state)
         # print('Assigning', [x.name for x in new_moves], ns)
-        new_states.append(ns)
+        if any(ns.moving_to):
+          new_states.append(ns)
 
+    s_new = []
     for state in new_states:
       state.minute += 1
       state.pressure += state.rate
@@ -589,8 +608,31 @@ class day16(aoc.aoc):
             state.moving_to[i] = None
             if self.trace_sample:
               print('=== reached', move_to.name, state)
+      heapq.heappush(s_new, (-state.min_value(), state))
 
-    return list(set(new_states))
+    if not s_new:
+     return []
+
+    first_score = s_new[0][0]
+    tier = 1
+    ns = set()
+    cutoff = len(s_new)
+    if s_new[0][1].minute > 17:
+      cutoff = cutoff * 3 // 4
+    while s_new:
+      if len(ns) > cutoff:
+        break
+      top = heapq.heappop(s_new)
+      #assert top[0] >= first_score
+      #if top[0] > first_score:
+      #  if tier > 3:  # Can we fiddle with this?
+      #    break
+      #  first_score = top[0]
+      #  tier += 1
+      ns.add(top[1])
+      if first_score < 0 and tier > 1 and len(ns) > 10000:
+        break
+    return list(ns)
 
 
 day16.sample_test("""
@@ -611,4 +653,5 @@ Valve JJ has flow rate=21; tunnel leads to valve II
 if __name__ == '__main__':
   # part1: 1503 1611  <   X   < 2191
   # part2: initial greedy: 2219  2255  2281 <  x  < ?
+  # not 2411
   day16.run_and_check('input.txt', expect1=2056, expect2=None)
