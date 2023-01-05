@@ -69,6 +69,10 @@ class day17(aoc.aoc):
     self.grid = gridutils.Grid(default_cell='.')
     self.row_value = {}
     self.top = 0
+    self.n_dropped = 0
+    self.drop_2_delta = {}
+    self.delta_2_drop = defaultdict(list)
+    self.drop_2_top = {}
 
   def reset(self):
     # for future use
@@ -138,6 +142,10 @@ class day17(aoc.aoc):
         # print('drop to', y)
         # self.show_grid(rock, x, y)
     assert limit == n_rocks
+    self.top_index = self.top
+    while self.row_value.get(self.top_index, 0) == 0:
+      self.top_index -= 1
+    self.drop_2_top[self.n_dropped] = self.top_index
     return self.top
 
   def has_cycle(self):
@@ -171,7 +179,6 @@ class day17(aoc.aoc):
         b = 1 if (self.grid.get(col, row) == '#') else 0
         n = n << 1 | b
       self.row_value[row] = n
- 
 
   def collision(self, rock, x, y):
     if y - rock.height + 1 < 0:
@@ -186,9 +193,8 @@ class day17(aoc.aoc):
   def drop_rock(self):
     rock = ROCKS[self.rock]
     self.rock = (self.rock + 1) % 5
-    # rock & 
+    self.n_dropped += 1
     return rock, self.top + 3 + rock.height - 1
-
 
   def part2(self):
     print('===== Start part 2')
@@ -196,91 +202,92 @@ class day17(aoc.aoc):
     # return self.run_for(1000000) 
 
     goal = 1000000000000
-    cycle = len(self._puffs)
     cycle = len(self._puffs) * 5
     rock = ROCKS[0]
 
     last_top = 0
-    drop = 0
-    self.drop_2_delta = {}
-    self.delta_2_drop = defaultdict(list)
     self.cycle = cycle
-    self.drop_2_top = {}
+
+    loops = goal // self.cycle
+    prerun = goal - loops * self.cycle
+    print('cycle', self.cycle, 'prerun', prerun)
+    if prerun > 0:
+       ret = self.run_for(prerun)
+       delta = self.top_index - last_top
+       last_top = self.top_index
+       self.drop_2_delta[self.n_dropped] = delta
+       self.delta_2_drop[delta].append(self.n_dropped)
+
     for i in range(200000):
       if i % 1000 == 0:
         print(i)
       ret = self.run_for(self.cycle)
       for col in range(7):
         assert self.grid.get(col, self.top) == '.'
-      drop += self.cycle
-      actual_top = self.top-1
-      while self.row_value.get(actual_top, 0) == 0:
-        actual_top -= 1
-      self.drop_2_top[drop] = actual_top
-      delta = actual_top - last_top
-      last_top = actual_top
-      self.drop_2_delta[drop] = delta
-      self.delta_2_drop[delta].append(drop)
+      delta = self.top_index - last_top
+      last_top = self.top_index
+      self.drop_2_delta[self.n_dropped] = delta
+      self.delta_2_drop[delta].append(self.n_dropped)
 
-      print('cycle', self.cycle, 'drop', drop, 'top', actual_top, 'delta', delta)
-      # self.show_grid(rock, 2, actual_top+1)
+      print('drop:', self.n_dropped, 'top:', self.top_index, 'delta from last cycle', delta)
+      # self.show_grid(rock, 2, self.top_index+1)
 
-      loop_len, loop_height = self.found_loop(drop)
+      loop_len, loop_height = self.found_loop(self.n_dropped)
       if loop_len and loop_len > 0:
-        print("LOOP AT", drop, 'len', loop_len)
+        print("LOOP AT", self.n_dropped, 'len', loop_len)
         break
 
-      loop_len, loop_height = self.find_loop2(drop)
+      loop_len, loop_height = self.find_loop2(self.n_dropped)
       if loop_len and loop_len > 0:
-        print("LOOP2 AT", drop, 'len', loop_len)
+        print("LOOP2 AT", self.n_dropped, 'len', loop_len)
         break
 
-
-    drops_per_loop = self.cycle*loop_len
-    print('At', drop, 'found loop over ', loop_len, 'cycles', '(of %d drops)' % drops_per_loop, 'height', loop_height)
+    # Now that we have found the loop, verify it and calcuulate base height + loop height
+    drops_per_loop = self.cycle * loop_len
+    print('== At drop ', self.n_dropped, 'found loop over', loop_len, 'cycles', '(of %d drops)' % drops_per_loop, 'height', loop_height)
     # The top of the previous cycle end
-    base_drop = drop - drops_per_loop
+    base_drop = self.n_dropped - drops_per_loop
     base_high = self.drop_2_top[base_drop]
-    assert base_high + loop_height == self.drop_2_top[drop]
+    assert base_high + loop_height == self.drop_2_top[self.n_dropped]
 
     # SMOKE TEST
-    print('cur_top', self.top, 'actual', actual_top)
-    for row in range(8):
-      v = self.row_value.get(actual_top - row, 'na')
-      print(''.join([self.grid.get(col, actual_top-row) for col in range(7)]), v)
-    print('back_top', base_high)
-    for row in range(8):
-      v = self.row_value.get(base_high - row, 'na')
-      print(''.join([self.grid.get(col, base_high-row) for col in range(7)]), v)
+    self.show_n_rows('cur_top=%d' % self.top, ti=self.top_index, indent='  ')
+    self.show_n_rows('previous top', ti=base_high, indent='  ')
 
-    print('== Starting at drop', drop, 'with height', actual_top)
+    print(' > starting at drop', self.n_dropped, 'with height', self.top_index,
+          'looking back top top', base_high)
 
-    need_loops = (goal - drop) // drops_per_loop
-    print('Needs', need_loops, 'loopcycles to near goal of', goal)
-    total_drop = drop + drops_per_loop * need_loops
-    print('  %d drops + %d drops/loop * %d loops = %d' % (
-        drop, drops_per_loop, need_loops, total_drop))
-
-    high = actual_top + need_loops * loop_height
+    need_loops = (goal - self.n_dropped) // drops_per_loop
+    print('  needs', need_loops, 'loopcycles to near goal of', goal)
+    total_drop = self.n_dropped + drops_per_loop * need_loops
+    print('   %d drops + %d drops/loop * %d loops = %d' % (
+        self.n_dropped, drops_per_loop, need_loops, total_drop))
+    high = self.top_index + need_loops * loop_height
     need_drops = goal - total_drop
-    print('After', total_drop, 'got to', high, 'Need %d drops' % need_drops)
-    print('  %d = %d high + %d loops * %d high/loop' % (
-        high, actual_top, need_loops, loop_height))
+    print('  => after', total_drop, 'height would be', high, 'Need %d drops' % need_drops)
+    print('   %d = %d high + %d loops * %d high/loop' % (
+        high, self.top_index, need_loops, loop_height))
 
-    wtf = 1516250000004
-    exp = 1514285714288
+    exp = 1514285714288   # part2 sample expectation
     for i in range(10):
       next_loop_phase = base_drop + cycle * i
       more_h = self.drop_2_delta[next_loop_phase]
       total_drop += cycle
       high += more_h
       need_drops = goal - total_drop
-      print('After', total_drop, 'got to', high, 'Need %d drops' % need_drops)
-      print('Expect', exp, 'need', exp - high)
+      print('After', total_drop, 'height would be', high, 'Need %d drops' % need_drops)
+      print('  part2 sample expect', exp, 'need', exp - high)
       if need_drops == 0:
         # high -= 1
         break
     return high
+
+  def show_n_rows(self, label, ti, n_rows=8, indent=''):
+    print(indent + label, 'at', ti)
+    for row in range(n_rows):
+      v = self.row_value.get(ti - row, 'na')
+      print(indent + '  ', ''.join([self.grid.get(col, ti-row) for col in range(7)]), '%3d' % v)
+
 
   def found_loop(self, drop):
     delta = self.drop_2_delta[drop]
@@ -292,7 +299,7 @@ class day17(aoc.aoc):
       back_drop = possible_matches[-nback]
       if back_drop + self.cycle == drop:
         continue
-      print("=== Check", drop, 'back to', back_drop)
+      print("=== Check drop", drop, 'back to drop', back_drop)
       target, lspan = self.sum_span(drop, back_drop)
       drops_loop = self.cycle*lspan
       print('  ', lspan, 'cycles back from drop', drop, 'delta_h', target)
