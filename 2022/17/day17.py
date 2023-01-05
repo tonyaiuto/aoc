@@ -179,6 +179,8 @@ class day17(aoc.aoc):
         b = 1 if (self.grid.get(col, row) == '#') else 0
         n = n << 1 | b
       self.row_value[row] = n
+      if n == 127:
+        print('  ******** shelf row at: %8d' % row)
 
   def collision(self, rock, x, y):
     if y - rock.height + 1 < 0:
