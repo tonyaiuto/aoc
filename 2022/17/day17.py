@@ -235,14 +235,23 @@ class day17(aoc.aoc):
       # self.show_grid(rock, 2, self.top_index+1)
 
       loop_len, loop_height = self.found_loop(self.n_dropped)
+      print("=loop1", self.n_dropped, 'len', loop_len, loop_height)
       if loop_len and loop_len > 0:
-        print("LOOP AT", self.n_dropped, 'len', loop_len)
+        print("LOOP AT", self.n_dropped, 'len', loop_len, loop_height)
+        # break
+
+      nloop_len, nloop_height = self.find_loop2()
+      print("=loop2", self.n_dropped, 'len', nloop_len, nloop_height)
+      if nloop_len and nloop_len > 0:
+        print("LOOP2 AT", self.n_dropped, 'len', nloop_len, nloop_height)
         break
 
-      loop_len, loop_height = self.find_loop2(self.n_dropped)
+      """
+      loop_len, loop_height = self.find_loop3()
       if loop_len and loop_len > 0:
-        print("LOOP2 AT", self.n_dropped, 'len', loop_len)
+        print("LOOP3 AT", self.n_dropped, 'len', loop_len)
         break
+      """
 
     # Now that we have found the loop, verify it and calcuulate base height + loop height
     drops_per_loop = self.cycle * loop_len
@@ -364,15 +373,59 @@ class day17(aoc.aoc):
       lspan += 1
     return ret, lspan
 
-  def find_loop2(self, drop):
-    if drop < self.cycle * 3:
+  def find_loop2(self):
+    # Try to look backwards N*cycle drops for top of stacks matching.
+    # This does not do it for input data.
+    if self.n_dropped < self.cycle * 3:
+      return None, None
+
+    # ti = self.top_index
+    top_drop = self.n_dropped
+    lvec = 20
+    for nc in range(1, 10):
+      if self.n_dropped < nc * self.cycle * 3:
+        return None, None
+
+      top_row_index = self.drop_2_top[top_drop]
+      offset = nc * self.cycle
+      back_drop = top_drop - offset
+      back_row_index = self.drop_2_top[back_drop]
+      print('Trying match', lvec, 'rows from drop', top_drop, '(h:%d)' % top_row_index,
+            'back', nc, 'cycles to drop', back_drop, '(h:%d)' % back_row_index)
+      for i in range(self.cycle):  # ?? offset?
+        cycle_height = top_row_index - back_row_index
+        if self.vec_match(top_row_index, back_row_index, lvec):
+          print('## matched', lvec, 'rows at', top_row_index,
+                'expected height', cycle_height)
+          # verify on next batch down
+          next_back_drop = back_drop - offset
+          next_back_row_index = self.drop_2_top[next_back_drop]
+          if cycle_height != back_row_index - next_back_row_index:
+            print('  >> but the hight from next cycles back is ',
+                  back_row_index - next_back_row_index)
+          else:
+            # ??? XXX if lvec == offset:
+            return nc, cycle_height
+        top_row_index -= 1
+        back_row_index -= 1
+    return None, None
+
+  def vec_match(self, p1, p2, nv):
+    # Match nv values backwards from two offsets
+    for i in range(nv):
+      if self.row_value[p1 - i] != self.row_value[p2 - i]:
+        return False
+    return True
+
+  def find_loop3(self):
+    if self.n_dropped < self.cycle * 5:
       return None, None
 
     for nc in range(1, 100):
+      offset = nc * self.cycle
       if drop < nc * self.cycle * 3:
         return None, None
 
-      offset = nc * self.cycle
       print('Trying for loop over', nc, 'cycles')
       for i in range(self.cycle):  # ?? offset?
         test_top = drop - 1
@@ -380,16 +433,11 @@ class day17(aoc.aoc):
           print('## matched', offset, 'rows at', test_top - offset)
     return None, None
 
-  def vec_match(self, p1, p2, nv):
-    for i in range(nv):
-      if self.row_value[p1 + i] != self.row_value[p2 + i]:
-        return False
-    return True
 
 
 day17.sample_test("""
 >>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>
-""", expect1=3068, expect2=1514285714288)
+""", expect1=3068, expect2=15142857142889)
 
 
 if __name__ == '__main__':
