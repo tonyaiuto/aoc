@@ -1,1 +1,1 @@
-target area: x=195..238, y=-93..-67
+../../input/2021/17/input.txt

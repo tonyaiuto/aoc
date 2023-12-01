@@ -1,2 +1,1 @@
-depth: 3339
-target: 10,715
+../../input/2018/22/input.txt
