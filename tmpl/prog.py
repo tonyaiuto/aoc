@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"AOC 2021: day @N2@"
+"AOC 2023: day @N2@"
 
 from collections import defaultdict
 import copy

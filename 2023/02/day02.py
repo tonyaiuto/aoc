@@ -1,27 +1,7 @@
 #!/usr/bin/env python3
-"AOC 2021: day 02"
-
-from collections import defaultdict
-import copy
-import heapq
-import itertools
-import math
+"AOC 2023: day 02"
 
 from tools import aoc
-from tools import gridutils
-
-
-class Foo(object):
-
-  def __init__(self):
-    self.max_r = 12
-    self.max_g = 13
-    self.max_b = 14
-    self.sum_id = 0
-
-  def __str__(self):
-    return str(self)
-
 
 
 class day02(aoc.aoc):
@@ -37,10 +17,6 @@ class day02(aoc.aoc):
     self.trace = True
     self.id_sum = 0
     self.ps_sum = 0
-
-  def reset(self):
-    # for future use
-    pass
 
   def do_line(self, line):
     # called for each line of input
@@ -79,11 +55,6 @@ class day02(aoc.aoc):
     if possible:
       self.id_sum += id
     self.ps_sum += ps
-
-  def post_load(self):
-    # called after all input is read
-    pass
-
 
   def part1(self):
     print('===== Start part 1')
