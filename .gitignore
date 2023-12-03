@@ -4,7 +4,6 @@ sample.cur
 *.gv
 *_f
 out_*.png
-input.txt
 /third_party
 /2019/*/intcode.py
 /2019/18/map.py
@@ -12,3 +11,5 @@ input.txt
 /2020/*/intcode.py
 /2020/*/tools
 /2020/*/Makefile
+/2023/*/tools
+/2023/*/input.txt
