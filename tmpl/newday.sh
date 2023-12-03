@@ -16,4 +16,10 @@ fi
 mkdir $day2
 sed -e "s/@YEAR@/$year/g" -e "s/@N@/$day/g" -e "s/@N2@/${day2}/g" ../tmpl/Makefile.tmpl >$day2/Makefile
 sed -e "s/@YEAR@/$year/g" -e "s/@N@/$day/g" -e "s/@N2@/${day2}/g" ../tmpl/prog.py >$day2/day${day2}.py
-(cd $day2 ; ln -s ../../tools ; chmod a+x *.py)
+
+cd $day2
+ln -s ../../tools
+chmod a+x *.py
+mkdir ../../input/$year/$day2
+touch ../../input/$year/$day2/input.txt
+ln -s ../../input/$year/$day2/input.txt
