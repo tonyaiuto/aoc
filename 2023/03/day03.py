@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 "AOC 2023: day 03"
 
-from collections import defaultdict
-import copy
-import heapq
-import itertools
-import math
-
 from tools import aoc
 from tools import gridutils
 
@@ -17,17 +11,6 @@ def is_symbol(c):
   if c == '.':
     return False
   return True
-
-
-class Foo(object):
-
-  def __init__(self):
-    pass
-
-  def __str__(self):
-    return str(self)
-
-
 
 class day03(aoc.aoc):
 
@@ -42,14 +25,9 @@ class day03(aoc.aoc):
     self.trace = True
     self.rows = ['']
 
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     self.rows.append('.' + line.strip() + '.')
-    pass
 
   def post_load(self):
     # called after all input is read
