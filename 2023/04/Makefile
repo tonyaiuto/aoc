@@ -1,10 +1,20 @@
 
-go:
+go:	bzl
+
+bzl:	BUILD day04.bzl
+	bazelisk build :all
+
+BUILD:
+	./to_build.sh <sample.txt >BUILD
+
+watchbzl:
+	../../tools/watch day04.bzl make --no-print-directory bzl
+
+
+py:
 	python3 day04.py
-	@echo
 
-
-watch:
+watchpy:
 	../../tools/watch day04.py make --no-print-directory go
 
 
