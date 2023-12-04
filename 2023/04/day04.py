@@ -1,14 +1,9 @@
 #!/usr/bin/env python3
 "AOC 2023: day 04"
 
-from collections import defaultdict
-import copy
 import heapq
-import itertools
-import math
 
 from tools import aoc
-from tools import gridutils
 
 
 def s2l(s):
@@ -29,6 +24,7 @@ class Card(object):
     win = set(self.win)
     self.score = 0
     self.match = 0
+    self.count = 1
     for h in self.have:
       if h in win:
         self.match += 1
@@ -70,7 +66,7 @@ class day04(aoc.aoc):
     return tot_score
 
 
-  def part2(self):
+  def part2_slow(self):
     print('===== Start part 2')
     tot_cards = 0
     while True:
@@ -84,6 +80,20 @@ class day04(aoc.aoc):
       for wc in range(c.match):
         # print('push', c.numb + 1 + wc)
         heapq.heappush(self.cardi, c.numb + 1 + wc)
+    return tot_cards
+
+  def part2(self):
+    print('===== Start part 2')
+    tot_cards = 0
+    for card in self.cards:
+      tot_cards += card.count
+      # print('do card', card.numb, 'match', card.match, 'count', card.count, 'tot', tot_cards)
+      for wc in range(card.match):
+        oc = card.numb + 1 + wc
+        self.cards[oc-1].count += card.count
+        # print('     card', oc, self.cards[oc-1].count)
+    #for card in self.cards:
+    #  print('final card', card.numb, card.match, card.count)
     return tot_cards
 
 
