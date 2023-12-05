@@ -13,3 +13,5 @@ out_*.png
 /2020/*/Makefile
 /2023/*/tools
 /2023/*/input.txt
+/2023/04/BUILD
+/2023/04/WORKSPACE
