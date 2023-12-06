@@ -153,9 +153,25 @@ class day05(aoc.aoc):
       print("seed", s, '=>', x)
       if x < mloc or mloc < 0:
         mloc = x
-
     print('part1', mloc)
     return mloc
+
+  def part2x(self):
+    print('===== Start part 2')
+    mloc = -1
+    ls = len(self.seeds)
+    for i in range(ls//2):
+      si = i * 2
+      start = self.seeds[si]
+      l_range  = self.seeds[si+1]
+      print("=== Seed range", start, 'to', start+l_range, 'len', l_range)
+      for ic in range(l_range):
+        s = start+ic
+        if ic % 1000000 == 0:
+          print("     ic", ic)
+        # if merged maps worked, use this
+        # x = self.find_in_range_list(self.merged, s)
+
 
   def part2(self):
     print('===== Start part 2')
@@ -170,6 +186,7 @@ class day05(aoc.aoc):
         s = start+ic
         if ic % 1000000 == 0:
           print("     ic", ic)
+        # if merged maps worked, use this
         # x = self.find_in_range_list(self.merged, s)
         x = self.seed_to_location(s)
         # print("seed", s, '=>', x)
@@ -182,14 +199,10 @@ class day05(aoc.aoc):
 
   
   def find_in_map(self, map_name, v):
-    mp = self.maps[map_name]
-    for row in mp:
-      if row[1] <= v and v < row[1] + row[2]:
-        delta = v - row[1]
-        # print(map_name, v, row[0] + delta)
-        return row[0] + delta
-    # print(map_name, v, v)
-    return v
+    ranges = self.maps[map_name]
+    ret = self.find_in_range_list(ranges, v)
+    # print(map_name, ret, ret)
+    return ret
 
   @staticmethod
   def find_in_range_list(range_list, v):
@@ -210,16 +223,6 @@ class day05(aoc.aoc):
     loc = self.find_in_map('humidity_to_location', humid)
     return loc
 
-  def seed_to_location2(self, s):
-    s2s = self.m['seed_to_soil']
-    soil = s2s.get(s, s)
-    fert = self.m['soil_to_fertilizer'].get(soil, soil)
-    water = self.m['fertilizer_to_water'].get(fert, fert)
-    light = self.m['water_to_light'].get(water, water)
-    temp = self.m['light_to_temperature'].get(light, light)
-    humid = self.m['temperature_to_humidity'].get(temp, temp)
-    loc = self.m['humidity_to_location'].get(humid, humid)
-    return loc
 
 
 day05.sample_test("""
