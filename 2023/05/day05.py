@@ -15,8 +15,10 @@ class day05(aoc.aoc):
             'verbose': False,
         })
     self.trace = True
+    self.from_map = {}  # the map feeding me
     self.maps = {}
     self.cur_map = None
+    self.cur_map_name = None
 
   def reset(self):
     # for future use
@@ -36,6 +38,8 @@ class day05(aoc.aoc):
     if line.endswith('map:'):
       name = line.split(' ')[0].replace('-', '_')
       self.maps[name] = []
+      self.from_map[name] = cur_map_name
+      self.cur_map_name = name
       self.cur_map = self.maps[name]
       return
 
@@ -46,6 +50,9 @@ class day05(aoc.aoc):
 
   def post_load(self):
     # called after all input is read
+    for map in self.maps:
+      self.maps[map] = sorted(self.maps[map])
+      print(map, self.maps[map])
 
     """
     m = self.merge_maps(
@@ -156,9 +163,16 @@ class day05(aoc.aoc):
     print('part1', mloc)
     return mloc
 
-  def part2x(self):
+  def part2(self):
     print('===== Start part 2')
     mloc = -1
+
+    loc = 0
+    map = self.maps['humidity_to_location']
+    while True:
+      previous 
+
+      
     ls = len(self.seeds)
     for i in range(ls//2):
       si = i * 2
@@ -172,8 +186,12 @@ class day05(aoc.aoc):
         # if merged maps worked, use this
         # x = self.find_in_range_list(self.merged, s)
 
+  @staticmethod
+  def sources_for(map, dest_from, dest_to):
+    # enumerate sources needed to get 
+    
 
-  def part2(self):
+  def part2_brute(self):
     print('===== Start part 2')
     mloc = -1
     ls = len(self.seeds)
