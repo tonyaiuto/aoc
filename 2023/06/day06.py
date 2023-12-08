@@ -72,4 +72,4 @@ Distance:  9  40  200
 
 
 if __name__ == '__main__':
-  day06.run_and_check('input.txt', expect1=None, expect2=None)
+  day06.run_and_check('input.txt', expect1=505494, expect2=23632299)
