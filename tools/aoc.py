@@ -75,15 +75,18 @@ class aoc(object):
     print('You must implement part2()')
 
   @classmethod
-  def run_and_check(cls, input, expect1=None, expect2=None, tag=None, recreate=True):
+  def run_and_check(cls, input, expect1=None, expect2=None, tag=None, recreate=True, skip1=False):
     solver = cls()
     tag = tag or type(solver).__name__
 
     start = time.perf_counter()
     solver.load_file(input)
     load_done = time.perf_counter()
-    print('part1:  %-15s     load: %.5fms' % (' ', 1000*(load_done-start)))
-    solver.result1 = run_func(
+    if skip1:
+      print('init:   %-15s     load: %.5fms' % (' ', 1000*(load_done-start)))
+    else:
+      print('part1:  %-15s     load: %.5fms' % (' ', 1000*(load_done-start)))
+      solver.result1 = run_func(
         solver.part1, expect=expect1, tag=tag+'.part1')
 
     if recreate:
@@ -97,7 +100,7 @@ class aoc(object):
         solver.part2, expect=expect2, tag=tag+'.part2')
 
   @classmethod
-  def sample_test(cls, input, expect1=None, expect2=None, tag=None, recreate=True, is_file=False):
+  def sample_test(cls, input, expect1=None, expect2=None, tag=None, recreate=True, is_file=False, skip1=False):
     solver = cls()
     solver.trace_sample = True
     solver.doing_sample = True
@@ -106,7 +109,8 @@ class aoc(object):
       solver.load_file(input)
     else:
       solver.load_str(input)
-    _ = run_func(solver.part1, expect=expect1, tag=tag+'.part1')
+    if not skip1:
+      _ = run_func(solver.part1, expect=expect1, tag=tag+'.part1')
 
     if recreate:
       solver = cls()
