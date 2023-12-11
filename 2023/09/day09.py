@@ -1,24 +1,7 @@
 #!/usr/bin/env python3
 "AOC 2023: day 09"
 
-from collections import defaultdict
-import copy
-import heapq
-import itertools
-import math
-
 from tools import aoc
-from tools import gridutils
-
-
-class Foo(object):
-
-  def __init__(self):
-    pass
-
-  def __str__(self):
-    return str(self)
-
 
 
 class day09(aoc.aoc):

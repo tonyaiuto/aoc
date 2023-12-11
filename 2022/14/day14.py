@@ -5,7 +5,6 @@ from collections import defaultdict
 import copy
 import heapq
 import itertools
-import jsonrpclib
 import math
 import time
 import tkinter
@@ -84,7 +83,7 @@ class day14(aoc.aoc):
 
   def post_load(self):
     # called after all input is read
-    self.bottom = self.grid.max_y
+    self.bottom = self.grid.max_y   # WARNING _ MIGHT BE OFF BY ONE`
     self.setup_anim()
 
   def setup_anim(self):

@@ -2,7 +2,6 @@
 "AOC 2023: day 03"
 
 from tools import aoc
-from tools import gridutils
 
 
 def is_symbol(c):

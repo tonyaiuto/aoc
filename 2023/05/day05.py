@@ -38,7 +38,7 @@ class day05(aoc.aoc):
     if line.endswith('map:'):
       name = line.split(' ')[0].replace('-', '_')
       self.maps[name] = []
-      self.from_map[name] = cur_map_name
+      self.from_map[name] = self.cur_map_name
       self.cur_map_name = name
       self.cur_map = self.maps[name]
       return
@@ -169,10 +169,7 @@ class day05(aoc.aoc):
 
     loc = 0
     map = self.maps['humidity_to_location']
-    while True:
-      previous 
 
-      
     ls = len(self.seeds)
     for i in range(ls//2):
       si = i * 2
@@ -189,7 +186,8 @@ class day05(aoc.aoc):
   @staticmethod
   def sources_for(map, dest_from, dest_to):
     # enumerate sources needed to get 
-    
+    # TBD
+    pass
 
   def part2_brute(self):
     print('===== Start part 2')

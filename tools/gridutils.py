@@ -137,18 +137,18 @@ def min_max(positions):
 class Grid(object):
 
   def __init__(self, base_x=0, base_y=0, default_cell=' ', ignore=None, in_map=None):
-    self.base_x = base_x
-    self.base_y = base_y
+    self.base_x = base_x  # user defined low x
+    self.base_y = base_y  # user defined low y
     self.default_cell = default_cell
     self.in_map = in_map
     self.ignore = ignore
 
     self.points = {}
-    self.min_x = self.base_x
-    self.max_x = 0
+    self.min_x = self.base_x  # Minimal x seen
+    self.max_x = 0            # Maximum x seen
     self.min_y = self.base_y
     self.max_y = 0
-    self.n_rows = 0
+    self.n_rows = 0           # how many total y rows
 
   def add_row(self, row):
     for i, c in enumerate(row):
@@ -159,7 +159,7 @@ class Grid(object):
       self.points[(self.base_x + i, self.base_y + self.n_rows)] = c
     self.n_rows += 1
     self.max_x = max(self.max_x, self.base_x + len(row) - 1) 
-    self.max_y += 1
+    self.max_y = max(self.max_y, self.base_x + self.n_rows - 1)
 
   @property
   def width(self):

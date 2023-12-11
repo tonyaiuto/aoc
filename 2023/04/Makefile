@@ -1,5 +1,5 @@
 
-go:	bzl
+go:	py
 
 bzl:	BUILD day04.bzl
 	bazelisk build :all

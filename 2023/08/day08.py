@@ -2,13 +2,9 @@
 "AOC 2023: day 08"
 
 from collections import defaultdict
-import copy
-import heapq
-import itertools
 import math
 
 from tools import aoc
-from tools import gridutils
 
 
 class Node(object):
