@@ -35,20 +35,20 @@ class Report(object):
     while self.raw[pos] == '.':
       pos += 1
     self.at = [-1] * len(self.need)
-    ok = self.match_at_pos(pos, 0)
+    got = self.match_at_pos(pos, 0)
     if DEBUG:
-      print('==', self.raw, '=>', len(self.got))
-    return len(self.got)
+      print('==', self.raw, '=>', got)
+    return got
 
 
   # @memoized.memoized
   def match_at_pos(self, pos, need_i):
-    # Matched them all?
+    # matched them all?
     if need_i >= len(self.need):
       self.got.append(self.at)
       if DEBUG:
-        print('   ' * need_i, 'Got', self.at)
-      return True
+        print('   ' * need_i, 'got', self.at)
+      return 1
 
     need = self.need[need_i]
     if DEBUG:
@@ -56,79 +56,82 @@ class Report(object):
     if pos + self.all_need[need_i] > self.len:
       if DEBUG:
         print('  ' * need_i, '> Dead end. Maxed out')
-      return False
+      return 0
 
+    ret = 0
     while pos + self.all_need[need_i] <= self.len:
       # skip leading white space
       while self.raw[pos] == '.':
         pos += 1
         if pos >= self.len:
           if DEBUG:
-            print('  ' * need_i, '   ran out OK')
-          return False
+            print('  ' * need_i, '   ran out right edge')
+          return ret
 
       if pos + self.all_need[need_i] > self.len:
         if DEBUG:
           print('  ' * need_i, "  ran out - total")
-        return False
+        return ret
 
+      #                      0123456789 1234567
       # assert part1_decode('?.?.????????? 1,4,1') == 8
 
       # Gather a section which could be damaged
       have = 0
-      leading_wild = 0
-      had_hash = False
-      for ic in range(self.len-pos):
+      n_wild = 0
+      all_wild = True
+      for ic in range(need):
         c = self.raw[pos+ic]
         if c in ('#', '?'):
           have += 1
           if c == '?':
-            if not had_hash:
-              leading_wild += 1
+            n_wild += 1
           else:
-            had_has = True
+            all_wild = False
         else:
           break
   
       if have < need:  # not enough
         if DEBUG:
           print('  ' * need_i, "  ran out short at", pos, "got", have, "of", need)
-        return False
-
-      # assert part1_decode('?.?.????????? 1,4,1') == 8
+        # try again at the next possible start point
+        pos += 1
+        continue
 
       nxt = self.raw[pos+need]
       if DEBUG:
-        print('  ' * need_i, "  nxt is @", pos+need, "=", nxt)
+        print('  ' * need_i, 'pos[%d]=%c' % (pos, self.raw[pos]),
+                             'nxt @%d=%c' % (pos+need, nxt))
+
       # Cases: need = 2
       # .###
-      # print('  ' * need_i, "   @pos=", self.raw[pos])
       if self.raw[pos] == '#' and nxt == '#':
         # More than we can use
-        return False
-
-      # 0123456789 12345678
-      # ????.######..#####.@ [1, 6, 5]
+        return ret
 
       if nxt != '#':
+        # clean potentional match
         # .##.
         # .##?.
         # .##?#
-        #if nxt != '#':
         self.at[need_i] = pos
         if DEBUG:
           print('  ' * need_i, "  > recurse @", pos+need+1)
-        ok = self.match_at_pos(pos+need+1, need_i+1)
+        matches = self.match_at_pos(pos+need+1, need_i+1)
+        ret += matches
         if DEBUG:
-          print('  ' * need_i, "  < back from @", pos+need+1, ok)
+          print('  ' * need_i, "  < back from @", pos+need+1, matches, 'tot', ret)
 
         pos += 1
         if self.raw[pos] == '#':
-          if ok:
+          if matches > 0:
             pos += need
           else:
-            return False
+            return ret
       else:
+        # Next is  #, but pos is ?
+        assert nxt == '#' and self.raw[pos] == '?'
+
         # .?..    <- reduce to '.'
         # .?#.
         # .??.
@@ -141,8 +144,8 @@ class Report(object):
 
     if pos + self.all_need[need_i] > self.len:
       if DEBUG:
-        print('  ' * need_i, '   ran out maxneed')
-    return False
+        print('  ' * need_i, '  ran out maxneed')
+    return ret
 
 
 def part1_decode(s):
@@ -190,6 +193,8 @@ class day12(aoc.aoc):
       ret += rep.count_patterns()
     if ret >= 11559:
       print("part 1", ret, "TOO HIGH!")
+    if ret >= 9613:
+      print("part 1", ret, "TOO HIGH!")
     print("part 1", ret)
     return ret
 
@@ -204,11 +209,12 @@ assert part1_decode('???.### 1,1,3') == 1
 assert part1_decode('.??..??...?##. 1,1,3') == 4
 assert part1_decode('?#?#?#?#?#?#?#? 1,3,1,6') == 1
 assert part1_decode('????.#...#... 4,1,1') == 1
-DEBUG = True
 assert part1_decode('????.######..#####. 1,6,5') == 4
 assert part1_decode('?###???????? 3,2,1') == 10
-assert part1_decode('?.?.????????? 1,4,1') == 8
-assert part1_decode('.??????????. 1,4,2') == 0
+# DEBUG = True
+assert part1_decode('?.?.????????? 1,4,1') == 24
+# assert part1_decode('.??????????. 1,4,2') == 0
+
 
 day12.sample_test("""
 ???.### 1,1,3
@@ -218,7 +224,6 @@ day12.sample_test("""
 ????.######..#####. 1,6,5
 ?###???????? 3,2,1
 """, expect1=21, expect2=None)
-
 
 
 if __name__ == '__main__':
