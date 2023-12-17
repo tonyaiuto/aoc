@@ -11,6 +11,7 @@ from tools import aoc
 from tools import memoized
 
 DEBUG = False
+PRINT_SOL = False
 
 class Report(object):
 
@@ -40,14 +41,27 @@ class Report(object):
       print('==', self.raw, '=>', got)
     return got
 
+  def print_solution(self, positions):
+    sol = ''
+    for i in range(len(self.need)):
+       pad = '.' * (positions[i] - len(sol))
+       sol += pad
+       sol += '#' * self.need[i]
+    print('==', sol)
+
 
   # @memoized.memoized
   def match_at_pos(self, pos, need_i):
     # matched them all?
     if need_i >= len(self.need):
+      if '#' in self.raw[pos:]:
+        return 0
       self.got.append(self.at)
+      if PRINT_SOL:
+        self.print_solution(self.at)
       if DEBUG:
         print('   ' * need_i, 'got', self.at)
+        pass
       return 1
 
     need = self.need[need_i]
@@ -123,11 +137,14 @@ class Report(object):
           print('  ' * need_i, "  < back from @", pos+need+1, matches, 'tot', ret)
 
         pos += 1
-        if self.raw[pos] == '#':
+        if self.raw[pos-1] == '#':
           if matches > 0:
             pos += need
           else:
             return ret
+          return ret
+      elif self.raw[pos] == '#':
+        return ret
       else:
         # Next is  #, but pos is ?
         assert nxt == '#' and self.raw[pos] == '?'
@@ -152,6 +169,8 @@ def part1_decode(s):
   rep = Report(s)
   if DEBUG:
     print('==== Check', rep.raw, rep.need)
+  if PRINT_SOL:
+    print('__', rep.raw, rep.need)
   ret = rep.count_patterns()
   print('==== Check', rep.raw, rep.need, '->', ret)
   return ret
@@ -190,7 +209,11 @@ class day12(aoc.aoc):
 
     ret = 0
     for rep in self.reports:
-      ret += rep.count_patterns()
+      got = rep.count_patterns()
+      print('  ', rep.raw, rep.need, '=>', got)
+      ret += got
+
+    # Not 7898
     if ret >= 11559:
       print("part 1", ret, "TOO HIGH!")
     if ret >= 9613:
@@ -215,6 +238,18 @@ assert part1_decode('?###???????? 3,2,1') == 10
 assert part1_decode('?.?.????????? 1,4,1') == 24
 # assert part1_decode('.??????????. 1,4,2') == 0
 
+#DEBUG = True
+PRINT_SOL = True
+#== ##.#.#..#
+#== ##.#.#.....#   WRONG
+#== ##.#....#..#
+#== ##..#...#..#
+#== ##...#..#..#
+#== .##.#...#..#
+#== .##..#..#..#
+#== ..##.#..#..#
+assert part1_decode('#?????.?#..? 2,1,1,1') == 4
+assert part1_decode('???.???#?? 1,3') == 12
 
 day12.sample_test("""
 ???.### 1,1,3
