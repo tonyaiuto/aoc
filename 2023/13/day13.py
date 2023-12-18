@@ -1,48 +1,34 @@
 #!/usr/bin/env python3
 "AOC 2023: day 13"
 
-from collections import defaultdict
-import copy
-import heapq
-import itertools
-import math
-
 from tools import aoc
-from tools import gridutils
+
+def is_reflect(slice):
+  l = len(slice)
+  half = l // 2
+  if half * 2 != l:
+    return False
+  for i in range(half):
+    if slice[half-1-i] != slice[half+i]:
+      return False
+  return True
+
 
 def find_reflection(values):
+  # A reflection needs to hit at least one edge
   l = len(values)
-  best_match = -1
+  half = (l + 1) // 2
   best_center = -1
-  centers = []
-  i = 0
-  while i < l-1:
-    if values[i] == values[i+1]:
-      # possible center line
-      # print("Maybe center at", i, values[i])
-      centers.append(i+1)
-      lmatch = 1
-      for j in range(1, l - i - 1):
-        if i - j < 0:
-          break
-        if values[i-j] == values[i+1+j]:
-          lmatch += 1
-        else:
-          break
-      #   012345
-      # x abbad
-      # y abccb
-      # z abcdd
-      # print('  m', i, lmatch, i + 1 - lmatch, i + 1 + lmatch, l)
-      if (0 == i + 1 - lmatch) or (i + 1 + lmatch) >= l:
-        best_match = lmatch
-        best_center = i + 1
-        # print('update center', best_center)
-      i += lmatch + 1
-    else:
-      i += 1
-  # print(best_center, centers)
-  # return sum(centers)
+  for lmatch in range(1, half+1):
+    # a match has to be at least 1 long and can be up to the full half
+    center_left = lmatch - 1         # is 0 on first iteration
+    center_right = l - 1 - lmatch    # is l-2 (last element) on first iteration
+    lslice = lmatch * 2
+
+    if is_reflect(values[0:lslice]):
+      best_center = center_left + 1
+    if is_reflect(values[-lslice:]):
+      best_center = center_right + 1
   return best_center
 
 
@@ -64,7 +50,7 @@ def best_variation(vals, skip):
       # print(v2, 'bit', bit)
       r = find_reflection(v2)
       v2[vi] = v
-      if r >= 0 and r != skip:
+      if r > 0 and r != skip:
         # print('got new reflect at', r)
         if reflect != r:
           reflect = r
@@ -116,12 +102,19 @@ class day13(aoc.aoc):
       self.sum_hr += hr
     print(vr, hr)
 
-    vr = best_variation(cols, skip=vr)
-    if vr > 0:
-      self.sum_vr2 += vr
-    hr = best_variation(rows, skip=hr)
-    if hr > 0:
-      self.sum_hr2 += hr
+    bvr = best_variation(cols, skip=vr)
+    if bvr > 0:
+      self.sum_vr2 += bvr
+    bhr = best_variation(rows, skip=hr)
+    if bhr > 0:
+      self.sum_hr2 += bhr
+
+    if (bvr > 0 and vr < 0) and (bhr > 0 and hr < 0):
+      print("==============  Lost VR and HR")
+      assert False
+    if (bvr < 0 and vr < 0) and (bhr < 0 and hr < 0):
+      print("==============  FAILED")
+      assert False
     print(vr, hr)
 
   def part1(self):
@@ -133,7 +126,8 @@ class day13(aoc.aoc):
   def part2(self):
     print('===== Start part 2')
     ret = self.sum_vr2 + 100 * self.sum_hr2
-    if ret <= 33703:
+    # if ret <= 33703:
+    if ret <= 35515:
       print("TOO LOW")
     print('part2', ret)
     return ret
