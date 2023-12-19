@@ -2,10 +2,6 @@
 "AOC 2023: day 16"
 
 from collections import defaultdict
-import copy
-import heapq
-import itertools
-import math
 
 from tools import aoc
 from tools import gridutils
@@ -39,10 +35,6 @@ class day16(aoc.aoc):
     self.grid = gridutils.Grid()
     self.n_rows = 0
 
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     for x, c in enumerate(line):
@@ -50,16 +42,10 @@ class day16(aoc.aoc):
         self.grid.set(x, self.n_rows, c)
     self.n_rows += 1
 
-  def post_load(self):
-    # called after all input is read
-    pass
-
-
   def part1(self):
     print('===== Start part 1')
-    self.reset()
     print("max x, y", self.grid.max_x, self.grid.max_y)
-    return self.run_from(-1, 0, RIGHT)
+    return self.run_from(0, 0, RIGHT)
 
   def run_from(self, x, y, dir):
     self.energized = defaultdict(set)
@@ -76,6 +62,17 @@ class day16(aoc.aoc):
     # x,y is cur pos
 
     while True:
+      cell = self.grid.get(x, y)
+      if cell != '.':
+        # print('NEW_DIR', x, y, dir, cell)
+        dir = NEW_DIR[dir][cell]
+        if dir == SPLIT_LR:
+          dir = LEFT
+          self.beams.append((x, y, RIGHT))
+        elif dir == SPLIT_UP:
+          dir = UP
+          self.beams.append((x, y, DOWN))
+
       ener = self.energized.get((x, y)) or set()
       if dir in ener:
         # print('been at', x, y, dir)
@@ -83,26 +80,12 @@ class day16(aoc.aoc):
       if x >= 0 and x <= self.grid.max_x and y >= 0 and y <= self.grid.max_y:
         self.energized[(x, y)].add(dir)
 
-      nx, ny = self.new_pos(x, y, dir)
-      if nx < 0 or nx > self.grid.max_x:
+      x, y = self.new_pos(x, y, dir)
+      if x < 0 or x > self.grid.max_x:
         break
-      if ny < 0 or ny > self.grid.max_y:
+      if y < 0 or y > self.grid.max_y:
         break
 
-      cell = self.grid.get(nx, ny)
-      if cell != '.':
-        # print('NEW_DIR', nx, ny, dir, cell)
-        dir = NEW_DIR[dir][cell]
-        if dir == SPLIT_LR:
-          dir = LEFT
-          self.beams.append((nx, ny, RIGHT))
-        elif dir == SPLIT_UP:
-          dir = UP
-          self.beams.append((nx, ny, DOWN))
-      x = nx
-      y = ny
-
-    
   def new_pos(self, x, y, dir):
     if dir == UP:
       return x, y-1
@@ -115,22 +98,18 @@ class day16(aoc.aoc):
 
   def part2(self):
     print('===== Start part 2')
-    self.reset()
 
     most_energized = 0
-    for y in range(self.grid.max_y + 1):
-      n_e = self.run_from(-1, y, RIGHT)
+    for y in range(self.grid.max_y):
+      n_e = self.run_from(0, y, RIGHT)
       most_energized = max(most_energized, n_e)
-    for y in range(self.grid.max_y + 1):
-      n_e = self.run_from(self.grid.max_x+1, y, LEFT)
+      n_e = self.run_from(self.grid.max_x, y, LEFT)
       most_energized = max(most_energized, n_e)
+
     for x in range(1, self.grid.max_x):
-      n_e = self.run_from(x, -1, DOWN)
+      n_e = self.run_from(x, 0, DOWN)
       most_energized = max(most_energized, n_e)
-    if self.doing_sample:
-      print("Doing bottom edge")
-    for x in range(1, self.grid.max_x):
-      n_e = self.run_from(x, self.grid.max_y+1, UP)
+      n_e = self.run_from(x, self.grid.max_y, UP)
       most_energized = max(most_energized, n_e)
 
     print("part2", most_energized)
