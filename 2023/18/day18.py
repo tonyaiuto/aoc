@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 "AOC 2023: day 18"
 
+from collections import defaultdict
 
 from tools import aoc
 from tools import gridutils
@@ -91,9 +92,9 @@ class day18(aoc.aoc):
     if self.doing_sample:
       print_grid(grid)
     edge_size = len(grid.live_cells())
-    #filled = fill_grid(grid)
+    #filled = fill_grid_flood(grid)
     #filled_size = len(filled)
-    filled = fill_grid2(grid)
+    filled = fill_grid3(grid)
     print('edge', edge_size, 'filled', filled)
     return filled
 
@@ -110,9 +111,10 @@ class day18(aoc.aoc):
 
     edge_size = len(grid.live_cells())
     print('edge', edge_size)
-    filled = fill_grid2(grid)
+    filled = fill_grid3(grid)
     print('edge', edge_size, 'filled', filled)
-    return edge_size + filled
+    print("too high by ", filled - 952408144115)
+    return filled
 
 
 def print_grid(grid):
@@ -123,7 +125,7 @@ def print_grid(grid):
       out.append('#' if cell else '.')
     print(''.join(out))
 
-def fill_grid(grid):
+def fill_grid_flood(grid):
   visited = set()
   x = 1
   y = 1
@@ -167,10 +169,47 @@ def fill_grid2(grid):
         if count_it:
           row_n += 1
         last_cell_edge = False
-    print('row_n', row_n)
+    # print('row_n', row_n)
     ret += row_n
   return ret
 
+
+def fill_grid3(grid):
+  rows = defaultdict(list)
+  for cell in grid.live_cells():
+    x = cell[0]
+    y = cell[1]
+    rows[y].append(x)
+
+  ret = 0
+  for y in range(grid.min_y, grid.max_y+1):
+    xs = sorted(rows[y])
+    row_n = 0
+    count_gap = False
+    inside = False
+    next_inside = True
+    edge_span = 0
+    x = -1000000
+    for cell_x in xs:
+      # . . 3 4 . 6 . 8 . => 5
+      # . . 3 . . 6 . 8 9 => 6
+      # . . 3 . . 6 . 8 9 10 . => 7
+      # . . 3 4 . 6 7 . 9 10 . => 7
+
+      #print('x=%d, cnt=%d, inside=%s, nxt=%s, in_edge=%s' % (
+      #       cell_x, row_n, inside, next_inside, in_edge))
+      row_n += 1  # count the edge part
+      gap = (cell_x - x - 1)
+      if gap > 0:
+        if count_gap:
+          row_n += gap
+        count_gap = not count_gap
+      x = cell_x
+
+    if abs(y) < 10:
+      print('row', y, xs, '  row_n', row_n)
+    ret += row_n
+  return ret
 
 day18.sample_test("""
 R 6 (#70c710)
