@@ -10,6 +10,9 @@ C2DIR = {'0': 'R', '1': 'D', '2': 'L', '3': 'U'}
 
 VERBOSE=1
 
+def scale(x):
+  return int((x+500) / 1000)
+
 class Dig(object):
 
   def __init__(self, s):
@@ -37,11 +40,15 @@ class Dig(object):
     return x, y
 
   def dig2(self, grid, x, y):
-    if self.dir in ('U', 'D'):
-      grid.set(x, y, self.dir)
+    if self.dir2 in ('U', 'D'):
+      grid.set(x, y, self.dir2)
+    ox = x
+    oy = y
     for i in range(self.dist2):
       x, y = self._move(self.dir2, x, y)
-      grid.set(x, y, self.dir)
+      grid.set(x, y, self.dir2)
+    # print("%c %7d,%7d -> %7d,%7d" % (self.dir2, ox, oy, x, y), self.dist2)
+    print("%c %7d,%7d -> %7d,%7d" % (self.dir2, scale(ox), scale(oy), scale(x), scale(y)), '    dist', scale(self.dist2))
     return x, y
 
   def _move(self, dir, x, y):
@@ -208,8 +215,9 @@ def fill_grid3(grid, verbose=False):
       vert_edge = cell_dir in ('U', 'D')
 
       if verbose or y == 356353:
-        print('x=%d, cnt=%d, inside=%s' % (cell_x, row_n, count_gap),
-              'cell_dir', cell_dir, 'lastE', last_edge_dir)
+        #print('x=%d, cnt=%d, inside=%s' % (cell_x, row_n, count_gap),
+        #      'cell_dir', cell_dir, 'lastE', last_edge_dir)
+        pass
 
       if gap > 0 and cell_dir == last_edge_dir:
         print('x=%d, cnt=%d, inside=%s' % (cell_x, row_n, count_gap),
