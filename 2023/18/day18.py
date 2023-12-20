@@ -8,6 +8,8 @@ from tools import gridutils
 
 C2DIR = {'0': 'R', '1': 'D', '2': 'L', '3': 'U'}
 
+VERBOSE=1
+
 class Dig(object):
 
   def __init__(self, s):
@@ -27,15 +29,19 @@ class Dig(object):
     return '%c %d %s %c %d' % (self.dir, self.dist, self.color, self.dir2, self.dist2)
 
   def dig(self, grid, x, y):
+    if self.dir in ('U', 'D'):
+      grid.set(x, y, self.dir)
     for i in range(self.dist):
       x, y = self._move(self.dir, x, y)
-      grid.set(x, y, self.color)
+      grid.set(x, y, self.dir)
     return x, y
 
   def dig2(self, grid, x, y):
+    if self.dir in ('U', 'D'):
+      grid.set(x, y, self.dir)
     for i in range(self.dist2):
       x, y = self._move(self.dir2, x, y)
-      grid.set(x, y, self.color)
+      grid.set(x, y, self.dir)
     return x, y
 
   def _move(self, dir, x, y):
@@ -86,7 +92,7 @@ class day18(aoc.aoc):
     x = 0
     y = 0
     for dig in self.digs:
-      if self.doing_sample:
+      if self.doing_sample and VERBOSE > 1:
         print("=== Digging", dig)
       x, y = dig.dig(grid, x, y)
     if self.doing_sample:
@@ -94,7 +100,7 @@ class day18(aoc.aoc):
     edge_size = len(grid.live_cells())
     #filled = fill_grid_flood(grid)
     #filled_size = len(filled)
-    filled = fill_grid3(grid)
+    filled = fill_grid3(grid, verbose=self.doing_sample)
     print('edge', edge_size, 'filled', filled)
     return filled
 
@@ -105,7 +111,7 @@ class day18(aoc.aoc):
     x = 0
     y = 0
     for dig in self.digs:
-      if self.doing_sample:
+      if self.doing_sample and VERBOSE > 1:
         print("=== Digging", dig)
       x, y = dig.dig2(grid, x, y)
 
@@ -174,7 +180,7 @@ def fill_grid2(grid):
   return ret
 
 
-def fill_grid3(grid):
+def fill_grid3(grid, verbose=False):
   rows = defaultdict(list)
   for cell in grid.live_cells():
     x = cell[0]
@@ -186,28 +192,47 @@ def fill_grid3(grid):
     xs = sorted(rows[y])
     row_n = 0
     count_gap = False
-    inside = False
-    next_inside = True
-    edge_span = 0
-    x = -1000000
+    x = grid.min_x-1
+    last_edge_dir = 'X'
+    rcd = []
     for cell_x in xs:
-      # . . 3 4 . 6 . 8 . => 5
-      # . . 3 . . 6 . 8 9 => 6
-      # . . 3 . . 6 . 8 9 10 . => 7
-      # . . 3 4 . 6 7 . 9 10 . => 7
+      # . . U R U . U . 8 . => 5
+      # . . 3 . . . . 8 9 => 6
+      # . . U R D . . 8 9 10 . => 7
+      # . . 3 4 . . 7 . 9 10 . => 7
 
-      #print('x=%d, cnt=%d, inside=%s, nxt=%s, in_edge=%s' % (
-      #       cell_x, row_n, inside, next_inside, in_edge))
       row_n += 1  # count the edge part
+      cell_dir = grid.get(cell_x, y)
+      rcd.append(cell_dir)
       gap = (cell_x - x - 1)
+      vert_edge = cell_dir in ('U', 'D')
+
+      if verbose or y == 356353:
+        print('x=%d, cnt=%d, inside=%s' % (cell_x, row_n, count_gap),
+              'cell_dir', cell_dir, 'lastE', last_edge_dir)
+
+      if gap > 0 and cell_dir == last_edge_dir:
+        print('x=%d, cnt=%d, inside=%s' % (cell_x, row_n, count_gap),
+              'cell_dir', cell_dir, 'lastE', last_edge_dir)
+        print("==== NOT POSSIBLE, y=", y, 'cellx', cell_x, 'gap', gap)
+        print([' %8d' % i for i in xs[0:9]])
+        print([' %8s' % e for e in rcd[0:9]])
+        assert False
+
       if gap > 0:
         if count_gap:
           row_n += gap
-        count_gap = not count_gap
+
+      if vert_edge:
+        #if last_edge_dir == 'X':
+        #  count_gap = True
+        if cell_dir != last_edge_dir:
+          count_gap = not count_gap
+        last_edge_dir = cell_dir
       x = cell_x
 
     if abs(y) < 10:
-      print('row', y, xs, '  row_n', row_n)
+      print('row', y, xs[0:10], '  row_n', row_n)
     ret += row_n
   return ret
 
