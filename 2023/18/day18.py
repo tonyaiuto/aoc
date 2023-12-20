@@ -263,4 +263,4 @@ U 2 (#7a21e3)
 
 
 if __name__ == '__main__':
-  day18.run_and_check('input.txt', expect1=48652, expect2=None)
+  day18.run_and_check('input.txt', expect1=48652, expect2=45757884535661)
