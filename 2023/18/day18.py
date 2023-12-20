@@ -90,11 +90,12 @@ class day18(aoc.aoc):
       x, y = dig.dig(grid, x, y)
     if self.doing_sample:
       print_grid(grid)
-    filled = fill_grid(grid)
     edge_size = len(grid.live_cells())
-    filled_size = len(filled)
-    print('edge', edge_size, 'filled', filled_size)
-    return edge_size + filled_size
+    #filled = fill_grid(grid)
+    #filled_size = len(filled)
+    filled = fill_grid2(grid)
+    print('edge', edge_size, 'filled', filled)
+    return filled
 
 
   def part2(self):
@@ -109,11 +110,9 @@ class day18(aoc.aoc):
 
     edge_size = len(grid.live_cells())
     print('edge', edge_size)
-    #filled = fill_grid2(grid)
-    #filled_size = len(filled)
-    #print('edge', edge_size, 'filled', filled_size)
-    #return edge_size + filled_size
-    return edge_size
+    filled = fill_grid2(grid)
+    print('edge', edge_size, 'filled', filled)
+    return edge_size + filled
 
 
 def print_grid(grid):
@@ -152,10 +151,25 @@ def fill_grid(grid):
 
 
 def fill_grid2(grid):
+  ret = 0
   for y in range(grid.min_y, grid.max_y+1):
-    out = []
+    row_n = 0
+    last_cell_edge = False
+    count_it = False
     for x in range(grid.min_x, grid.max_x+1):
       cell = grid.get(x, y)
+      if cell:
+        row_n += 1
+        if not last_cell_edge:
+          count_it = not count_it
+        last_cell_edge = True
+      else:
+        if count_it:
+          row_n += 1
+        last_cell_edge = False
+    print('row_n', row_n)
+    ret += row_n
+  return ret
 
 
 day18.sample_test("""
