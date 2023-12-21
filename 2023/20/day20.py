@@ -111,10 +111,43 @@ class day20(aoc.aoc):
 
     # make the printing nicer
     self.state_order = [
-      self.modules[m] for m in (
-         sorted([m.name for m in self.modules.values() if m.type == FF])
-         + sorted([m.name for m in self.modules.values() if m.type == CONJ]))
+      self.modules.get('qz'),
+      self.modules.get('tx'),
+      self.modules.get('jr'),
+      self.modules.get('hk'),
+
+      self.modules.get('gc'),
+      self.modules.get('jg'),
+      self.modules.get('qm'),
+      self.modules.get('tv'),
+
     ]
+    self.state_order = [x for x in self.state_order if x]
+    done = set(self.state_order)
+    for m in self.modules.values():
+      if m.type == FF and not m in done:
+        self.state_order.append(m)
+    more = [
+      self.modules.get('pf'),
+      self.modules.get('ts'),
+      self.modules.get('vr'),
+      self.modules.get('xd'),
+
+      self.modules.get('ks'),
+      self.modules.get('pm'),
+      self.modules.get('dl'),
+      self.modules.get('vk'),
+
+      self.modules.get('dt'),
+    ]
+    self.state_order.extend([x for x in more if x])
+    self.state_order.extend([
+         self.modules[m]
+         for m in sorted([m.name for m in self.modules.values()
+                          if m.type == CONJ and m not in more])
+    ])
+    self.l1 = ''.join(m.name[0] for m in self.state_order if m.type == FF)
+    self.l2 = ''.join(m.name[-1] for m in self.state_order if m.type == FF)
 
     for m in self.modules.values():
       if m.type == CONJ:
@@ -123,6 +156,12 @@ class day20(aoc.aoc):
     pf = self.modules.get('pf')
     if pf:
       self.set_in_list(pf, ['hk', 'qn', 'zr', 'vx', 'lj', 'fl', 'zn', 'vh', 'cb'])
+
+    ts = self.modules.get('ts')
+    if ts:
+      # {vn: xg: gk: jr: cd: mt: rr: pb: }
+      self.set_in_list(ts, ['jr', 'rr', 'cd','vn', 'gk', 'xg', 'pb', 'mt'])
+
     xd = self.modules.get('xd')
     if xd:
       self.set_in_list(xd, ['qz', 'xv', 'vl',      'gb', 'hd', 'mg', 'vj'])
@@ -135,7 +174,9 @@ class day20(aoc.aoc):
       if m not in done:
         in_list.append(m)
     in_list.reverse()
-    assert set(in_list) == set(module.inputs)
+    if set(in_list) != set(module.inputs):
+      print("Whump", set(in_list), set(module.inputs))
+      assert False
     module.in_list = in_list
     print(module.name, '->', [m.name for m in module.in_list])
 
@@ -165,15 +206,14 @@ class day20(aoc.aoc):
     self.counts = {'low': 0, 'high': 0}
 
     ret = 0
-    self.show_state()
+    self.show_state(0)
     while not self.done:
       if ret == 1024 * 16:
         break
       ret += 1
-      if ret % 1024 == 0:
-        print("press", ret)
-      if ret % 1024 == 0 or ret < 1024:
-        self.show_state(tag = '%5d' % ret)
+      want = ret % 1024
+      if want in (0, 1, 1023) or ret < 1024:
+        self.show_state(ret)
       self.do_button(stop_on=self.rx)
 
     for m in self.modules.values():
@@ -229,12 +269,14 @@ class day20(aoc.aoc):
 
     assert "can not reach" == 'here'
 
-  def show_state(self, tag=''):
-    # print(' '.join([m.short_str() for m in self.state_order]))
+  def show_state(self, press):
     out = []
+    if press % 512 == 0:
+      print('     ', self.l1)
+      print('     ', self.l2)
     for m in self.state_order:
       out.append(m.as_bits())
-    print(tag, ''.join(out)) 
+    print('%5d' % press, ''.join(out)) 
 
 
 day20.sample_test("""
