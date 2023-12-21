@@ -219,6 +219,7 @@ class day12(aoc.aoc):
     if ret >= 9613:
       print("part 1", ret, "TOO HIGH!")
     print("part 1", ret)
+    print('7898 is WRONG')
     return ret
 
 
