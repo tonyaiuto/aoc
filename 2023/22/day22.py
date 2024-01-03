@@ -103,6 +103,7 @@ class day22(aoc.aoc):
       for x in aoc.visit_range(brick.a[X], brick.b[X]):
         for y in aoc.visit_range(brick.a[Y], brick.b[Y]):
           height[(x,y)] = to_h + brick.height
+          # Make sure we are not screwing up
           for z in range(brick.z, brick.z + brick.height):
             clash = filled.get((x, y, z))
             if clash:
@@ -133,6 +134,11 @@ class day22(aoc.aoc):
               continue
             assert other.z != brick.z
 
+            if other.z == brick.z + brick.height:
+              print('%3s' % brick.name, 'supports', other.name, 'at', x, y, 'z', other.z)
+              brick.supports.add(other)
+              other.supported_by.add(brick)
+            """
             if other.z < brick.z:
               # print('does', brick.name, 'is above', other)
               if foo:
@@ -149,6 +155,7 @@ class day22(aoc.aoc):
               # print('does', brick.name, 'cant support anything else at', x, y)
               foo = True
               continue
+            """
 
     can_dis = set(self.bricks)
     for brick in self.bricks:
@@ -184,8 +191,8 @@ day22.sample_test("""
 2,0,5~2,2,5
 0,1,6~2,1,6
 1,1,8~1,1,9
-""", expect1=5, expect2=None)
+""", expect1=5, expect2=333)
 
 
 if __name__ == '__main__':
-  day22.run_and_check('input.txt', expect1=None, expect2=None)
+  day22.run_and_check('input.txt', expect1=446, expect2=None)
