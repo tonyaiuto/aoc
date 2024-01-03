@@ -68,6 +68,7 @@ class day22(aoc.aoc):
 
   def reset(self):
     # for future use
+    Brick.n_bricks = 0
     pass
 
   def do_line(self, line):
@@ -110,16 +111,10 @@ class day22(aoc.aoc):
               print("CLASH", clash, brick)
               assert False
             filled[(x, y, z)] = brick
-      print("Landed", brick)
+      if self.doing_sample:
+        print("Landed", brick)
 
-
-  def part1(self):
-    print('===== Start part 1')
-    if True or self.doing_sample:
-      for b in self.bricks:
-        print(b)
-    self.drop_them()
-
+  def compute_support(self):
     for brick in self.bricks:
       for x in aoc.visit_range(brick.a[X], brick.b[X]):
         for y in aoc.visit_range(brick.a[Y], brick.b[Y]):
@@ -135,42 +130,32 @@ class day22(aoc.aoc):
             assert other.z != brick.z
 
             if other.z == brick.z + brick.height:
-              print('%3s' % brick.name, 'supports', other.name, 'at', x, y, 'z', other.z)
+              if self.doing_sample:
+                print('%3s' % brick.name, 'supports', other.name, 'at', x, y, 'z', other.z)
               brick.supports.add(other)
               other.supported_by.add(brick)
-            """
-            if other.z < brick.z:
-              # print('does', brick.name, 'is above', other)
-              if foo:
-                print('got low brick', other, 'after supporting ', brick)
-              continue
-            elif other.z == brick.z:
-              print('ERR collision', brick, other)
-              assert False
-            elif other.z == brick.z + 1:
-              print('%3s' % brick.name, 'supports', other.name, 'at', x, y, 'z', other.z)
-              brick.supports.add(other)
-              other.supported_by.add(brick)
-            elif other.z > brick.z + 1:
-              # print('does', brick.name, 'cant support anything else at', x, y)
-              foo = True
-              continue
-            """
+
+
+  def part1(self):
+    print('===== Start part 1')
+    if self.doing_sample:
+      for b in self.bricks:
+        print(b)
+    self.drop_them()
+    self.compute_support()
 
     can_dis = set(self.bricks)
     for brick in self.bricks:
       if len(brick.supported_by) == 1:
         for sup in brick.supported_by:
-          print(sup, 'is only support for', brick)
+          # print(sup, 'is only support for', brick)
           can_dis.discard(sup)
 
     ret = len(can_dis)
-    if ret >= 503:
-      print("TOO HIGH", ret)
     for brick in can_dis:
       if len(brick.supports) == 0:
         continue
-      print("check", brick)
+      # print("check", brick)
       for other in brick.supports:
         assert brick in other.supported_by
         assert len(other.supported_by) > 1
@@ -178,9 +163,32 @@ class day22(aoc.aoc):
 
   def part2(self):
     print('===== Start part 2')
-    self.reset()
+    self.drop_them()
+    self.compute_support()
 
-    return 42
+    def do_the_chain(brick, dissed):
+      more_dissed = []
+      for other in brick.supports:
+        who_holds_me_up = other.supported_by - dissed
+        if len(who_holds_me_up) == 0:
+          dissed.add(other)
+          more_dissed.append(other)
+      for other in more_dissed:
+        do_the_chain(other, dissed)
+      return len(dissed)
+
+    ret = 0
+    for brick in self.bricks:
+      will_fall = set()
+      dissed = set([brick])
+      will_fall = do_the_chain(brick, dissed) - 1
+      if self.doing_sample:
+        print(brick.name, 'drops', will_fall)
+      ret = ret + will_fall
+
+    if ret <= 1213:
+      print("TOO LOW", ret)
+    return ret
 
 
 day22.sample_test("""
@@ -191,8 +199,8 @@ day22.sample_test("""
 2,0,5~2,2,5
 0,1,6~2,1,6
 1,1,8~1,1,9
-""", expect1=5, expect2=333)
+""", expect1=5, expect2=7, recreate=False)
 
 
 if __name__ == '__main__':
-  day22.run_and_check('input.txt', expect1=446, expect2=None)
+  day22.run_and_check('input.txt', expect1=446, expect2=60287)
