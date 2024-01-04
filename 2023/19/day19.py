@@ -75,6 +75,9 @@ class Range(object):
   def __str__(self):
     return '(%s, %4d, %4d)' % (self.var, self.low, self.high)
 
+  def __repr__(self):
+    return str(self)
+
   @staticmethod
   def cmp(a, b):
     diff = ord(a.var) - ord(b.var)
@@ -87,6 +90,17 @@ class Range(object):
     if diff != 0:
       return diff
     return 0
+
+  def invert(self):
+    # Return the negation of a range. This might be a list,
+    # implying Range1 || Range2
+    ret = []
+    if self.low > 1:
+      ret.append(Range(self.var, 1, self.low-1))
+    if self.high != 4000:
+      ret.append(Range(self.var, self.high+1, 4000))
+    return ret
+
 
 def cmp_range_set(a, b):
   diff = len(a) - len(b)
@@ -290,6 +304,7 @@ class day19(aoc.aoc):
     print("=== FILLED & cond sorted and sorted")
     for win in wins:
       print("WIN:", ' '.join([str(c) for c in win]))
+      print("WIN^:", ' '.join([str(c.invert()) for c in win]))
 
     print("=== EVAL")
 
