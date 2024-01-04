@@ -14,6 +14,7 @@ from tools import qparser
 MORE = "_MORE_"
 FINAL_A = "_FINAL_"
 
+
 class Rule(object):
   
   REV_COND = {
@@ -51,44 +52,54 @@ class Rule(object):
     if self.action == 'R':
       expr = '%s %s %d' % (self.var, Rule.REV_COND[self.cond], self.value)
       if self.cond == '<':
-        cond = (self.var, self.value, 4000)
+        cond = Range(self.var, self.value, 4000)
       else:
-        cond = (self.var, 1, self.value)
+        cond = Range(self.var, 1, self.value)
       return expr, cond, MORE
     expr = '%s %c %d' % (self.var, self.cond, self.value)
     if self.cond == '<':
-      cond = (self.var, 1, self.value-1)
+      cond = Range(self.var, 1, self.value-1)
     else:
-      cond = (self.var, self.value+1, 4000)
+      cond = Range(self.var, self.value+1, 4000)
     if self.action == 'A':
       return expr, cond, FINAL_A
     return expr, cond, self.action
 
+class Range(object):
 
-def clause_cmp(a, b):
-  diff = ord(a[0]) - ord(b[0])
-  if diff != 0:
-    return diff
-  diff = a[1] - b[1]
-  if diff != 0:
-    return diff
-  diff = a[2] - b[2]
-  if diff != 0:
-    return diff
-  return 0
+  def __init__(self, var, low, high):
+    self.var = var
+    self.low = low
+    self.high = high
 
-def cmp_clause_set(a, b):
+  def __str__(self):
+    return '(%s, %4d, %4d)' % (self.var, self.low, self.high)
+
+  @staticmethod
+  def cmp(a, b):
+    diff = ord(a.var) - ord(b.var)
+    if diff != 0:
+      return diff
+    diff = a.low - b.low
+    if diff != 0:
+      return diff
+    diff = a.high - b.high
+    if diff != 0:
+      return diff
+    return 0
+
+def cmp_range_set(a, b):
   diff = len(a) - len(b)
   if diff != 0:
     return diff
   for i in range(len(a)):
-    diff = clause_cmp(a[i], b[i])
+    diff = Range.cmp(a[i], b[i])
     if diff:
       return diff
   return 0
 
 def fill_win(win):
-  got = set([x[0] for x in win])
+  got = set([x.var for x in win])
   need = set(['a', 'm', 's', 'x']) - got
   return win + [(n, 1, 4000) for n in need]
 
@@ -274,8 +285,8 @@ class day19(aoc.aoc):
       print("WIN:", ' '.join([str(c) for c in win]))
 
     # wins = [fill_win(w) for w in wins]
-    wins = [sorted(w, key=functools.cmp_to_key(clause_cmp)) for w in wins]
-    wins = sorted(wins, key=functools.cmp_to_key(cmp_clause_set))
+    wins = [sorted(w, key=functools.cmp_to_key(Range.cmp)) for w in wins]
+    wins = sorted(wins, key=functools.cmp_to_key(cmp_range_set))
     print("=== FILLED & cond sorted and sorted")
     for win in wins:
       print("WIN:", ' '.join([str(c) for c in win]))
@@ -286,14 +297,13 @@ class day19(aoc.aoc):
     for win in wins:
       s = [4000] * 4
       for ic, cond in enumerate(win):
-        s[ic] = cond[2] - cond[1] + 1
+        s[ic] = cond.high - cond.low + 1
       ok_count = s[0] * s[1] * s[2] * s[3]
       print("WIN:", "%11d" % ok_count, ' '.join([str(c) for c in win]))
       ret += ok_count
 
     print("too high by", ret - 167409079868000)
     return ret
-      
 
   def reduce_workflows(self):
     workflows = set(self.workflows.values())
@@ -369,14 +379,14 @@ class day19(aoc.aoc):
   def add_win(self, clauses):
     have = {}
     for c in clauses:
-      dup = have.get(c[0])
+      dup = have.get(c.var)
       if dup:
-        low = max(c[1], dup[1])
-        high = min(c[2], dup[2])
+        low = max(c.low, dup.low)
+        high = min(c.high, dup.high)
         if low > high:
           return  
-        c = (c[0], low, high)
-      have[c[0]] = c
+        c = Range(c.var, low, high)
+      have[c.var] = c
     self.wins.append(have.values())
 
   def useless_verify(self):
