@@ -3,6 +3,7 @@
 
 from collections import defaultdict
 import copy
+import functools
 
 from tools import aoc
 from tools import gridutils
@@ -49,11 +50,47 @@ class Rule(object):
     # Printable clause that makes rule succeed
     if self.action == 'R':
       expr = '%s %s %d' % (self.var, Rule.REV_COND[self.cond], self.value)
-      return expr, MORE
+      if self.cond == '<':
+        cond = (self.var, self.value, 4000)
+      else:
+        cond = (self.var, 1, self.value)
+      return expr, cond, MORE
     expr = '%s %c %d' % (self.var, self.cond, self.value)
+    if self.cond == '<':
+      cond = (self.var, 1, self.value-1)
+    else:
+      cond = (self.var, self.value+1, 4000)
     if self.action == 'A':
-      return expr, FINAL_A
-    return expr, self.action
+      return expr, cond, FINAL_A
+    return expr, cond, self.action
+
+
+def clause_cmp(a, b):
+  diff = ord(a[0]) - ord(b[0])
+  if diff != 0:
+    return diff
+  diff = a[1] - b[1]
+  if diff != 0:
+    return diff
+  diff = a[2] - b[2]
+  if diff != 0:
+    return diff
+  return 0
+
+def cmp_clause_set(a, b):
+  diff = len(a) - len(b)
+  if diff != 0:
+    return diff
+  for i in range(len(a)):
+    diff = clause_cmp(a[i], b[i])
+    if diff:
+      return diff
+  return 0
+
+def fill_win(win):
+  got = set([x[0] for x in win])
+  need = set(['a', 'm', 's', 'x']) - got
+  return win + [(n, 1, 4000) for n in need]
 
 
 class Workflow(object):
@@ -229,7 +266,34 @@ class day19(aoc.aoc):
 
     workflow = self.workflows['in']
     clauses = []
-    self.expand(workflow, clauses)
+    pclauses = []
+    self.wins = []
+    self.expand(workflow, clauses, pclauses)
+    wins = self.wins
+    for win in wins:
+      print("WIN:", ' '.join([str(c) for c in win]))
+
+    # wins = [fill_win(w) for w in wins]
+    wins = [sorted(w, key=functools.cmp_to_key(clause_cmp)) for w in wins]
+    wins = sorted(wins, key=functools.cmp_to_key(cmp_clause_set))
+    print("=== FILLED & cond sorted and sorted")
+    for win in wins:
+      print("WIN:", ' '.join([str(c) for c in win]))
+
+    print("=== EVAL")
+
+    ret = 0
+    for win in wins:
+      s = [4000] * 4
+      for ic, cond in enumerate(win):
+        s[ic] = cond[2] - cond[1] + 1
+      ok_count = s[0] * s[1] * s[2] * s[3]
+      print("WIN:", "%11d" % ok_count, ' '.join([str(c) for c in win]))
+      ret += ok_count
+
+    print("too high by", ret - 167409079868000)
+    return ret
+      
 
   def reduce_workflows(self):
     workflows = set(self.workflows.values())
@@ -245,7 +309,7 @@ class day19(aoc.aoc):
               print("replace", remove.name, "with %s in" % remove.next, rule)
               rule.action = remove.next
           if w.next == remove.name:
-            print("replace fallback", remove.name, "with %s in" % remove.next, rule)
+            print("replace fallback", remove.name, "with %s in" % remove.next, w)
             w.next = remove.next
     return workflows
 
@@ -272,33 +336,48 @@ class day19(aoc.aoc):
           print("Can reduce", workflow)
     return reducible 
 
-
-  def expand(self, workflow, clauses):
-    if self.doing_sample:
+  def expand(self, workflow, clauses, pclauses):
+    if False and self.doing_sample:
       print(" . expand workflow", workflow)
-    # hqn{a<2457:bjm,x<2335:qql,s>1648:tbn,tgg}
-    # 
     orig_clauses = copy.copy(clauses)
+    orig_pclauses = copy.copy(pclauses)
     for rule in workflow.rules:
-      expr, nxt = rule.cond_p()
-      clauses.append(expr)
+      expr, cond, nxt = rule.cond_p()
+      clauses.append(cond)
+      pclauses.append(expr)
       if nxt == MORE:
         continue
       if nxt == FINAL_A:
-        print("A:", ' and '.join(clauses))
+        #print("A:", ' and '.join(pclauses))
+        print("A:", ' and '.join([str(c) for c in clauses]))
+        self.add_win(clauses)
       else:
         next_workflow = self.workflows[nxt]
-        self.expand(next_workflow, copy.copy(clauses))
+        self.expand(next_workflow, copy.copy(clauses), copy.copy(pclauses))
 
-      if workflow.next == 'A':  # accept          
-        print("A:", ' and '.join(clauses))
-        return
-      if workflow.next == 'R':  # accept          
-        print("REJECT:", ' and '.join(clauses))
-        return
-      next_workflow = self.workflows[workflow.next]
-      self.expand(next_workflow, orig_clauses)
+    if workflow.next == 'A':  # accept          
+      #print("A:", ' and '.join(pclauses))
+      print("A:", ' and '.join([str(c) for c in clauses]))
+      self.add_win(clauses)
+      return
+    if workflow.next == 'R':  # accept          
+      # print("REJECT:", ' and '.join(pclauses))
+      return
+    next_workflow = self.workflows[workflow.next]
+    self.expand(next_workflow, orig_clauses, orig_pclauses)
 
+  def add_win(self, clauses):
+    have = {}
+    for c in clauses:
+      dup = have.get(c[0])
+      if dup:
+        low = max(c[1], dup[1])
+        high = min(c[2], dup[2])
+        if low > high:
+          return  
+        c = (c[0], low, high)
+      have[c[0]] = c
+    self.wins.append(have.values())
 
   def useless_verify(self):
     # Explore the data a bit
@@ -315,10 +394,6 @@ class day19(aoc.aoc):
         assert False
     # Each rule is only used once.  Does this matter?
 
-
-  def bind_w(self, workflow):
-    for r in workflow.rules:
-      r.var
 
 day19.sample_test("""
 in{s<1351:px,qqz}
