@@ -65,6 +65,7 @@ class Rule(object):
       return expr, cond, FINAL_A
     return expr, cond, self.action
 
+
 class Range(object):
 
   def __init__(self, var, low, high):
@@ -73,10 +74,10 @@ class Range(object):
     self.high = high
 
   def __str__(self):
-    return '(%s, %4d, %4d)' % (self.var, self.low, self.high)
+    return '%s_%d:%4d' % (self.var, self.low, self.high)
 
   def __repr__(self):
-    return str(self)
+    return '(%s, %4d, %4d)' % (self.var, self.low, self.high)
 
   @staticmethod
   def cmp(a, b):
@@ -100,6 +101,68 @@ class Range(object):
     if self.high != 4000:
       ret.append(Range(self.var, self.high+1, 4000))
     return ret
+
+
+def invert_range_list(range_list):
+  return [r.invert() for r in range_list]
+
+def range_list_to_s(range_list):
+  return ' '.join(str(r) for r in range_list)
+
+def eval_range_list(range_list):
+  s = [4000] * 4
+  for ic, cond in enumerate(range_list):
+    s[ic] = cond.high - cond.low + 1
+  print("       spans:", s[0], s[1], s[2], s[3])
+  ok_count = s[0] * s[1] * s[2] * s[3]
+  return ok_count
+
+def merge_range_lists(range_list, more):
+  # AND a list of ranges with an existing one
+  # 
+  # print("  Merge", range_list, 'with', more)
+  # First do the easy ANDs
+  new_a = range_list
+  any_ors = False
+  for m in more:
+    if len(m) == 1:
+      # Single cluase
+      new_a = merge_range(new_a, m[0])
+      if not new_a:
+        return
+    else:
+      any_ors = True
+
+  # Now go through the list of ORs
+  if not any_ors:
+    yield new_a
+    return
+  # WRONG.  Must cross product the ors
+  for m in more:
+    if len(m) > 1:
+      for x in m:
+        new_a = merge_range(new_a, x)
+        if new_a:
+          yield new_a
+
+
+def merge_range(range_list, to_add):
+  # AND the new clause into an existing list
+  have = {r.var: r for r in range_list}
+  dup = have.get(to_add.var)
+  if dup:
+    #  1-10    20-4000 => disjoint impossible
+    #  1-1000  80-4000 => 80-1000
+    #  80-4000 1-100   => 80-100
+    low = max(dup.low, to_add.low)
+    high = min(dup.high, to_add.high)
+    if low > high:
+      # print("Impossible merge", dup, to_add)
+      return None
+    have[dup.var] = Range(to_add.var, low, high)
+  else:
+    have[to_add.var] = to_add
+  return list(have.values())
 
 
 def cmp_range_set(a, b):
@@ -304,20 +367,43 @@ class day19(aoc.aoc):
     print("=== FILLED & cond sorted and sorted")
     for win in wins:
       print("WIN:", ' '.join([str(c) for c in win]))
-      print("WIN^:", ' '.join([str(c.invert()) for c in win]))
+      # print("WIN^:", range_list_to_s(invert_range_list(win)))
 
-    print("=== EVAL")
-
+    """
     ret = 0
+    print("=== EVAL 1")
     for win in wins:
-      s = [4000] * 4
-      for ic, cond in enumerate(win):
-        s[ic] = cond.high - cond.low + 1
-      ok_count = s[0] * s[1] * s[2] * s[3]
-      print("WIN:", "%11d" % ok_count, ' '.join([str(c) for c in win]))
+      ok_count = eval_range_list(win)
+      print("WIN:", "%11d" % ok_count, range_list_to_s(win))
       ret += ok_count
 
-    print("too high by", ret - 167409079868000)
+    print(ret, "too high by", ret - 167409079868000)
+    """
+
+    ret = 0
+    print("=== EVAL 2")
+    ret = 0
+    while len(wins) > 0:
+      cur = wins[0]
+      rest = wins[1:]
+
+      # count me
+      ok_count = eval_range_list(cur)
+      ret += ok_count
+      print("WIN:", "%15d" % ok_count, range_list_to_s(cur))
+
+      # AND ^me to the remainder
+      icur = invert_range_list(cur)
+      wins = []
+      print("  Merge", icur, "into:")
+      for r in rest:
+        print("    ", r)
+        for x in merge_range_lists(r, icur):
+          wins.append(x)
+          print("      =>", range_list_to_s(x))
+      print("   ANNOTHER PASS")
+ 
+    print(ret, "too high by", ret - 167409079868000)
     return ret
 
   def reduce_workflows(self):
@@ -326,7 +412,7 @@ class day19(aoc.aoc):
       reducible = self.find_reducible(workflows)
       if not reducible:
         break
-      for remove in  reducible:
+      for remove in reducible:
         workflows.remove(remove)
         for w in workflows:
           for rule in w.rules:
@@ -362,34 +448,45 @@ class day19(aoc.aoc):
     return reducible 
 
   def expand(self, workflow, clauses, pclauses):
-    if False and self.doing_sample:
-      print(" . expand workflow", workflow)
+    if self.doing_sample:
+      print(" . expand workflow", workflow, 'with conds', range_list_to_s(clauses))
     orig_clauses = copy.copy(clauses)
     orig_pclauses = copy.copy(pclauses)
+    def_clauses = copy.copy(clauses)
     for rule in workflow.rules:
       expr, cond, nxt = rule.cond_p()
       clauses.append(cond)
       pclauses.append(expr)
+      inv = cond.invert()
+      assert len(inv) == 1
+      inv_cond = inv[0]
       if nxt == MORE:
+        def_clauses.append(cond)
         continue
       if nxt == FINAL_A:
-        #print("A:", ' and '.join(pclauses))
-        print("A:", ' and '.join([str(c) for c in clauses]))
+        def_clauses.append(inv_cond)
+        # print("A:", ' and '.join(pclauses))
         self.add_win(clauses)
+        clauses[-1] = inv_cond
+        # print("C, !C", cond, inv_cond)
+        print("NCLAUSE:", ' and '.join([str(c) for c in clauses]))
       else:
+        def_clauses.append(inv_cond)
         next_workflow = self.workflows[nxt]
         self.expand(next_workflow, copy.copy(clauses), copy.copy(pclauses))
+        clauses[-1] = inv_cond
+        print(" < back to", workflow, 'with conds', range_list_to_s(clauses))
 
     if workflow.next == 'A':  # accept          
-      #print("A:", ' and '.join(pclauses))
-      print("A:", ' and '.join([str(c) for c in clauses]))
+      # print("A:", ' and '.join(pclauses))
       self.add_win(clauses)
       return
     if workflow.next == 'R':  # accept          
       # print("REJECT:", ' and '.join(pclauses))
       return
+
     next_workflow = self.workflows[workflow.next]
-    self.expand(next_workflow, orig_clauses, orig_pclauses)
+    self.expand(next_workflow, def_clauses, orig_pclauses)
 
   def add_win(self, clauses):
     have = {}
@@ -402,7 +499,9 @@ class day19(aoc.aoc):
           return  
         c = Range(c.var, low, high)
       have[c.var] = c
-    self.wins.append(have.values())
+    merged_conds = list(have.values())
+    print("A:", ' and '.join([str(c) for c in merged_conds]))
+    self.wins.append(merged_conds)
 
   def useless_verify(self):
     # Explore the data a bit
