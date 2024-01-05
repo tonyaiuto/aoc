@@ -4,9 +4,9 @@
 from collections import defaultdict
 import copy
 import functools
+import itertools
 
 from tools import aoc
-from tools import gridutils
 from tools import qparser
 
 
@@ -115,28 +115,16 @@ def merge_range_lists(range_list, more):
   # 
   # print("  Merge", range_list, 'with', more)
   # First do the easy ANDs
-  new_a = range_list
-  any_ors = False
-  for m in more:
-    if len(m) == 1:
-      # Single cluase
-      new_a = merge_range(new_a, m[0])
-      if not new_a:
-        return
-    else:
-      any_ors = True
 
-  # Now go through the list of ORs
-  if not any_ors:
-    yield new_a
-    return
-  # WRONG.  Must cross product the ors
-  for m in more:
-    if len(m) > 1:
-      for x in m:
-        new_a = merge_range(new_a, x)
-        if new_a:
-          yield new_a
+  for cross_prod in itertools.product(*more):
+    new_a = range_list
+    # print("      ", cross_prod)
+    for cond in cross_prod:
+      new_a = merge_range(new_a, cond)
+      if not new_a:
+        break
+    if new_a:
+      yield new_a
 
 
 def merge_range(range_list, to_add):
@@ -150,7 +138,7 @@ def merge_range(range_list, to_add):
     low = max(dup.low, to_add.low)
     high = min(dup.high, to_add.high)
     if low > high:
-      # print("Impossible merge", dup, to_add)
+      # print("        Impossible merge", dup, to_add)
       return None
     have[dup.var] = Range(to_add.var, low, high)
   else:
@@ -375,6 +363,7 @@ class day19(aoc.aoc):
     ret = 0
     print("=== EVAL 2")
     ret = 0
+    done = set()
     while len(wins) > 0:
       cur = wins[0]
       rest = wins[1:]
@@ -383,6 +372,9 @@ class day19(aoc.aoc):
       ok_count = eval_range_list(cur)
       ret += ok_count
       print("WIN:", "%15d" % ok_count, range_list_to_s(cur))
+      done.add(range_list_to_s(cur))
+
+      NOPE: Must evaluate forks as a tree.
 
       # AND ^me to the remainder
       icur = invert_range_list(cur)
@@ -391,8 +383,11 @@ class day19(aoc.aoc):
       for r in rest:
         print("    ", r)
         for x in merge_range_lists(r, icur):
-          wins.append(x)
-          print("      =>", range_list_to_s(x))
+          sig = range_list_to_s(x)
+          if sig not in done:
+            wins.append(x)
+            done.add(sig)
+            print("      =>", range_list_to_s(x))
       print("   ANNOTHER PASS")
  
     print(ret, "too high by", ret - 167409079868000)
