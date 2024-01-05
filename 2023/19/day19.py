@@ -17,11 +17,6 @@ FINAL_A = "_FINAL_"
 
 class Rule(object):
   
-  REV_COND = {
-      '<': '>=',
-      '>': '<=',
-  }
-
   def __init__(self, s):
     p = s.split(':')
     self.var = s[0]
@@ -50,20 +45,18 @@ class Rule(object):
   def cond_p(self):
     # Printable clause that makes rule succeed
     if self.action == 'R':
-      expr = '%s %s %d' % (self.var, Rule.REV_COND[self.cond], self.value)
       if self.cond == '<':
         cond = Range(self.var, self.value, 4000)
       else:
         cond = Range(self.var, 1, self.value)
-      return expr, cond, MORE
-    expr = '%s %c %d' % (self.var, self.cond, self.value)
+      return cond, MORE
     if self.cond == '<':
       cond = Range(self.var, 1, self.value-1)
     else:
       cond = Range(self.var, self.value+1, 4000)
     if self.action == 'A':
-      return expr, cond, FINAL_A
-    return expr, cond, self.action
+      return cond, FINAL_A
+    return cond, self.action
 
 
 class Range(object):
@@ -354,9 +347,8 @@ class day19(aoc.aoc):
 
     workflow = self.workflows['in']
     clauses = []
-    pclauses = []
     self.wins = []
-    self.expand(workflow, clauses, pclauses)
+    self.expand(workflow, clauses)
     wins = self.wins
     for win in wins:
       print("WIN:", ' '.join([str(c) for c in win]))
@@ -447,16 +439,14 @@ class day19(aoc.aoc):
           print("Can reduce", workflow)
     return reducible 
 
-  def expand(self, workflow, clauses, pclauses):
+  def expand(self, workflow, clauses):
     if self.doing_sample:
       print(" . expand workflow", workflow, 'with conds', range_list_to_s(clauses))
     orig_clauses = copy.copy(clauses)
-    orig_pclauses = copy.copy(pclauses)
     def_clauses = copy.copy(clauses)
     for rule in workflow.rules:
-      expr, cond, nxt = rule.cond_p()
+      cond, nxt = rule.cond_p()
       clauses.append(cond)
-      pclauses.append(expr)
       inv = cond.invert()
       assert len(inv) == 1
       inv_cond = inv[0]
@@ -465,28 +455,26 @@ class day19(aoc.aoc):
         continue
       if nxt == FINAL_A:
         def_clauses.append(inv_cond)
-        # print("A:", ' and '.join(pclauses))
         self.add_win(clauses)
         clauses[-1] = inv_cond
         # print("C, !C", cond, inv_cond)
-        print("NCLAUSE:", ' and '.join([str(c) for c in clauses]))
+        # print("NCLAUSE:", ' and '.join([str(c) for c in clauses]))
       else:
         def_clauses.append(inv_cond)
         next_workflow = self.workflows[nxt]
-        self.expand(next_workflow, copy.copy(clauses), copy.copy(pclauses))
+        self.expand(next_workflow, copy.copy(clauses))
         clauses[-1] = inv_cond
-        print(" < back to", workflow, 'with conds', range_list_to_s(clauses))
+        # print(" < back to", workflow, 'with conds', range_list_to_s(clauses))
 
     if workflow.next == 'A':  # accept          
-      # print("A:", ' and '.join(pclauses))
       self.add_win(clauses)
       return
     if workflow.next == 'R':  # accept          
-      # print("REJECT:", ' and '.join(pclauses))
+      # print("REJECT:", ' and '.join(clauses))
       return
 
     next_workflow = self.workflows[workflow.next]
-    self.expand(next_workflow, def_clauses, orig_pclauses)
+    self.expand(next_workflow, def_clauses)
 
   def add_win(self, clauses):
     have = {}
