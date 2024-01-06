@@ -32,7 +32,14 @@ def find_reflection(values):
   return best_center
 
 
-def best_variation(vals, skip):
+def best_variation(rows, cols, skip_h, skip_v):
+  #  bhr, bvr = best_variation(rows, cols, 
+  bhr =  variation_points(rows, skip=skip_h)
+  bvr =  variation_points(cols, skip=skip_v)
+  return bhr, bvr
+
+
+def variation_points(vals, skip):
   # [109, 12, 30, 30, 76, 97, 30, 30, 115]
   l = len(vals)
   bit = 1
@@ -51,7 +58,7 @@ def best_variation(vals, skip):
       r = find_reflection(v2)
       v2[vi] = v
       if r > 0 and r != skip:
-        # print('got new reflect at', r)
+        print('got new reflect at', r, 'skiping', skip)
         if reflect != r:
           reflect = r
           n_reflect += 1
@@ -80,6 +87,7 @@ class day13(aoc.aoc):
     # called for each line of input
     print("===============")
     nc = len(map[0])
+    # Turn map in binary value of # bits per row and colum1
     cols = [0] * nc
     rows = []
     for row in map:
@@ -100,22 +108,12 @@ class day13(aoc.aoc):
     # assert vr >= 0 or hr >= 0
     if hr > 0:
       self.sum_hr += hr
-    print(vr, hr)
+    print('part1 reflection', vr, hr, '=', 100 * hr + vr)
 
-    bvr = best_variation(cols, skip=vr)
-    if bvr > 0:
-      self.sum_vr2 += bvr
-    bhr = best_variation(rows, skip=hr)
-    if bhr > 0:
-      self.sum_hr2 += bhr
-
-    if (bvr > 0 and vr < 0) and (bhr > 0 and hr < 0):
-      print("==============  Lost VR and HR")
-      assert False
-    if (bvr < 0 and vr < 0) and (bhr < 0 and hr < 0):
-      print("==============  FAILED")
-      assert False
-    print(vr, hr)
+    bhr, bvr = best_variation(rows, cols, skip_h=hr, skip_v=vr)
+    self.sum_hr2 += bhr
+    self.sum_vr2 += bvr
+    print('part2 reflections', bhr, bvr)
 
   def part1(self):
     print('===== Start part 1')
@@ -126,6 +124,8 @@ class day13(aoc.aoc):
   def part2(self):
     print('===== Start part 2')
     ret = self.sum_vr2 + 100 * self.sum_hr2
+
+    
     # if ret <= 33703:
     if ret <= 35515:
       print("TOO LOW")

@@ -374,7 +374,7 @@ class day19(aoc.aoc):
       print("WIN:", "%15d" % ok_count, range_list_to_s(cur))
       done.add(range_list_to_s(cur))
 
-      NOPE: Must evaluate forks as a tree.
+      # NOPE: Must evaluate forks as a tree.
 
       # AND ^me to the remainder
       icur = invert_range_list(cur)
