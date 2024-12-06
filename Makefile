@@ -1,4 +1,7 @@
 
+sync:
+	git fetch
+	SYNCALL
 
 all:
 	(cd 2020 ; $(MAKE) -k$(MAKEFLAGS) all)
