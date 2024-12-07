@@ -97,8 +97,8 @@ class day04(aoc.aoc):
       for col in range(self.grid.width):
         if self.grid.get(row, col) == 'M':
           for dir_i, (inc_r, inc_c) in enumerate(DIRS):
-             if dir_i % 2 == 0:
-               continue
+             #if dir_i % 2 == 0:
+             #  continue
              if self.dir_find(row, col, inc_r, inc_c, ['A', 'S']):
                # print("MAS at %d, %d, dir %d" % (row, col, dir_i))
                # assert A at row+inc_r, col+inc_c
