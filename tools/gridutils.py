@@ -7,6 +7,29 @@ import sys
 
 verbose = False
 
+DIRS4 = [
+    ( 0, -1),  # UP
+    ( 1,  0),  # RIGHT
+    ( 0,  1),  # DOWN
+    (-1,  0),  # LEFT 
+]
+
+DIRS8 = [
+    ( 0, -1),  # UP
+    ( 1, -1),  # UP RIGHT
+    ( 1,  0),  # RIGHT
+    ( 1,  1),  # DOWN RIGHT
+    ( 0,  1),  # DOWN
+    (-1,  1),  # DOWN LEFT
+    (-1,  0),  # LEFT 
+    (-1, -1),  # LEFT UP
+]
+
+
+def move_in_dir(pos, dir):
+  return (pos[0] + dir[0], pos[1] + dir[1])
+
+
 def check(tag, expect, got):
   if expect == got:
     if verbose:
@@ -171,6 +194,9 @@ class Grid(object):
 
   def get(self, x, y):
      return self.points.get((x, y), self.default_cell)
+
+  def get_pos(self, pos):
+     return self.points.get(pos, self.default_cell)
 
   def set(self, x, y, value):
     self.min_x = min(self.min_x, x)
