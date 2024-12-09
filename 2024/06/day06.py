@@ -80,44 +80,38 @@ class day06(aoc.aoc):
       if (np[0] < 0 or np[0] > self.grid.max_x 
           or np[1] < 0 or np[1] > self.grid.max_y):
         break 
-      if self.grid.get_pos(np) == '#':
+      hit_wall = False
+      while self.grid.get_pos(np) == '#':
+        hit_wall = True
         vg.set(np[0], np[1], dir_index)
         # print('from', at, 'to', np, 'would collide', self.grid.get_pos(np))
         # would colide
         dir_index = (dir_index + 1) % 4
         np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
-      else:
-         if self.does_loop(at, dir_index, extra=np):
-           print("ADD ONE AT", np)
+
+      if not hit_wall:
+         if self.would_loop(at, dir_index, extra=np):
+           if self.doing_sample:
+             print("ADD ONE AT", np)
            added.add(np)
            n_pos += 1
       at = np
 
-      """
-      # What if we had to turn.
-      #   np = the next postition, were we place the obstacle
-      new_dir_index = (dir_index + 1) % 4
-      test_pos = at
-      while True:
-       test_pos = gridutils.move_in_dir(test_pos, dir=gridutils.DIRS4[new_dir_index])
-       if (test_pos[0] < 0 or test_pos[0] > self.grid.max_x
-           or test_pos[1] < 0 or test_pos[1] > self.grid.max_y):
-         break
-       if vg.get_pos(test_pos) == new_dir_index:
-         print("ADD ONE AT", np)
-         n_pos += 1
-         break
-      """
-  
     # vg.print()
     print("n_pos", n_pos, "size", len(added))
     return len(added)
 
-  def does_loop(self, at, dir_index, extra):
+  def would_loop(self, at, dir_index, extra):
     iter = 0
+    vis = set()
     while iter < self.max_loop:
       iter += 1
+      sig = (at, dir_index)
+      if sig in vis:
+        break
+      vis.add(sig)
       np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
+      # if blocked ahead, turn right and check again.
       while (self.grid.get_pos(np) == '#' or np == extra):
         dir_index = (dir_index + 1) % 4
         np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
