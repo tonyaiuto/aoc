@@ -125,7 +125,6 @@ class day04(aoc.aoc):
   def part2(self):
     print('===== Start part 2')
     self.reset()
-    got = defaultdict(int)
     found = 0
     for y in range(self.rows+1):
       for x in range(self.grid.width+1):
@@ -136,6 +135,7 @@ class day04(aoc.aoc):
             c1 = self.grid.get(x + 1, y - 1)
             c2 = self.grid.get(x - 1, y + 1)
             if (c1 == 'M' and c2 == 'S') or (c1 == 'S' and c2 == 'M'):
+              # print("found diag", x, y)
               found += 1
 
           c1 = self.grid.get(x - 1, y)
@@ -144,12 +144,10 @@ class day04(aoc.aoc):
             c1 = self.grid.get(x, y - 1)
             c2 = self.grid.get(x, y + 1)
             if (c1 == 'M' and c2 == 'S') or (c1 == 'S' and c2 == 'M'):
+              # print("found cross", x, y)
               found += 1
 
-    # 2039 low for part 2
-    # 2067 high for part 2
     return found
-
 
 
 day04.sample_test("""
@@ -167,4 +165,6 @@ MXMXAXMASX
 
 
 if __name__ == '__main__':
+  # 2039 low for part 2
+  # 2067 high for part 2
   day04.run_and_check('input.txt', expect1=2718, expect2=2000)
