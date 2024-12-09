@@ -77,6 +77,9 @@ class day06(aoc.aoc):
     added = set()
     while True:
       np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
+      if (np[0] < 0 or np[0] > self.grid.max_x 
+          or np[1] < 0 or np[1] > self.grid.max_y):
+        break 
       if self.grid.get_pos(np) == '#':
         vg.set(np[0], np[1], dir_index)
         # print('from', at, 'to', np, 'would collide', self.grid.get_pos(np))
@@ -88,9 +91,6 @@ class day06(aoc.aoc):
            print("ADD ONE AT", np)
            added.add(np)
            n_pos += 1
-      if (np[0] < 0 or np[0] > self.grid.max_x 
-          or np[1] < 0 or np[1] > self.grid.max_y):
-        break 
       at = np
 
       """
@@ -146,4 +146,6 @@ if __name__ == '__main__':
   # 731 too low
   # 1929 too high
   # 1833 too high
-  day06.run_and_check('input.txt', expect1=5086, expect2=731)
+  # 1791 it did not like
+  # 1790 it did not like
+  day06.run_and_check('input.txt', expect1=5086, expect2=1700)
