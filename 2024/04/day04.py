@@ -32,10 +32,6 @@ class day04(aoc.aoc):
     self.grid = gridutils.Grid()
     self.rows = 0
 
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     self.grid.add_row(line)
@@ -49,7 +45,6 @@ class day04(aoc.aoc):
 
   def part1(self):
     print('===== Start part 1')
-    self.reset()
     found = 0
     for y in range(self.rows+1):
       for x in range(self.grid.width+1):
@@ -78,7 +73,6 @@ class day04(aoc.aoc):
 
   def part1_any_dir(self):
     print('===== Start part 1 any dir')
-    self.reset()
     found = 0
     for row in range(self.rows):
       for col in range(self.grid.width):
@@ -87,40 +81,6 @@ class day04(aoc.aoc):
           # print("X at %d, %d => %d" % (row, col, n))
           found += n
     return found
-
-  def part2_try1(self):
-    print('===== Start part 2')
-    self.reset()
-    got = defaultdict(int)
-    for y in range(self.rows+1):
-      for x in range(self.grid.width+1):
-        if self.grid.get(x, y) == 'M':
-          for dir_i, (inc_x, inc_y) in enumerate(DIRS):
-             if self.dir_find(x, y, inc_x, inc_y, ['A', 'S']):
-               # assert A at row+inc_r, col+inc_c
-               a_x = x + inc_x
-               a_y = y + inc_y
-               if self.grid.get(a_x, a_y) != 'A':
-                 print("FAIL: expect A at %d,%d got %s" % (
-                        a_x, a_y, self.grid.get(a_x, a_y)))
-                 return -1
-               # get alternate corners
-               dir_90 = DIRS[(dir_i + 2) % len(DIRS)]
-               dir_180 = DIRS[(dir_i + 6) % len(DIRS)]
-               c1 = self.grid.get(a_x + dir_90[0], a_y + dir_90[1])
-               c2 = self.grid.get(a_x + dir_180[0], a_y + dir_180[1])
-               if (c1 == 'M' and c2 == 'S') or (c1 == 'S' and c2 == 'M'):
-                 sig = (a_x, a_y, dir_i % 2)
-                 got[sig] += 1
-                 print("X-MAS at %d, %d, dir %d" % (a_x, a_y, dir_i))
-
-    for sig, count in got.items():
-      if count != 2:
-        print("what", sig, count)
-    # 2039 low for part 2
-    # 2067 high for part 2
-    # return found // 2
-    return len(got)
 
   def part2(self):
     print('===== Start part 2')
@@ -135,17 +95,21 @@ class day04(aoc.aoc):
             c1 = self.grid.get(x + 1, y - 1)
             c2 = self.grid.get(x - 1, y + 1)
             if (c1 == 'M' and c2 == 'S') or (c1 == 'S' and c2 == 'M'):
-              # print("found diag", x, y)
+              if self.doing_sample:
+                print("found diag", x, y)
               found += 1
 
+          # I am very annoyed that a + cross is not an X, but that is
+          # just a thing to live with.
           c1 = self.grid.get(x - 1, y)
           c2 = self.grid.get(x + 1, y)
           if (c1 == 'M' and c2 == 'S') or (c1 == 'S' and c2 == 'M'):
             c1 = self.grid.get(x, y - 1)
             c2 = self.grid.get(x, y + 1)
             if (c1 == 'M' and c2 == 'S') or (c1 == 'S' and c2 == 'M'):
-              # print("found cross", x, y)
-              found += 1
+              if self.doing_sample:
+                print("found cross", x, y)
+              # found += 1
 
     return found
 
@@ -167,4 +131,4 @@ MXMXAXMASX
 if __name__ == '__main__':
   # 2039 low for part 2
   # 2067 high for part 2
-  day04.run_and_check('input.txt', expect1=2718, expect2=2000)
+  day04.run_and_check('input.txt', expect1=2718, expect2=2046)
