@@ -30,6 +30,10 @@ def move_in_dir(pos, dir):
   return (pos[0] + dir[0], pos[1] + dir[1])
 
 
+def manhattan_distance(a, b):
+  return abs(a[0]-b[0]) + abs(a[1]-b[1])
+
+
 def check(tag, expect, got):
   if expect == got:
     if verbose:
