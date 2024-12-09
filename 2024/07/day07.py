@@ -1,15 +1,7 @@
 #!/usr/bin/env python3
 "AOC 2023: day 07"
 
-from collections import defaultdict
-import copy
-import heapq
-import itertools
-import math
-
 from tools import aoc
-from tools import gridutils
-
 
 class day07(aoc.aoc):
 
@@ -25,22 +17,11 @@ class day07(aoc.aoc):
     self.res = []
     self.vals = []
 
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     parts = line.split(':')
     self.res.append(int(parts[0]))
     self.vals.append([int(x) for x in parts[1].strip().split(' ')])
-
-  def post_load(self):
-    # called after all input is read
-    # print(self.res)
-    # print(self.vals)
-    pass
-
 
   def part1(self):
     print('===== Start part 1')
@@ -60,7 +41,10 @@ class day07(aoc.aoc):
       if got_match(vals=self.vals[i], target=self.res[i]):
         ret +=  self.res[i]
         # print('GOT', self.res[i])
-        # ELSE ...
+      else:
+        if got_match2(vals=self.vals[i], target=self.res[i]):
+          # print('GOT 2', self.res[i])
+          ret +=  self.res[i]
     return ret
 
 
@@ -87,15 +71,20 @@ got_match([81, 40, 27], target=3267)
 got_match([6, 8, 6, 15], target=7290)
 
 
-
 def got_match2(vals, target=None):
   cur = [vals[0]]
   more = vals[1:]
   while more:
     n_cur = []
     for v in cur:
-      for r in gen_results2(have=v, next=more[0], target=target):
-        n_cur.append(r)
+      next = more[0]
+      if v * next <= target:
+        n_cur.append(v * next)
+      if v + next <= target:
+        n_cur.append(v + next)
+      vv = int('%d%d' % (v, next))
+      if vv <= target:
+        n_cur.append(vv)
     cur = n_cur
     more = more[1:]
     print
@@ -104,14 +93,6 @@ def got_match2(vals, target=None):
     # print('GOT', target)
     return True
   return False
-
-def gen_results2(have=None, next=None, target=None):
-  mul_branch = have * next
-  if mul_branch <= target:
-    yield mul_branch
-  add_branch = have + next
-  if add_branch <= target:
-    yield add_branch
 
 
 day07.sample_test("""
@@ -124,8 +105,8 @@ day07.sample_test("""
 192: 17 8 14
 21037: 9 7 18 13
 292: 11 6 16 20
-""", expect1=3749, expect2=None)
+""", expect1=3749, expect2=11387)
 
 
 if __name__ == '__main__':
-  day07.run_and_check('input.txt', expect1=14711933466277, expect2=None)
+  day07.run_and_check('input.txt', expect1=14711933466277, expect2=286580387663654)
