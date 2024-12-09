@@ -3,26 +3,8 @@
 
 from collections import defaultdict
 import copy
-import heapq
-import itertools
-import math
 
 from tools import aoc
-from tools import gridutils
-
-
-class Foo(object):
-
-  def __init__(self):
-    pass
-
-  def __repr__(self):
-    return str(self)
-
-  def __str__(self):
-    return str(self.__dict__)
-
-
 
 class day09(aoc.aoc):
 
@@ -36,10 +18,6 @@ class day09(aoc.aoc):
         })
     self.trace = True
 
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     pass
@@ -49,8 +27,9 @@ class day09(aoc.aoc):
     self.files = [int(c) for c in self.all_input[0][::2]]
     self.free  = [int(c) for c in self.all_input[0][1::2]]
     self.free.append(0)
-    print('file sizes', self.files)
-    print('free sizes', self.free)
+    if self.doing_sample:
+      print('file sizes', self.files)
+      print('free sizes', self.free)
 
     # compute starts of used and free spots
     self.n_files = len(self.files)
@@ -66,8 +45,9 @@ class day09(aoc.aoc):
       self.free_start[i] = at
       at += self.free[i]
       self.total_free += self.free[i]
-    print('file starts', self.file_start)
-    print('free starts', self.free_start)
+    if self.doing_sample:
+      print('file starts', self.file_start)
+      print('free starts', self.free_start)
     print("Total: %d used, %d free" % (self.total_used, self.total_free))
 
 
@@ -84,7 +64,8 @@ class day09(aoc.aoc):
       # for i in range(self.files[cur_file]):
       for i in range(unmoved_blocks[cur_file]):
         chk += block * cur_file
-        print('block %d, file %d: sum %d   file_size:%d' % (block, cur_file, chk, self.files[cur_file]))
+        if self.doing_sample:
+          print('block %d, file %d: sum %d   file_size:%d' % (block, cur_file, chk, self.files[cur_file]))
         block += 1
         if block >= self.total_used:
           break
@@ -95,7 +76,8 @@ class day09(aoc.aoc):
           cur_last -= 1
         unmoved_blocks[cur_last] -= 1
         chk += block * cur_last
-        print('block %d, file %d: sum %d' % (block, cur_last, chk))
+        if self.doing_sample:
+          print('block %d, file %d: sum %d' % (block, cur_last, chk))
         block += 1
         if block >= self.total_used:
           break
@@ -107,49 +89,34 @@ class day09(aoc.aoc):
   def part2(self):
     print('===== Start part 2')
     self.reset()
-    block = 0  # block we are indexing
-    chk = 0
-    cur_file = 0
-    cur_last = self.n_files - 1
-    print("cur last file", cur_last)
+    self.build_map()
 
     # Move them
-    while True:
-      want_free = self.files[cur_last]
-      for i_free, size in enumerate(self.free):
-        if size >= want_free:
+    cur_last = self.n_files - 1
+    while cur_last > 0:
+      want = self.files[cur_last]
+      moved = False
+      for i_free in range(len(self.free)):
+        size = self.free[i_free]
+        if size >= want and self.free_start[i_free] < self.file_start[cur_last]:
           self.file_start[cur_last] = self.free_start[i_free]
-          print('Moved %d for %d to %d' % (cur_last, want, self.file_start[cur_last]))
-          cur_last -= 1
+          if self.doing_sample:
+            print('Moved file %d for %d to %d' % (cur_last, want, self.free_start[i_free]))
+          self.free[i_free] -= want
+          self.free_start[i_free] += want
+          moved = True
           break
+      cur_last -= 1
 
-
-    while block < self.total_used:
-      # for i in range(self.files[cur_file]):
-      for i in range(unmoved_blocks[cur_file]):
-        chk += block * cur_file
-        print('block %d, file %d: sum %d   file_size:%d' % (block, cur_file, chk, self.files[cur_file]))
+    chk = 0
+    for file_i in range(self.n_files):
+      block = self.file_start[file_i]
+      # print('block %d, file %d: sum %d   file_size:%d' % (block, file_i, chk, self.files[file_i]))
+      for i in range(self.files[file_i]):
+        chk += block * file_i
         block += 1
-        if block >= self.total_used:
-          break
-      if block >= self.total_used:
-        break
-
-
-      for i in range(self.free[cur_file]):  # there is a free per file
-        if unmoved_blocks[cur_last] <= 0:
-          cur_last -= 1
-        unmoved_blocks[cur_last] -= 1
-        chk += block * cur_last
-        print('block %d, file %d: sum %d' % (block, cur_last, chk))
-        block += 1
-        if block >= self.total_used:
-          break
-      cur_file += 1
 
     return chk
-
-    return 42
 
 
 day09.sample_test("""
@@ -158,4 +125,5 @@ day09.sample_test("""
 
 
 if __name__ == '__main__':
-  day09.run_and_check('input.txt', expect1=6225730762521, expect2=None)
+  # 8446022420670 too high
+  day09.run_and_check('input.txt', expect1=6225730762521, expect2=6250605700557)
