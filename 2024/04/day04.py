@@ -6,7 +6,7 @@ from collections import defaultdict
 from tools import aoc
 from tools import gridutils
 
-DIRS = [
+XDIRS = [
     (-1,  0),  # UP
     (-1,  1),  # UP RIGHT
     ( 0,  1),  # RIGHT
@@ -16,6 +16,7 @@ DIRS = [
     ( 0, -1),  # LEFT 
     (-1, -1),  # LEFT UP
 ]
+DIRS=gridutils.DIRS8
 
 class day04(aoc.aoc):
 
@@ -37,8 +38,7 @@ class day04(aoc.aoc):
 
   def do_line(self, line):
     # called for each line of input
-    for ic, c  in enumerate(line):
-      self.grid.set(self.rows, ic, c)
+    self.grid.add_row(line)
     self.rows += 1
 
   def post_load(self):
@@ -51,20 +51,20 @@ class day04(aoc.aoc):
     print('===== Start part 1')
     self.reset()
     found = 0
-    for row in range(self.rows+1):
-      for col in range(self.grid.width+1):
-        if self.grid.get(row, col) == 'X':
-          for nr, nc in DIRS:
-             if self.dir_find(row, col, nr, nc, ['M', 'A', 'S']):
+    for y in range(self.rows+1):
+      for x in range(self.grid.width+1):
+        if self.grid.get(x, y) == 'X':
+          for nx, ny in DIRS:
+             if self.dir_find(x, y, nx, ny, ['M', 'A', 'S']):
                found += 1
     return found
 
-  def dir_find(self, row, col, nr, nc, more):
+  def dir_find(self, x, y, nx, ny, more):
     # Find remaining letters in a given direction
     if not more:
       return 1
-    if self.grid.get(row+nr, col+nc) == more[0]:
-      return self.dir_find(row+nr, col+nc, nr, nc, more[1:])
+    if self.grid.get(x+nx, y+ny) == more[0]:
+      return self.dir_find(x+nx, y+ny, nx, ny, more[1:])
 
   def pattern_find(self, row, col, more):
     if not more:
@@ -88,44 +88,68 @@ class day04(aoc.aoc):
           found += n
     return found
 
-  def part2(self):
+  def part2_try1(self):
     print('===== Start part 2')
     self.reset()
-    found = 0
     got = defaultdict(int)
-    for row in range(self.rows):
-      for col in range(self.grid.width):
-        if self.grid.get(row, col) == 'M':
-          for dir_i, (inc_r, inc_c) in enumerate(DIRS):
-             #if dir_i % 2 == 0:
-             #  continue
-             if self.dir_find(row, col, inc_r, inc_c, ['A', 'S']):
-               # print("MAS at %d, %d, dir %d" % (row, col, dir_i))
+    for y in range(self.rows+1):
+      for x in range(self.grid.width+1):
+        if self.grid.get(x, y) == 'M':
+          for dir_i, (inc_x, inc_y) in enumerate(DIRS):
+             if self.dir_find(x, y, inc_x, inc_y, ['A', 'S']):
                # assert A at row+inc_r, col+inc_c
-               a_r = row + inc_r
-               a_c = col + inc_c
-               if self.grid.get(a_r, a_c) != 'A':
+               a_x = x + inc_x
+               a_y = y + inc_y
+               if self.grid.get(a_x, a_y) != 'A':
                  print("FAIL: expect A at %d,%d got %s" % (
-                        a_r, a_c, self.grid.get(a_r, a_c)))
+                        a_x, a_y, self.grid.get(a_x, a_y)))
                  return -1
                # get alternate corners
                dir_90 = DIRS[(dir_i + 2) % len(DIRS)]
                dir_180 = DIRS[(dir_i + 6) % len(DIRS)]
-               c1 = self.grid.get(a_r + dir_90[0], a_c + dir_90[1])
-               c2 = self.grid.get(a_r + dir_180[0], a_c + dir_180[1])
+               c1 = self.grid.get(a_x + dir_90[0], a_y + dir_90[1])
+               c2 = self.grid.get(a_x + dir_180[0], a_y + dir_180[1])
                if (c1 == 'M' and c2 == 'S') or (c1 == 'S' and c2 == 'M'):
-                 print("X-MAS at %d, %d, dir %d" % (a_r, a_c, dir_i))
-                 sig = (a_r, a_c, dir_i)
+                 sig = (a_x, a_y, dir_i % 2)
                  got[sig] += 1
-                 if (a_r, a_c, (dir_i + 4) % len(DIRS)) not in got:
-                   found += 1
+                 print("X-MAS at %d, %d, dir %d" % (a_x, a_y, dir_i))
 
     for sig, count in got.items():
-      if count != 1:
+      if count != 2:
         print("what", sig, count)
     # 2039 low for part 2
     # 2067 high for part 2
-    return found // 2
+    # return found // 2
+    return len(got)
+
+  def part2(self):
+    print('===== Start part 2')
+    self.reset()
+    got = defaultdict(int)
+    found = 0
+    for y in range(self.rows+1):
+      for x in range(self.grid.width+1):
+        if self.grid.get(x, y) == 'A':
+          c1 = self.grid.get(x - 1, y - 1)
+          c2 = self.grid.get(x + 1, y + 1)
+          if (c1 == 'M' and c2 == 'S') or (c1 == 'S' and c2 == 'M'):
+            c1 = self.grid.get(x + 1, y - 1)
+            c2 = self.grid.get(x - 1, y + 1)
+            if (c1 == 'M' and c2 == 'S') or (c1 == 'S' and c2 == 'M'):
+              found += 1
+
+          c1 = self.grid.get(x - 1, y)
+          c2 = self.grid.get(x + 1, y)
+          if (c1 == 'M' and c2 == 'S') or (c1 == 'S' and c2 == 'M'):
+            c1 = self.grid.get(x, y - 1)
+            c2 = self.grid.get(x, y + 1)
+            if (c1 == 'M' and c2 == 'S') or (c1 == 'S' and c2 == 'M'):
+              found += 1
+
+    # 2039 low for part 2
+    # 2067 high for part 2
+    return found
+
 
 
 day04.sample_test("""
