@@ -1,5 +1,7 @@
 
 sync:
+	cd input
+	git pull
 	git fetch
 	SYNCALL
 
