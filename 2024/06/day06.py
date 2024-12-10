@@ -104,6 +104,9 @@ class day06(aoc.aoc):
   def would_loop(self, at, dir_index, extra):
     iter = 0
     vis = set()
+    assert at != extra
+    assert self.grid.get_pos(at) != '#'
+    assert self.grid.get_pos(extra) != '#'
     while iter < self.max_loop:
       iter += 1
       sig = (at, dir_index)
