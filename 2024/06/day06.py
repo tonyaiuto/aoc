@@ -27,18 +27,17 @@ class day06(aoc.aoc):
   def do_line(self, line):
     # called for each line of input
     self.grid.add_row(line)
-    gp = line.find('^')
-    if gp >= 0:
-      self.guard_start = (gp, self.grid.height)
+    g_x = line.find('^')
+    if g_x >= 0:
+      self.guard_start = (g_x, self.grid.height)
       print('guard at', self.guard_start, self.grid.get_pos(self.guard_start))
-      self.grid.set(gp, self.grid.height, ' ')
-    pass
+      # self.grid.set(g_x, self.grid.height, ' ')
 
   def post_load(self):
     # called after all input is read
-    # self.grid.print()
+    if self.doing_sample:
+      self.grid.print()
     self.max_loop = self.grid.width * self.grid.height
-    pass
 
 
   def part1(self):
@@ -73,7 +72,6 @@ class day06(aoc.aoc):
     at = self.guard_start
     dir_index = 0
     n_pos = 0
-    vg = gridutils.Grid()
     added = set()
     while True:
       np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
@@ -81,23 +79,25 @@ class day06(aoc.aoc):
           or np[1] < 0 or np[1] > self.grid.max_y):
         break 
       hit_wall = False
+      iii = 0
       while self.grid.get_pos(np) == '#':
+        iii += 1
+        if iii > 1:
+          print("CORNER WALL AT", at)
         hit_wall = True
-        vg.set(np[0], np[1], dir_index)
         # print('from', at, 'to', np, 'would collide', self.grid.get_pos(np))
         # would colide
         dir_index = (dir_index + 1) % 4
         np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
 
       if not hit_wall:
-         if self.would_loop(at, dir_index, extra=np):
-           if self.doing_sample:
-             print("ADD ONE AT", np)
-           added.add(np)
-           n_pos += 1
+        if self.would_loop(at, dir_index, extra=np):
+          if self.doing_sample:
+            print("ADD ONE AT", np)
+          added.add(np)
+          n_pos += 1
       at = np
 
-    # vg.print()
     print("n_pos", n_pos, "size", len(added))
     return len(added)
 
@@ -108,7 +108,7 @@ class day06(aoc.aoc):
       iter += 1
       sig = (at, dir_index)
       if sig in vis:
-        break
+        return True
       vis.add(sig)
       np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
       # if blocked ahead, turn right and check again.
