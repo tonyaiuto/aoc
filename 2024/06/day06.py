@@ -71,48 +71,55 @@ class day06(aoc.aoc):
     self.reset()
     at = self.guard_start
     dir_index = 0
-    n_pos = 0
     added = set()
+    hit_wall = 0
     while True:
       np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
       if (np[0] < 0 or np[0] > self.grid.max_x 
           or np[1] < 0 or np[1] > self.grid.max_y):
-        break 
-      hit_wall = False
-      iii = 0
+        break
       while self.grid.get_pos(np) == '#':
-        iii += 1
-        if iii > 1:
-          print("CORNER WALL AT", at)
-        hit_wall = True
         # print('from', at, 'to', np, 'would collide', self.grid.get_pos(np))
-        # would colide
+        hit_wall += 1
+        if hit_wall > 4:
+          print('boxed in at', at)
+          return -1
         dir_index = (dir_index + 1) % 4
         np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
+        if (np[0] < 0 or np[0] > self.grid.max_x 
+            or np[1] < 0 or np[1] > self.grid.max_y):
+          return -1
+        # continue
 
-      if not hit_wall:
+      if hit_wall == 0:
+        # We are ready to move to np
+        assert self.grid.get_pos(np) != '#'
         if self.would_loop(at, dir_index, extra=np):
           if self.doing_sample:
             print("ADD ONE AT", np)
           added.add(np)
-          n_pos += 1
+      hit_wall = 0
       at = np
 
-    print("n_pos", n_pos, "size", len(added))
+    print("size", len(added))
     return len(added)
 
   def would_loop(self, at, dir_index, extra):
-    iter = 0
     vis = set()
     assert at != extra
     assert self.grid.get_pos(at) != '#'
     assert self.grid.get_pos(extra) != '#'
+    start = at
+    iter = 0
     while iter < self.max_loop:
       iter += 1
       sig = (at, dir_index)
       if sig in vis:
+        if self.doing_sample:
+          print('Loop for', extra, start, at)
         return True
       vis.add(sig)
+
       np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
       # if blocked ahead, turn right and check again.
       while (self.grid.get_pos(np) == '#' or np == extra):
