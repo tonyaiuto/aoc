@@ -50,19 +50,21 @@ class day06(aoc.aoc):
     while True:
       visited.add(at)
       np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
+      if (np[0] < 0 or np[0] > self.grid.max_x 
+          or np[1] < 0 or np[1] > self.grid.max_y):
+        break 
       if self.grid.get_pos(np) == '#':
         vg.set(np[0], np[1], '#')
         # print('from', at, 'to', np, 'would collide', self.grid.get_pos(np))
         # would colide
         dir_index = (dir_index + 1) % 4
-        np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
-      if (np[0] < 0 or np[0] > self.grid.max_x 
-          or np[1] < 0 or np[1] > self.grid.max_y):
-        break 
+        continue
+
       at = np
       # print('from', at, 'to', np, self.grid.get_pos(np), 'visited', len(visited))
       # vg.set(at[0], at[1], 'X')
   
+    print("Fell off grid at", np)
     # vg.print()
     return len(visited)
 
@@ -75,32 +77,43 @@ class day06(aoc.aoc):
     hit_wall = 0
     while True:
       np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
+      # Next step will fall off grid
       if (np[0] < 0 or np[0] > self.grid.max_x 
           or np[1] < 0 or np[1] > self.grid.max_y):
         break
-      while self.grid.get_pos(np) == '#':
+      if self.grid.get_pos(np) == '#':
         # print('from', at, 'to', np, 'would collide', self.grid.get_pos(np))
         hit_wall += 1
         if hit_wall > 4:
           print('boxed in at', at)
           return -1
         dir_index = (dir_index + 1) % 4
+        """
+          XXXX
         np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
         if (np[0] < 0 or np[0] > self.grid.max_x 
             or np[1] < 0 or np[1] > self.grid.max_y):
           return -1
-        # continue
+        """
+        continue
 
+      # ??? If we drop the test we get 1833 instead of 1790.
+      # That is unexpected because the fir
       if hit_wall == 0:
         # We are ready to move to np
+        assert self.grid.get_pos(at) != '#'
         assert self.grid.get_pos(np) != '#'
         if self.would_loop(at, dir_index, extra=np):
           if self.doing_sample:
             print("ADD ONE AT", np)
           added.add(np)
-      hit_wall = 0
+      # Move to the new space
       at = np
+      assert not (at[0] < 0 or at[0] > self.grid.max_x 
+            or at[1] < 0 or at[1] > self.grid.max_y)
+      hit_wall = 0
 
+    print("Fell off grid at", np)
     print("size", len(added))
     return len(added)
 
