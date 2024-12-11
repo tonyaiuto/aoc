@@ -88,13 +88,6 @@ class day06(aoc.aoc):
           print('boxed in at', at)
           return -1
         dir_index = (dir_index + 1) % 4
-        """
-          XXXX
-        np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
-        if (np[0] < 0 or np[0] > self.grid.max_x 
-            or np[1] < 0 or np[1] > self.grid.max_y):
-          return -1
-        """
         continue
 
       # ??? If we drop the test we get 1833 instead of 1790.
@@ -126,22 +119,26 @@ class day06(aoc.aoc):
     iter = 0
     while iter < self.max_loop:
       iter += 1
-      sig = (at, dir_index)
-      if sig in vis:
-        if self.doing_sample:
-          print('Loop for', extra, start, at)
-        return True
-      vis.add(sig)
-
       np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
-      # if blocked ahead, turn right and check again.
-      while (self.grid.get_pos(np) == '#' or np == extra):
-        dir_index = (dir_index + 1) % 4
-        np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
       if (np[0] < 0 or np[0] > self.grid.max_x 
           or np[1] < 0 or np[1] > self.grid.max_y):
         return False
-      at = np
+
+      # if blocked ahead, turn right
+      if (self.grid.get_pos(np) == '#' or np == extra):
+        dir_index = (dir_index + 1) % 4
+      else:
+        # We always turn on iter 1
+        assert iter != 1
+        at = np
+        sig = (at, dir_index)
+        if sig in vis:
+          if self.doing_sample:
+            print('Loop for', extra, start, at)
+          return True
+        vis.add(sig)
+
+    assert False
     return True
 
 
