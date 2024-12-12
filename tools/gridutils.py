@@ -26,6 +26,10 @@ DIRS8 = [
 ]
 
 
+def add_vector(a, v):
+  return (a[0]+v[0], a[1]+v[1])
+
+
 def move_in_dir(pos, dir):
   return (pos[0] + dir[0], pos[1] + dir[1])
 
