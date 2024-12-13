@@ -64,20 +64,21 @@ class Prize(object):
       print(self)
 
     # self.x = self.a.x * a_press + self.b.x * b_press
-    a_max = max(100, min(self.x // self.a.x, self.y // self.a.y))
-    b_max = max(100, min(self.x // self.b.x, self.y // self.b.y))
+    a_max = min(100, min(self.x // self.a.x, self.y // self.a.y))
+    b_max = min(100, min(self.x // self.b.x, self.y // self.b.y))
     least_cost = -1
     for a_press in range(a_max):
-      for b_press in range(b_max):
-        if self.x == self.a.x * a_press + self.b.x * b_press:
-          if self.y == self.a.y * a_press + self.b.y * b_press:
-            cost = 3 * a_press + b_press
-            if verbose:
-              print(' prize at %d %d => cost: %d' % (a_press, b_press, cost))
-            if least_cost > 0:
-              least_cost = min(cost, least_cost)
-            else:
-              least_cost = cost
+      left = self.x - self.a.x * a_press
+      b_press = left // self.b.x
+      if b_press <= b_max:
+        if b_press * self.b.x == left:
+          cost = 3 * a_press + b_press
+          if verbose:
+            print(' prize at %d %d => cost: %d' % (a_press, b_press, cost))
+          if least_cost > 0:
+            least_cost = min(cost, least_cost)
+          else:
+            least_cost = cost
     return least_cost
 
 
