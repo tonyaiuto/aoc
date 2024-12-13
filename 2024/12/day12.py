@@ -92,12 +92,14 @@ class day12(aoc.aoc):
             nf.add(npos)
           else:
             perimeter += 1
-            edges.add(find_edge(pos, npos))
+            edge = find_edge(pos, npos)
+            edges.add(edge)
+            assert self.grid.get_pos(pos) == crop
 
       frontier = nf
     if self.doing_sample:
       print("region", crop, "area", len(region), "perimeter", perimeter)
-      print(edges)
+      # print(edges)
     return region, perimeter, edges
     
   def part2(self):
@@ -110,12 +112,12 @@ class day12(aoc.aoc):
         continue
       crop = self.grid.get_pos(pos)
       region, perimeter, edges = self.find_region(pos, crop)
-      perimeter = self.how_many_sides(edges)
+      perimeter = self.how_many_sides(edges, crop)
       ret += len(region) * perimeter
       done.update(region)
     return ret
 
-  def how_many_sides(self, edges):
+  def how_many_sides(self, edges, crop):
     ends = defaultdict(set)
     for edge in edges:
       ends[edge[0]].add(edge)
@@ -134,10 +136,10 @@ class day12(aoc.aoc):
         for pair in itertools.combinations(connections, 2):
           edge = pair[0]
           other = pair[1]
-          new_edge = can_merge(pair[0], pair[1])
+          new_edge = self.can_merge(pair[0], pair[1], crop)
           if not new_edge:
             continue
-          print('comp', edge, other, '=>', new_edge)
+          # print('comp', edge, other, '=>', new_edge)
           ends[edge[0]].remove(edge)
           ends[edge[1]].remove(edge)
           ends[other[0]].remove(other)
@@ -151,36 +153,50 @@ class day12(aoc.aoc):
                  for conns in ends.values()
                  for edge in conns
                 ])
-    print('After reduce', edges)
+    # print('After reduce', edges)
     return len(edges)
 
-def can_merge(a, b):
-  """
-  AAA
-  ABA   Do not merge AB CA
-  CAA
-  """
-  a_head = a[0]
-  a_tail = a[1]
-  b_head = b[0]
-  b_tail = b[1]
-  if a_head == b_head or a_tail == b_tail:
+  def can_merge(self, a, b, crop):
+    """
+    AAA
+    ABA   Do not merge AB CA
+    CAA
+    """
+    a_head = a[0]
+    a_tail = a[1]
+    b_head = b[0]
+    b_tail = b[1]
+    if a_head == b_head or a_tail == b_tail:
+      return None
+    if a_head[X] == a_tail[X]:
+      if a_head[X] == b_head[X] and b_head[X] == b_tail[X]:
+        a_crop_right = self.grid.get_pos(a_head)
+        b_crop_right = self.grid.get_pos(b_head)
+        if not (crop == a_crop_right and crop == b_crop_right):
+          a_crop_left = self.grid.get_pos((a_head[X]-1, a_head[Y]))
+          b_crop_left = self.grid.get_pos((b_head[X]-1, b_head[Y]))
+          if not (crop == a_crop_left and crop == b_crop_left):
+            return False
+        # colinear in column
+        y_min = min(a_head[Y], a_tail[Y], b_head[Y], b_tail[Y])
+        y_max = max(a_head[Y], a_tail[Y], b_head[Y], b_tail[Y])
+        return ((a_head[X], y_min), (a_head[X], y_max))
+    if a_head[Y] == a_tail[Y]:
+      if a_head[Y] == b_head[Y] and b_head[Y] == b_tail[Y]:
+        # colinear in row
+        a_crop_below = self.grid.get_pos(a_head)
+        b_crop_below = self.grid.get_pos(b_head)
+        if not (crop == a_crop_below and crop == b_crop_below):
+          a_crop_above = self.grid.get_pos((a_head[X], a_head[Y]-1))
+          b_crop_above = self.grid.get_pos((b_head[X], b_head[Y]-1))
+          if not (crop == a_crop_above and crop == b_crop_above):
+            return False
+        x_min = min(a_head[X], a_tail[X], b_head[X], b_tail[X])
+        x_max = max(a_head[X], a_tail[X], b_head[X], b_tail[X])
+        return ((x_min, a_head[Y]), (x_max, a_head[Y]))
     return None
-  if a_head[X] == a_tail[X]:
-    if a_head[X] == b_head[X] and b_head[X] == b_tail[X]:
-      # colinear in column
-      y_min = min(a_head[Y], a_tail[Y], b_head[Y], b_tail[Y])
-      y_max = max(a_head[Y], a_tail[Y], b_head[Y], b_tail[Y])
-      return ((a_head[X], y_min), (a_head[X], y_max))
-  if a_head[Y] == a_tail[Y]:
-    if a_head[Y] == b_head[Y] and b_head[Y] == b_tail[Y]:
-      # colinear in row
-      x_min = min(a_head[X], a_tail[X], b_head[X], b_tail[X])
-      x_max = max(a_head[X], a_tail[X], b_head[X], b_tail[X])
-      return ((x_min, a_head[Y]), (x_max, a_head[Y]))
-  return None
 
-assert can_merge(((1, 1), (2, 1)), ((0, 1), (1, 1))) == ((0, 1), (2, 1))
+# assert can_merge(((1, 1), (2, 1)), ((0, 1), (1, 1))) == ((0, 1), (2, 1))
 
 day12.sample_test("""
 AAAA
@@ -205,4 +221,4 @@ MMMISSJEEE
 
 if __name__ == '__main__':
    # 855340 low part2
-  day12.run_and_check('input.txt', expect1=1402544, expect2=None)
+  day12.run_and_check('input.txt', expect1=1402544, expect2=862486)
