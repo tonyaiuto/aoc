@@ -84,19 +84,72 @@ class Prize(object):
     if verbose:
       print(self)
     offset = 10000000000000
-    self.x += offset
-    self.y += offset
+    #self.x += offset
+    #self.y += offset
 
+    # Find the recurance relationship
     a_max = min(self.x // self.a.x, self.y // self.a.y)
+    a_max = 100
     self.least_cost = -1
+    n_solved = 0
+    a_press = 0
+    while n_solved < 3:
+      a_press += 1
+      left = self.target - self.n_a * a_press
+      b_press = left // self.n_b
+      if (b_press > 0) and (b_press * self.n_b == left):
+        # we have a solution
+        cost = 3 * a_press + b_press
+        if n_solved == 0:
+          base_a = a_press
+          base_b = b_press
+          base_cost = cost
+        elif n_solved == 1:
+          delta_a = a_press - base_a
+          delta_b = b_press - base_b
+          delta1_cost = cost
+        elif n_solved == 2:
+          assert a_press == base_a + 2 * delta_a
+          assert b_press == base_b + 2 * delta_b
+          delta2_cost = cost
+        n_solved += 1
+        if verbose:
+          print(' solution at %d %d => cost: %d' % (a_press, b_press, cost))
+
+    # Ax = base_a + delta_a * N
+    # Bx = base_b + delta_b * N
+    # This is all wrong...
+    # COST = 3 * (base_a + delta_a * N) + (base_b + delta_b * N)
+    # COST = 3 * base_a + 3 * delta_a * N + base_b + delta_b * N
+    # COST = 3 * base_a + base+b + N * (3 * delta_a + delta_b)
+
+    def n_to_cost(n):
+      return 3 * base_a + base_b + n * (3 * delta_a + delta_b)
+
+    if verbose:
+      print("costs 0..2:", n_to_cost(0), n_to_cost(1), n_to_cost(2))
+    assert n_to_cost(0) == base_cost
+    assert n_to_cost(1) == delta1_cost
+    assert n_to_cost(2) == delta2_cost
+
+    # solve for 
+    # self.x = A * self.a.x + B * self.b.x
+    # self.x = (base_a + delta_a * N) * self.a.x + (base_b + delta_b * N) * self.b.x
+    # self.x = (base_a + delta_a * N) * self.a.x + (base_b + delta_b * N) * self.b.x
+    # self.x = base_a * self.a.x + base_b * self.b.x  + delta_a * N * self.a.x + (base_b + delta_b * N) * self.b.x
+
 
     lower = 1
-    upper = a_max
-
+    upper = self.x / self.a.x  # suspect this is wrong
+    self.least_cost = 17
     """
     while True:
       midpoint = (upper - lower) // 2 + lower
       cost = self.press2cost(a_press)
+
+    left = self.x - self.a.x * a_press
+    b_press = left // self.b.x
+    if b_press * self.b.x == left:
 
     for a_press in range(a_max):
       #if a_press % 1000 == 0:
@@ -104,7 +157,6 @@ class Prize(object):
       least_cost = self.press2cost(a_press)
     """
     return self.least_cost
-
 
   def press2cost(self, a_press, b_max=0, verbose=False):
     left = self.x - self.a.x * a_press
@@ -176,6 +228,8 @@ class day13(aoc.aoc):
       cost = prize.least_cost2(verbose=self.doing_sample)
       if cost > 0:
         ret += cost
+      if not self.doing_sample:
+        break
     return ret
 
 
@@ -196,7 +250,7 @@ Button A: X+69, Y+23
 Button B: X+27, Y+71
 Prize: X=18641, Y=10279
 
-""", expect1=480, expect2=None)
+""", expect1=480, expect2=17)
 
 
 if __name__ == '__main__':
