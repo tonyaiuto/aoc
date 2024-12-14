@@ -49,6 +49,7 @@ class Prize(object):
     Prize.prize_parser.parse(self, line)
     self.a = a
     self.b = b
+    self.least_cost = -1
 
   def set_a(self, line):
     Prize.button_parser.parse(self, line)
@@ -63,23 +64,55 @@ class Prize(object):
     if verbose:
       print(self)
 
-    # self.x = self.a.x * a_press + self.b.x * b_press
-    a_max = min(100, min(self.x // self.a.x, self.y // self.a.y))
-    b_max = min(100, min(self.x // self.b.x, self.y // self.b.y))
-    least_cost = -1
+    a_max = min(100, self.x // self.a.x, self.y // self.a.y)
+    b_max = min(100, self.x // self.b.x, self.y // self.b.y)
+    self.least_cost = -1
     for a_press in range(a_max):
-      left = self.x - self.a.x * a_press
-      b_press = left // self.b.x
-      if b_press <= b_max:
-        if b_press * self.b.x == left:
-          cost = 3 * a_press + b_press
-          if verbose:
-            print(' prize at %d %d => cost: %d' % (a_press, b_press, cost))
-          if least_cost > 0:
-            least_cost = min(cost, least_cost)
-          else:
-            least_cost = cost
-    return least_cost
+      cost = self.try_press(a_press, b_max=b_max, verbose=verbose)
+      if cost <= 0:
+        continue
+      if self.least_cost > 0:
+        self.least_cost = min(cost, self.least_cost)
+      else:
+        self.least_cost = cost
+    return self.least_cost
+
+  def least_cost2(self, verbose=False):
+    if verbose:
+      print(self)
+    offset = 10000000000000
+
+    a_max = min((self.x + offset) // self.a.x, (self.y + offset) // self.a.y)
+    self.least_cost = -1
+
+    lower = 1
+    upper = a_max
+
+    """
+    while True:
+      midpoint = (upper - lower) // 2 + lower
+      cost = self.try_press(a_press)
+j
+    for a_press in range(a_max):
+      #if a_press % 1000 == 0:
+      #  print("apress", a_press)
+      least_cost = self.try_press(a_press)
+    """
+    return self.least_cost
+
+  def try_press(self, a_press, b_max=0, verbose=False):
+    left = self.x - self.a.x * a_press
+    b_press = left // self.b.x
+    if b_press * self.b.x == left:
+      if self.y == a_press * self.a.y + b_press * self.b.y:
+        # we have a solution
+        if b_max > 0 and b_press > b_max:
+          return
+        cost = 3 * a_press + b_press
+        if verbose:
+          print(' prize at %d %d => cost: %d' % (a_press, b_press, cost))
+        return cost
+    return -1
 
 
 class day13(aoc.aoc):
@@ -128,8 +161,12 @@ class day13(aoc.aoc):
   def part2(self):
     print('===== Start part 2')
     self.reset()
-
-    return 42
+    ret = 0
+    for prize in self.prizes:
+      cost = prize.least_cost2(verbose=self.doing_sample)
+      if cost > 0:
+        ret += cost
+    return ret
 
 
 day13.sample_test("""
@@ -149,7 +186,7 @@ Button A: X+69, Y+23
 Button B: X+27, Y+71
 Prize: X=18641, Y=10279
 
-""", expect1=480, expect2=7)
+""", expect1=480, expect2=None)
 
 
 if __name__ == '__main__':
