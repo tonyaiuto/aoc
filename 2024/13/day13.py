@@ -2,13 +2,8 @@
 "AOC 2023: day 13"
 
 from collections import defaultdict
-import copy
-import heapq
-import itertools
-import math
 
 from tools import aoc
-from tools import gridutils
 from tools import qparser
 
 
@@ -50,9 +45,15 @@ class Prize(object):
     self.a = a
     self.b = b
     self.least_cost = -1
-
-  def set_a(self, line):
-    Prize.button_parser.parse(self, line)
+    # subract the two linear equations.
+    if self.x > self.y:
+      self.target = self.x - self.y
+      self.n_a = self.a.x - self.a.y
+      self.n_b = self.b.x - self.b.y
+    else:
+      self.target = self.y - self.x
+      self.n_a = self.a.y - self.a.x
+      self.n_b = self.b.y - self.b.x
 
   def __repr__(self):
     return 'prize: %5d %5d' % (self.x, self.y)
@@ -63,12 +64,14 @@ class Prize(object):
   def least_cost1(self, verbose=False):
     if verbose:
       print(self)
-
     a_max = min(100, self.x // self.a.x, self.y // self.a.y)
     b_max = min(100, self.x // self.b.x, self.y // self.b.y)
     self.least_cost = -1
     for a_press in range(a_max):
-      cost = self.try_press(a_press, b_max=b_max, verbose=verbose)
+      cost = self.press2cost(a_press, b_max=b_max, verbose=verbose)
+      # cost_alt = self.press2cost_alt(a_press, b_max=b_max, verbose=verbose)
+      # if cost != cost_alt:
+      #   print("cost diff", cost, cost_alt)
       if cost <= 0:
         continue
       if self.least_cost > 0:
@@ -81,8 +84,10 @@ class Prize(object):
     if verbose:
       print(self)
     offset = 10000000000000
+    self.x += offset
+    self.y += offset
 
-    a_max = min((self.x + offset) // self.a.x, (self.y + offset) // self.a.y)
+    a_max = min(self.x // self.a.x, self.y // self.a.y)
     self.least_cost = -1
 
     lower = 1
@@ -91,27 +96,41 @@ class Prize(object):
     """
     while True:
       midpoint = (upper - lower) // 2 + lower
-      cost = self.try_press(a_press)
-j
+      cost = self.press2cost(a_press)
+
     for a_press in range(a_max):
       #if a_press % 1000 == 0:
       #  print("apress", a_press)
-      least_cost = self.try_press(a_press)
+      least_cost = self.press2cost(a_press)
     """
     return self.least_cost
 
-  def try_press(self, a_press, b_max=0, verbose=False):
+
+  def press2cost(self, a_press, b_max=0, verbose=False):
     left = self.x - self.a.x * a_press
     b_press = left // self.b.x
     if b_press * self.b.x == left:
       if self.y == a_press * self.a.y + b_press * self.b.y:
         # we have a solution
         if b_max > 0 and b_press > b_max:
-          return
+          return -1
         cost = 3 * a_press + b_press
         if verbose:
           print(' prize at %d %d => cost: %d' % (a_press, b_press, cost))
         return cost
+    return -1
+
+  def press2cost_alt(self, a_press, b_max=0, verbose=False):
+    left = self.target - self.n_a * a_press
+    b_press = left // self.n_b
+    if b_press * self.n_b == left:
+      # we have a solution
+      if b_press < 0 or (b_max > 0 and b_press > b_max):
+        return -1
+      cost = 3 * a_press + b_press
+      if verbose:
+        print(' prize at %d %d => cost: %d (alt)' % (a_press, b_press, cost))
+      return cost
     return -1
 
 
@@ -128,11 +147,6 @@ class day13(aoc.aoc):
     self.trace = True
     self.prizes = []
     
-
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     a = Button(line[0])
@@ -142,9 +156,6 @@ class day13(aoc.aoc):
       print(prize)
     self.prizes.append(prize)
 
-  def post_load(self):
-    # called after all input is read
-    pass
 
   def part1(self):
     print('===== Start part 1')
@@ -154,7 +165,6 @@ class day13(aoc.aoc):
       cost = prize.least_cost1(verbose=self.doing_sample)
       if cost > 0:
         ret += cost
-
     return ret
 
 
