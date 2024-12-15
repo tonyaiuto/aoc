@@ -100,6 +100,7 @@ class day15(aoc.aoc):
     return ret
 
   def double_map(self):
+    self.robot_x *= 2
     ng = gridutils.Grid()
     for y in range(self.grid.max_y+1):
       for x in range(self.grid.max_x+1):
@@ -123,7 +124,76 @@ class day15(aoc.aoc):
     if self.doing_sample:
       self.grid.print()
 
-    return 42
+    pos = (self.robot_x, self.robot_y)
+    n = 0
+    for move in self.moves:
+      pos = self.do_move2(pos, move)
+      n += 1
+      if n < 5 and self.doing_sample:
+        self.grid.set_pos(pos, '@')
+        self.grid.print()
+        self.grid.set_pos(pos, '.')
+    self.grid.print()
+    return self.lantern_gps()
+
+  def do_move2(self, pos, move):
+    new_pos = gridutils.add_vector(pos, move_dir[move])
+    c = self.grid.get_pos(new_pos)
+    if c == '#':
+      return pos
+    if c == '.':
+      return new_pos
+    assert c in ('[', ']')
+
+    # left right are easy. probably can be combined with up
+    # down, but doing this is practice
+    if move in ('<', '>'):
+      np = new_pos
+      while True:
+        np = gridutils.add_vector(np, move_dir[move])
+        c = self.grid.get_pos(np)
+        if c in ('[', ']'):
+          continue
+        if c == '#':
+          return pos
+        assert c == '.'
+        # Found the gap, move them over
+        x = new_pos[0]
+        y = new_pos[1]
+        assert y == np[1]
+        nx = np[0]
+        if nx > x:  # push right
+          while nx > x:
+            self.grid.set(nx, y, self.grid.get(nx-1, y))
+            nx -= 1
+        else:
+          while nx < x:
+            self.grid.set(nx, y, self.grid.get(nx+1, y))
+            nx += 1
+        # since the robot pushed the block out of the way
+        # make it empty
+        self.grid.set_pos(new_pos, '.')
+        return new_pos
+
+    # find line of O to wall
+    """
+    heads = set([new_pos])
+    while len(heads) > 0:
+      for head in heads:
+        np = gridutils.add_vector(head, move_dir[move])
+        c = self.grid.get_pos(np)
+        if c in ('[', ']'):
+          # STACK EM
+          continue
+        if c == '#':
+          return pos
+        assert c == '.'
+
+      self.grid.set_pos(new_pos, '.')
+      self.grid.set_pos(np, 'O')
+      return new_pos
+    """
+    return new_pos
 
 
 day15.sample_test("""
