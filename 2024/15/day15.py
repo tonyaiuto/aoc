@@ -45,6 +45,8 @@ class day15(aoc.aoc):
       if '@' in line:
         self.robot_x = line.find('@')
         self.robot_y = self.grid.height
+        # turn it back to free space
+        self.grid.set(self.robot_x, self.robot_y, '.')
     else:
       self.moves = self.moves + line
 
@@ -62,7 +64,6 @@ class day15(aoc.aoc):
       print(self.robot_x, self.robot_y)
 
     pos = (self.robot_x, self.robot_y)
-    self.grid.set_pos(pos, '.')
     for move in self.moves:
       pos = self.do_move(pos, move)
     self.grid.print()
@@ -98,10 +99,29 @@ class day15(aoc.aoc):
         ret += 100 * pos[1] + pos[0]
     return ret
 
+  def double_map(self):
+    ng = gridutils.Grid()
+    for y in range(self.grid.max_y+1):
+      for x in range(self.grid.max_x+1):
+        c = self.grid.get(x, y)
+        if c in ('#', '.'):
+          ng.set(2*x, y, c)
+          ng.set(2*x+1, y, c)
+        elif c == 'O':
+          ng.set(2*x, y, '[')
+          ng.set(2*x+1, y, ']')
+        else:
+          print("WTF", x, y, c)
+          sys.exit(1)
+    self.grid = ng
+
 
   def part2(self):
     print('===== Start part 2')
     self.reset()
+    self.double_map()
+    if self.doing_sample:
+      self.grid.print()
 
     return 42
 
