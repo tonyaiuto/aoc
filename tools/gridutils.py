@@ -213,6 +213,10 @@ class Grid(object):
     self.max_y = max(self.max_y, y)
     self.points[(x, y)] = value
 
+  def set_pos(self, pos, value):
+     return self.set(pos[0], pos[1], value)
+
+
   def unset(self, x, y):
     del self.points[(x, y)]
  
