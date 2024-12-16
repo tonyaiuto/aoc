@@ -35,6 +35,7 @@ class day15(aoc.aoc):
     self.grid = gridutils.Grid()
     self.in_grid = True
     self.moves = ''
+    self.verbose = 2
 
   def do_line(self, line):
     if not line:
@@ -51,14 +52,9 @@ class day15(aoc.aoc):
     else:
       self.moves = self.moves + line
 
-  def post_load(self):
-    # called after all input is read
-    pass
-
 
   def part1(self):
     print('===== Start part 1')
-    self.reset()
     if self.doing_sample:
       self.grid.print()
       print(self.moves)
@@ -96,7 +92,7 @@ class day15(aoc.aoc):
   def lantern_gps(self):
     ret = 0
     for pos in self.grid.live_cells():
-      if self.grid.get_pos(pos) == 'O':
+      if self.grid.get_pos(pos) in ('O', '['):
         ret += 100 * pos[1] + pos[0]
     return ret
 
@@ -120,21 +116,13 @@ class day15(aoc.aoc):
 
   def part2(self):
     print('===== Start part 2')
-    self.reset()
     self.double_map()
     if self.doing_sample:
       self.grid.print()
 
     pos = (self.robot_x, self.robot_y)
-    n = 0
     for move in self.moves:
       pos = self.do_move2(pos, move)
-      n += 1
-      #if n < 10 and self.doing_sample:
-      #  print("====== Move", n)
-      #  self.grid.set_pos(pos, '@')
-      #  self.grid.print()
-      #  self.grid.set_pos(pos, '.')
     self.grid.print()
     return self.lantern_gps()
 
@@ -182,7 +170,6 @@ class day15(aoc.aoc):
 
     # find up/down group of [] to wall 
     to_move = set()
-    to_clear = set()
     heads = set([new_pos])
     c = self.grid.get_pos(new_pos)
     if c == '[':
@@ -190,7 +177,6 @@ class day15(aoc.aoc):
     else:
       heads.add(gridutils.add_vector(new_pos, DIRS[3]))
     to_move = set(heads)
-    to_clear = set(heads)
     while len(heads) > 0:
       new_heads = set()
       last_heads = set(heads)
@@ -206,48 +192,34 @@ class day15(aoc.aoc):
           if c == '[':
             move_to_pos = gridutils.add_vector(np, DIRS[1])
             new_heads.add(move_to_pos)
-            if move_to_pos not in to_move:
-              to_clear.add(move_to_pos)
             to_move.add(move_to_pos)
-            #clear_pos = gridutils.add_vector(move_to_pos, REV_DIR[move])
-            #if clear_pos not in to_move and move_to_pos not in heads:
-            #  to_clear.add(clear_pos)
           else:
             move_to_pos = gridutils.add_vector(np, DIRS[3])
             new_heads.add(move_to_pos)
-            if move_to_pos not in to_move:
-              to_clear.add(move_to_pos)
             to_move.add(move_to_pos)
-            #clear_pos = gridutils.add_vector(move_to_pos, REV_DIR[move])
-            #if clear_pos not in to_move and move_to_pos not in heads:
-            #  to_clear.add(clear_pos)
         else:
           assert c == '.'
-      if self.doing_sample:
-        print("Heads from ", heads, 'to', new_heads,"moving", to_move, "clearing", to_clear)
+      if self.doing_sample and self.verbose > 0:
+        print(move, "Heads from ", heads, 'to', new_heads,"moving", to_move)
       heads = new_heads
     if last_heads:
-      if self.doing_sample:
-        print("final heads at", last_heads, 'moving', to_move, 'clearing', to_clear)
+      if self.doing_sample and self.verbose > 1:
+        print(move, "final heads at", last_heads, 'moving', to_move)
         self.grid.set_pos(pos, '@')
         self.grid.print()
         self.grid.set_pos(pos, '.')
+
       if move == '^':
-        # Move down from y
-        for cell in sorted(to_move, key=lambda x: x[1], reverse=True):
+        # Move up from y
+        for cell in sorted(to_move, key=lambda x: x[1]):
           above = (cell[0], cell[1]-1)
           self.grid.set_pos(above, self.grid.get_pos(cell))
+          self.grid.set_pos(cell, '.')
       else:
-        for cell in sorted(to_move, key=lambda x: x[1]):
+        for cell in sorted(to_move, key=lambda x: x[1], reverse=True):
           below = (cell[0], cell[1]+1)
           self.grid.set_pos(below, self.grid.get_pos(cell))
-
-      print("clearing", to_clear)
-      for cell in to_clear:
-        self.grid.set_pos(cell, '.')
-      self.grid.set_pos(new_pos, '@')
-      self.grid.print()
-      self.grid.set_pos(new_pos, '.')
+          self.grid.set_pos(cell, '.')
 
     return new_pos
 
@@ -274,8 +246,8 @@ vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
 <><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
 ^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
 v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
-""", expect1=10092, expect2=7)
+""", expect1=10092, expect2=9021)
 
 
 if __name__ == '__main__':
-  day15.run_and_check('input.txt', expect1=1487337, expect2=9021)
+  day15.run_and_check('input.txt', expect1=1487337, expect2=1521952)
