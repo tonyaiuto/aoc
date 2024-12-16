@@ -109,15 +109,20 @@ class day14(aoc.aoc):
     """
   
     move = 0
-    while move < 20000:
+    # 224438715
+    while move < 200000000:
       move += 1
+      if move % 10000 == 0:
+        print('move', move)
+
 
       points = set()
       grid = gridutils.Grid(default_cell='.')
       for r in self.robots:
         nx, ny = self.move_robot(r, move)
         grid.set(nx, ny, 'X')
-      # grid.print(show_row_numbers=True)
+        print("------------------")
+        grid.print()
 
       last_y = -1
       tree = True
