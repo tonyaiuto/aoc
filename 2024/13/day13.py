@@ -113,7 +113,7 @@ class Prize(object):
           delta2_cost = cost
         n_solved += 1
         if verbose:
-          print(' solution at %d %d => cost: %d' % (a_press, b_press, cost))
+          print(' pattern at %d %d => cost: %d' % (a_press, b_press, cost))
 
     # Ax = base_a + delta_a * N
     # Bx = base_b + delta_b * N
@@ -125,6 +125,7 @@ class Prize(object):
       return 3 * base_a + base_b + n * (3 * delta_a + delta_b)
 
     if verbose:
+      print("base/delta, a/b", base_a, delta_a, base_b, delta_b)
       print("costs 0..2:", n_to_cost(0), n_to_cost(1), n_to_cost(2))
     assert n_to_cost(0) == base_cost
     assert n_to_cost(1) == delta1_cost
@@ -134,28 +135,45 @@ class Prize(object):
     # self.x = A * self.a.x + B * self.b.x
     # self.x = (base_a + delta_a * N) * self.a.x + (base_b + delta_b * N) * self.b.x
     # self.x = (base_a + delta_a * N) * self.a.x + (base_b + delta_b * N) * self.b.x
-    # self.x = base_a * self.a.x + base_b * self.b.x  + delta_a * N * self.a.x + (base_b + delta_b * N) * self.b.x
+    # self.x = base_a * self.a.x + base_b * self.b.x + (delta_a * self.a.x + delta_b * self.b.x) * N
+    # self.x = base_a * self.a.x + base_b * self.b.x + (delta_a * self.a.x + delta_b * self.b.x) * N
+    # self.x = base_a + delta_a * midpoint + base_b + delta_b * midpoint
 
+    # self.x = (base_a + delta_a * N) * self.a.x + (base_b + delta_b * N) * self.b.x
 
     # limits of N range
+    target_x = self.x + offset - base_a * self.a.x - base_b * self.b.x
+    target_y = self.y + offset - base_a * self.a.y - base_b * self.b.y
+    # assert N * delta_a * self.x == target_x
+
+
     lower = 1
-    max_a = max((self.x + offset) // self.a.x, (self.y + offset) // self.a.y)
-    max_b = max((self.x + offset) // self.b.x, (self.y + offset) // self.b.y)
+    max_a = min(target_x // self.a.x, (self.y + offset) // self.a.y)
+    max_b = min(target_x // self.b.x, (self.y + offset) // self.b.y)
     max_an = (max_a - base_a) // delta_a
     max_bn = (max_b - base_b) // delta_b
-    upper = max(max_an, max_bn)
+    upper = min(max_an, max_bn)
 
     print("N from", lower, "to", upper)
-    target = self.x + offset
     while upper > lower + 2:
       midpoint = (upper - lower) // 2 + lower
       x = base_a + delta_a * midpoint + base_b + delta_b * midpoint
-      if x > target:
+      if x > target_x:
         break
       # 113636363729
       # 10000000007870
       lower = midpoint
     print("rebound N from", lower, "to", upper)
+
+    for n in range(lower, lower+5):
+      a_press = base_a + delta_a * n
+      b_press = base_b + delta_b * n
+      got_x = self.a.x * a_press + self.b.x * b_press
+      got_y = self.a.y * a_press + self.b.y * b_press
+      off_x = self.x + offset - got_x
+      off_y = self.y + offset - got_y
+      print(n, '#a,b', a_press, b_press, '=>', got_x, got_y, 'offby', off_x, off_y)
+
   
     for n in range(lower-10000, upper+1):
       a_press = base_a + delta_a * n
