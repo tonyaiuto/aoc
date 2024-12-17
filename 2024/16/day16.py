@@ -64,12 +64,12 @@ class day16(aoc.aoc):
       new_heads = []
       for p in heads:
         for nxt, cost in self.possible_moves(p):
-          v = visited.get(nxt)
+          prev_cost = visited.get(nxt)
           if nxt[0] == self.end:
             # print("===================== end", nxt)
             end_costs.add(cost)
-          if v and v <= cost:
-            # print('got to', nxt, 'at cost', v, '<', cost)
+          if prev_cost and prev_cost <= cost:
+            # print('got to', nxt, 'at cost', prev_cost, '<', cost)
             continue
           new_heads.append(Head(nxt[0], nxt[1], cost))
           visited[nxt] = cost
@@ -104,24 +104,62 @@ class day16(aoc.aoc):
     visited = {(initial.pos, initial.dir): 0}
     print(self.possible_moves(initial))
     end_costs = set()
+    best_end = -1
     for n in range(self.grid.width * self.grid.height):
       new_heads = []
       for p in heads:
         for nxt, cost in self.possible_moves(p):
-          v = visited.get(nxt)
-          if nxt[0] == self.end:
-            # print("===================== end", nxt)
-            end_costs.add(cost)
-          if v and v < cost:
-            # print('got to', nxt, 'at cost', v, '<', cost)
+          prev_cost = visited.get(nxt)
+          if prev_cost and prev_cost < cost:
+            # print('got to', nxt, 'at cost', prev_cost, '<', cost)
             continue
+          if nxt[0] == self.end:
+            print("===================== end", nxt, cost)
+            if best_end < 0 or cost < best_end:
+              best_end = cost
+              # visited now has the lowest costs
+              pos_costs = [{cell_dir[0]: cost for cell_dir, cost in visited.items()}]
+            elif cost == best_end:
+              best_end = cost
+              # visited now has the lowest costs
+              pos_costs.append({cell_dir[0]: cost for cell_dir, cost in visited.items()})
+            end_costs.add(cost)
           new_heads.append(Head(nxt[0], nxt[1], cost))
           visited[nxt] = cost
       heads = new_heads
-    if self.doing_sample:
-      cells = set([v[0] for v in visited.keys()])
-      print(cells)
-      print(len(cells))
+
+    # visited now has the lowest costs
+    costs = {cell_dir[0]: cost for cell_dir, cost in visited.items()}
+
+    for pc in pos_costs:
+      i = 0
+      keys = list(pc.keys())
+      for i in range(1, len(pc), 8):
+        print(",  ".join(["%-9s= %4d" % (key, pc[key]) for key in keys[i:i+8]]))
+      
+    # print(pos_costs)
+    pos = self.end
+    ends = [self.end]
+    for n in range(10):
+      new_ends = []
+      for end in ends:
+        lc = costs[end]
+        print("at", end, 'lc=', lc)
+        for dir in range(4):
+          np = gridutils.add_vector(end, DIRS[dir])
+          if np not in costs:
+            print('loser', np)
+            continue
+          from_cost = costs[np]
+          if from_cost < lc:
+            best = [np]
+            lc = from_cost
+          elif from_cost == lc:
+            best.append(np)
+        print("back to", best)
+        new_ends.extend(list(best))
+      ends = new_ends
+
     return min(end_costs)
 
   def possible_moves(self, path):
@@ -158,7 +196,7 @@ day16.sample_test("""
 #.###.#.#.#.#.#
 #S..#.....#...#
 ###############
-""", expect1=7036, expect2=None)
+""", expect1=7036, expect2=45)
 
 
 if __name__ == '__main__':
