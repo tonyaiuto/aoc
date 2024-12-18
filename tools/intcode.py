@@ -141,6 +141,18 @@ class Intcode(object):
         print(before, '->', self.reg_str())
     return
 
+  def mem_at(self, reg):
+    """Returns memory pointed to by a register.
+
+    Essentially, register indirect.
+    """
+    if reg == 'pc':
+      return self.mem[self.pc]
+    return self.mem[self.registers[reg]]
+
+  def inc_pc(self):
+    self.pc = (self.pc + 1) % len(self.mem)
+
   def reg_str(self):
     if self.registers:
       return ','.join(['%c:%3d' % (r, self.registers[r]) for r in self.register_names])
