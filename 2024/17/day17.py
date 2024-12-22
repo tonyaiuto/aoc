@@ -144,6 +144,9 @@ class day17(aoc.aoc):
 
     while self.comp.pc < len(self.comp.mem):
       self.comp.step(self.comp.mem[self.comp.pc], verbose=self.doing_sample)
+      if self.comp.reg('B') > 7:
+        print("B went nuts", self.comp.reg('B'))
+        return -1
 
     output = self.comp.read_output()
     print('OUTPUT', output)
@@ -154,7 +157,7 @@ class day17(aoc.aoc):
     self.comp.in_part2 = True
 
     start_a = 0
-    while start_a < 2000000000:
+    while start_a < 200000:
       if start_a % 10000 == 0:
         print("== Part 2: A=%d" % start_a)
       self.reset()
@@ -162,6 +165,9 @@ class day17(aoc.aoc):
       # self.comp.print()
       while self.comp.pc < len(self.comp.mem):
         self.comp.step(self.comp.mem[self.comp.pc])
+        if self.comp.reg('B') > 7:
+          print("B went nuts", self.comp.reg('B'))
+          return -1
         if self.comp.out_fail:
           break
       output = self.comp.read_output()
