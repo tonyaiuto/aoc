@@ -98,22 +98,28 @@ def make_numeric_shortest_map():
   map[10][6] = set(['^^'])
   map[10][9] = set(['^^^'])
   for key in range(1, 10):
-    if key % 3 == 1:
+    if key % 3 == 1:  # 1, 4, 7
       map[key].update({key+1: set(['>']), key+2: set(['>>'])})
-      #if key < 7:
-      #  map[key].update({key+4: set(['>^', '^>'])})
-      #if key < 4:
-      #  map[key].update({key+7: set(['>^^', '^>^', '^^>'])})
-      #if key > 1:
-      #  map[key].update({key-2: set(['>^', '^>'])})
-    elif key % 3 == 2:
+      if key + 4 <= 9:
+        map[key][key+4] = set(['>^', '^>'])
+      if key + 7 <= 9:
+        map[key][key+7] = set(['>^^', '^>^', '^^>'])
+    elif key % 3 == 2:  # 2, 6, 8
       map[key].update({key-1: set(['<']), key+1: set(['>'])})
-      #if key < 7:
-      #  map[key].update({key+4: set(['>^', '^>'])})
-      #if key < 4:
-      #  map[key].update({key+7: set(['>^^', '^>^', '^^>'])})
-    else:
+      if key + 4 <= 9:
+        map[key][key+4] = set(['>^', '^>'])
+      if key + 7 <= 9:
+        map[key][key+7] = set(['>^^', '^>^', '^^>'])
+      if key + 2 <= 9:
+        map[key][key+2] = set(['<^', '^<'])
+      if key + 5 <= 9:
+        map[key][key+5] = set(['<^^', '^<^', '^^<'])
+    else:  # 3, 6, 9
       map[key].update({key-1: set(['<']), key-2: set(['<<'])})
+      if key + 2 <= 9:
+        map[key][key+2] = set(['<^', '^<'])
+      if key + 5 <= 9:
+        map[key][key+5] = set(['<^^', '^<^', '^^<'])
 
     if (key-1) //  3 == 0:
       map[key].update({key+3: set(['^']), key+6: set(['^^'])})
@@ -122,6 +128,7 @@ def make_numeric_shortest_map():
     elif (key-1) // 3 == 2:
       map[key].update({key-3: set(['v']), key-6: set(['vv'])})
 
+  print_map(map)
   """
   for key in range(0, 11):
     directs = map[key].keys()
@@ -130,7 +137,7 @@ def make_numeric_shortest_map():
         map[key][ok] = set()
   """
 
-  print_map(map)
+  """
   for key in range(0, 11):
     my_moves = dict(map[key])
     directs = list(map[key].keys())
@@ -161,6 +168,7 @@ def make_numeric_shortest_map():
               assert new_len < cur_path_len
               map[key][other_key] = set([new_moves])
               print("Replacing path from", key, "to", other_key, 'via', direct, new_moves)
+  """
   """
     for to_key in range(key+1, 11):
       to_moves = my_moves.get(to_key)
