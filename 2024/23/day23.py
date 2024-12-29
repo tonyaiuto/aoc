@@ -2,13 +2,8 @@
 "AOC 2023: day 23"
 
 from collections import defaultdict
-import copy
-import heapq
-import itertools
-import math
 
 from tools import aoc
-from tools import gridutils
 
 
 class Comp(object):
@@ -46,6 +41,9 @@ class Comp(object):
   def __str__(self):
     return str(self.name)
 
+  def __lt__(self, other):
+    return self.name < other.name
+
   @property
   def connections(self):
     return self.connects
@@ -71,7 +69,6 @@ class day23(aoc.aoc):
     Comp.reset()
 
   def do_line(self, line):
-    # called for each line of input
     parts = line.split('-')
     a = Comp.get(parts[0])
     b = Comp.get(parts[1])
@@ -81,36 +78,61 @@ class day23(aoc.aoc):
     assert len(Comp.all()) == len(Comp.all_names())
 
   def post_load(self):
-    # called after all input is read
     if self.doing_sample:
       print(Comp.all())
     print("len_comp", len(Comp.all()))
 
   def part1(self):
     print('===== Start part 1')
-    self.reset()
+    triplets = self.find_triplets(filter_t=True)
+    return len(triplets)
 
+  def find_triplets(self, filter_t=False):
     triplets = set()
     for comp in Comp.all():
-      if comp.name[0] != 't':
+      if filter_t and comp.name[0] != 't':
         continue
       for other in comp.connections:
         # print(comp, 'checking', other)
         assert comp != other
         for third in other.connections:
           if third.connects_to(comp):
-            key = ','.join(sorted([comp.name, other.name, third.name]))
+            # key = ','.join(sorted([comp.name, other.name, third.name]))
             # print('adding', key, 'for', comp.name, other.name, third.name)
+            key = tuple(sorted([comp, other, third]))
             triplets.add(key)
+    return triplets
 
-    # print(sorted(triplets))
-    return len(triplets)
+  def expand_clusters(self):
+    clusters = self.find_triplets()
+
+    # can we expand this cluster
+    while True:
+      new_c = set()     
+      for cluster in clusters:
+        possible = defaultdict(int)
+        for comp in cluster:
+          for other in comp.connections:
+            if other not in cluster:
+              possible[other] += 1
+        for other, count in possible.items():
+          assert count <= len(cluster)
+          if count == len(cluster):
+            key = tuple(sorted(list(cluster) + [other]))
+            # print('can expand', cluster, other, key)
+            new_c.add(key)
+      if len(new_c) == 0:
+        assert len(clusters) == 1
+        break
+      clusters = new_c
+    return clusters
 
 
   def part2(self):
     print('===== Start part 2')
 
-    return 42
+    clusters = self.expand_clusters()
+    return ','.join([c.name for c in list(clusters)[0]])
 
 
 day23.sample_test("""
@@ -146,9 +168,9 @@ co-tc
 wh-qp
 tb-vc
 td-yn
-""", expect1=7, expect2=None)
+""", expect1=7, expect2='co,de,ka,ta')
 
 
 if __name__ == '__main__':
   # part1: 1420 too high
-  day23.run_and_check('input.txt', expect1=None, expect2=None)
+  day23.run_and_check('input.txt', expect1=1411, expect2='aq,bn,ch,dt,gu,ow,pk,qy,tv,us,yx,zg,zu')
