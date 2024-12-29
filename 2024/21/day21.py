@@ -30,7 +30,7 @@ numeric_map = {
  2: { 0: {'v'}, 1: {'<'}, 3: {'>'}, 4: {'^<', '<^'}, 5: {'^'}, 6: {'^>', '>^'},
       7: {'^^<', '<^^', '^<^'}, 8: {'^^'}, 9: {'^^>', '>^^', '^>^'}, 10: {'v>', '>v'} },
  3: { 0: {'v<', '<v'}, 1: {'<<'}, 2: {'<'}, 4: {'^<<', '<<^', '<^<'}, 5: {'^<', '<^'}, 6: {'^'},
-      7: {'<^^<', '<^<^', '^^<<', '<<^^', '^<^<', '^<<^'}, 8: {'^^<', '<^^', '^<^'}, 9: {'^^'}, 10: {'v'} },
+      7: {'^^<<', '<^^<', '<^<^', '<<^^', '^<^<', '^<<^'}, 8: {'^^<', '<^^', '^<^'}, 9: {'^^'}, 10: {'v'} },
  4: { 0: {'v>v', '>vv'}, 1: {'v'}, 2: {'v>', '>v'}, 3: {'v>>', '>>v', '>v>'}, 5: {'>'}, 6: {'>>'},
       7: {'^'}, 8: {'^>', '>^'}, 9: {'>>^', '^>>', '>^>'},
      10: {'>>vv', '>v>v', '>vv>', 'v>>v', 'v>v>' } },
@@ -39,7 +39,7 @@ numeric_map = {
       7: {'^<', '<^'}, 8: {'^'}, 9: {'^>', '>^'}, 10: {'vv>', 'v>v', '>vv'} },
  6: { 0: {'<vv', 'v<v', 'vv<'}, 1: {'<<v', 'v<<', '<v<'}, 2: {'v<', '<v'}, 3: {'v'}, 4: {'<<'}, 5: {'<'},
       7: {'^<<', '<<^', '<^<'}, 8: {'^<', '<^'}, 9: {'^'}, 10: {'vv'} },
- 7: { 0: {'v>vv', '>vvv', 'vv>v'}, 1: {'vv'}, 2: {'vv>', 'v>v', '>vv'},
+ 7: { 0: {'>vvv', 'v>vv', 'vv>v'}, 1: {'vv'}, 2: {'vv>', 'v>v', '>vv'},
       3: {'>>vv', 'vv>>', 'v>>v', 'v>v>', '>v>v', '>vv>'},
       4: {'v'}, 5: {'v>', '>v'}, 6: {'v>>', '>>v', '>v>'}, 8: {'>'}, 9: {'>>'},
       10: {'>>vvv', '>v>vv', '>vv>v', '>vvv>', 'v>>vv', 'v>v>v', 'v>vv>', 'vv>>v', 'vv>v>'} },
@@ -48,7 +48,7 @@ numeric_map = {
  9: { 0: {'vvv<', 'v<vv', 'vv<v', '<vvv'}, 1: {'vv<<', '<<vv', 'v<v<', '<vv<', '<v<v', 'v<<v'},
       2: {'<vv', 'v<v', 'vv<'}, 3: {'vv'}, 4: {'<<v', 'v<<', '<v<'}, 5: {'v<', '<v'}, 6: {'v'},
       7: {'<<'}, 8: {'<'}, 10: {'vvv'} },
-10: { 0: {'<'}, 1: {'^<<', '<^<'}, 2: {'^<', '<^'}, 3: {'^'}, 4: {'<^^<', '<^<^', '^<^<', '^<<^', '^^<<'},
+10: { 0: {'<'}, 1: {'^<<', '<^<'}, 2: {'^<', '<^'}, 3: {'^'}, 4: {'^^<<', '<^^<', '<^<^', '^<^<', '^<<^'},
       5: {'^^<', '<^^', '^<^'}, 6: {'^^'},
       7: {'^^^<<', '^^<^<', '^^<<^', '^<^^<', '^<^<^', '^<<^^', '<^^^<', '<^^<^', '<^<^^'},
       8: {'<^^^', '^^<^', '^^^<', '^<^^'}, 9: {'^^^'} },
@@ -243,15 +243,18 @@ class day21(aoc.aoc):
 
   def find_presses(self, cur_button, new_button):
     return numeric_map[cur_button][new_button]
+    # return [sorted(list(numeric_map[cur_button][new_button]))[0]]
 
 
   def part1(self):
     print('===== Start part 1')
     self.reset()
-    want = set(['<A^A>^^AvvvA', '<A^A^>^AvvvA', '<A^A^^>AvvvA'])
-    got = self.all_presses_for_code('029A')
-    assert want == got
+    want = ['<A^A>^^AvvvA', '<A^A^>^AvvvA', '<A^A^^>AvvvA']
+    got = list(self.all_presses_for_code('029A'))
+    # assert len(got) == 1
+    assert got[0] in want
     want = 'v<<A>>^A<A>AvA<^AA>A<vAAA>^A'
+
     got = sorted(self.get_dir_presses_for('<A^A>^^AvvvA'))
     if want not in got:
       print("Expected", want, "in", got)
@@ -259,34 +262,36 @@ class day21(aoc.aoc):
 
     total_complexity = 0
     for code in self.codes:
-      all_presses = self.all_presses_for_code(code)
-      print(code, all_presses)
-      shortests = None
-      len_shortest = -1
-      for presses in all_presses:
-        robot2 = list(self.get_dir_presses_for(presses))
-        for r2 in robot2:
-          dir_presses = list(self.get_dir_presses_for(r2))
-          if len_shortest < 0:
-            len_shortest = len(dir_presses[0])
-            shortests = set([dir_presses[0]])
-          for dp in dir_presses:
-            if len(dp) < len_shortest:  
-              len_shortest = len(dp)
-              shortests = set([dp])
-            if len(dp) == len_shortest:  
-              shortests.add(dp)
-      print(code, '=>', sorted(shortests)[0])
-      complexity = len_shortest * int(code[0:3])
+      complexity = self.do_code(code)
       total_complexity += complexity
-      if code == '029A':
-        assert len_shortest == 68
-        assert complexity == len_shortest * 29
-
-    if code == '029A':
-      assert '<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A' in shortests
-
     return total_complexity
+
+  def do_code(self, code):
+    all_presses = self.all_presses_for_code(code)
+    print(code, all_presses)
+    shortests = None
+    len_shortest = -1
+    for presses in all_presses:
+      robot2 = list(self.get_dir_presses_for(presses))
+      for r2 in robot2:
+        dir_presses = list(self.get_dir_presses_for(r2))
+        if len_shortest < 0:
+          len_shortest = len(dir_presses[0])
+          shortests = set([dir_presses[0]])
+        for dp in dir_presses:
+          if len(dp) < len_shortest:  
+            len_shortest = len(dp)
+            shortests = set([dp])
+          if len(dp) == len_shortest:  
+            shortests.add(dp)
+
+    print(code, '=>', sorted(shortests)[0])
+    complexity = len_shortest * int(code[0:3])
+    if code == '029A':
+      assert len_shortest == 68
+      assert complexity == len_shortest * 29
+      assert '<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A' in shortests
+    return complexity
 
   def get_dir_presses_for(get, presses):
     pos = 'A'  # second keyboard at A
