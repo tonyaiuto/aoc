@@ -175,11 +175,10 @@ class day24(aoc.aoc):
 
     for bit in range(self.max_x+1):
       self.trace_bit(bit)
+    for gate in self.bad_gates:
+      print("Bad", gate)
 
-    # self.verify_half_adder(bit=0)
-    #for bit in range(1, 4):
-    #  self.verify_full_adder(bit=bit)
-    return 42
+    return ','.join(sorted(self.swaps))
 
   def trace_bit(self, bit):
     # Trace for correct wiring for bit N
@@ -195,25 +194,67 @@ class day24(aoc.aoc):
     # Do the sum side
     xy_input = self.output_to_gate['xor_inp_%d' % bit]
     sum_output = self.output_to_gate['out_%d' % bit]
-    bad_xy = False
-    bad_carry = False
-    if not sum_output.is_input(xy_input.out):
-      bad_xy = True
-      print("Input xor to sum gate problem", xy_input, sum_output)
+    good_xy = True
+    good_carry = False
     # carry in == carry out from bit - 1
     carry_in = self.output_to_gate.get('carry_out_%d' % (bit - 1))
+    if bit == 33:
+      print('bit 33', xy_input, carry_in, sum_output)
+    if sum_output.opname != 'xor' and carry_in:
+      # The output gate might be wrong
+      print("Suspect sum_output gate type", sum_output,
+            "looking for gate with inputs", xy_input.out, carry_in.out)
+      new_out = self.input_to_gate_type(xy_input.out, 'xor')
+      verify = self.input_to_gate_type(carry_in.out, 'xor')
+      if new_out != verify:
+        print(" >>> could not find xor gate with the right inputs")
+      else:
+        self.swap(new_out.out, sum_output.out)
+      sum_output = new_out
+
+    if not sum_output.is_input(xy_input.out):
+      good_xy = False
+      print("Input xor not connected to sum out", xy_input, sum_output)
+      # assert: one of the two gates has a bad output.
     if carry_in:
-      if not sum_output.is_input(carry_in.out):
-        bad_carry = True
-        print("Carry input to sum gate problem", carry_in, sum_output)
-    if bad_xy:
-      if bad_carry:
+      if sum_output.is_input(carry_in.out):
+        good_carry = True
+      else:
+        print("Carry input not connected to sum out", carry_in, sum_output)
+
+    # This is debugging rather than functional
+    if not good_xy:
+      if not good_carry:
         # The sum gate is wrong.
         print("sum gate is probably wrong", xy_input, carry_in, sum_output)
       else:
         self.bad_gates.add(xy_input)
-    elif bad_carry:
-      self.bad_gates.add(carry_in)
+    elif not good_carry:
+      if carry_in:
+        self.bad_gates.add(carry_in)
+
+    if not good_xy:
+      if good_carry:
+        assert sum_output
+        print("Trying to fix xy_input", xy_input, 'with carry_in', carry_in, 'to out', sum_output)
+        # If the carry feeds sum input a, swap with input b
+        swap = sum_output.b if carry_in.out == sum_output.a else sum_output.a
+        self.swap(xy_input.out, swap)
+      else:
+        # both are wrong? It must be the sum
+        # hgw XOR kvr -> npf
+        # hgw AND kvr -> tqs
+        # x13 XOR y13 -> kvr
+        # fmh OR tqs -> z13
+        print("Trying to fix sum_output", sum_output,
+              "looking for gate with inputs", xy_input.out, carry_in.out)
+        new_out = self.input_to_gate_type(xy_input.out, 'xor')
+        verify = self.input_to_gate_type(carry_in.out, 'xor')
+        if new_out != verify:
+          print(" >>> could not find xor gate with the right inputs")
+        else:
+          self.swap(new_out.out, sum_output.out)
+
 
     # Do the carry side
     xy_and = self.output_to_gate['and_inp_%d' % bit]
@@ -234,7 +275,9 @@ class day24(aoc.aoc):
           candidate_carry_out.functional_name = 'carry_out_%d' % bit
           self.output_to_gate[candidate_carry_out.functional_name] = candidate_carry_out
           print("Circuit complete for bit", bit, candidate_carry_out)
+          return
 
+    # Try to fix
 
   def check_carry_inputs(self):
     # Carry input 3 is the carry output of bit 2 full adder
@@ -262,7 +305,6 @@ class day24(aoc.aoc):
         print("Bad gate type for carryout input.", bit, in_b)
         self.bad_gates.add(in_b)
 
-      # self.check_inputs_for_xy(gate, bit, op_type='or', msg="sum gate xor inputs1")
 
   def check_sum_gates(self):
     self.sum_gates = {}
@@ -286,15 +328,19 @@ class day24(aoc.aoc):
           self.good_gates.add(gate)
         continue
 
+      """
       # other bits are full adders: (a ^ b) ^ carry_in => sum
       in_a = self.output_to_gate[gate.a]
       in_b = self.output_to_gate[gate.b]
       if in_a.opname == 'xor':
-        if self.check_inputs_for_xy(in_a, bit, op_type='xor', msg="sum gate xor inputs"):
+        # in_a should be the a^b gate
+        if self.check_inputs_for_xy(in_a, bit, op_type='xor', msg="sum gate xor input a"):
           self.carry_input[bit] = in_b
-      else:
-        if self.check_inputs_for_xy(in_b, bit, op_type='xor', msg="sum gate xor inputs"):
+      elif in_b.opname == 'xor':
+        # in_a should be the (a^b) ^ carry gate
+        if self.check_inputs_for_xy(in_b, bit, op_type='xor', msg="sum gate xor input b"):
           self.carry_input[bit] = in_a
+      """
 
   def check_inputs_for_xy(self, gate, bit, op_type, msg='gate'):  
     if gate.opname != op_type:
@@ -316,6 +362,7 @@ class day24(aoc.aoc):
     self.input_to_gates = defaultdict(set)
     self.output_to_gate = {}
     self.bit_to_gates = defaultdict(set)
+    self.swaps = set()
     for gate in self.gates:
       self.input_to_gates[gate.a].add(gate)
       self.input_to_gates[gate.b].add(gate)
@@ -343,6 +390,21 @@ class day24(aoc.aoc):
         self.bit_to_gates[gate.bit].add(gate)
         gate.functional_name = "out_%d" % gate.bit
         self.output_to_gate[gate.functional_name] = gate
+
+  def swap(self, a, b):
+    # swap two outputs.
+    self.swaps.add(a)
+    self.swaps.add(b)
+    print("## swap:", a, b)
+    gate_a = self.output_to_gate[a]
+    gate_b = self.output_to_gate[b]
+    gate_a.out = b
+    gate_b.out = a
+    self.output_to_gate[gate_a.out] = gate_a
+    self.output_to_gate[gate_b.out] = gate_b
+    self.output_to_gate[gate_a.functional_name] = gate_a
+    self.output_to_gate[gate_b.functional_name] = gate_b
+    print(gate_a, gate_b)
 
 
   def input_to_gate_type(self, name, type):
@@ -446,4 +508,5 @@ tnw OR pbm -> gnj
 """, expect1=2024, expect2=None)
 
 if __name__ == '__main__':
-  day24.run_and_check('input.txt', expect1=42049478636360, expect2=None)
+  day24.run_and_check('input.txt', expect1=42049478636360, expect2='cph,gws,hgj,nnt,npf,z13,z19,z33')
+
