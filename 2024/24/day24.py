@@ -26,16 +26,22 @@ class Gate(object):
     else:
       print('bad op', parts[1])
       sys.exit(1)
+    self.functional_name = None
 
   def __repr__(self):
     return str(self)
 
   def __str__(self):
-    return str('%s %s %s -> %s' % (self.a, self.b, self.opname, self.out))
+    ret =  str('%s %s %s -> %s' % (self.a, self.b, self.opname, self.out))
+    if self.functional_name:
+      ret += ' (%s)' % self.functional_name
+    return '[%s]' % ret
 
   def do_op(self, a, b):
     return self.op(a, b)
 
+  def is_input(self, wire_name):
+    return wire_name in (self.a, self.b)
 
 class day24(aoc.aoc):
 
@@ -53,6 +59,7 @@ class day24(aoc.aoc):
     self.y = []
     self.gates = []
     self.max_z = -1
+    self.gate_outputs = set()
 
   def reset(self):
     # for future use
@@ -80,6 +87,8 @@ class day24(aoc.aoc):
     if gate.out[0] == 'z':
       self.max_z = max(self.max_z, int(gate.out[1:]))
     self.gates.append(gate)
+    assert gate.out not in self.gate_outputs
+    self.gate_outputs.add(gate)
 
   def post_load(self):
     # called after all input is read
@@ -134,11 +143,7 @@ class day24(aoc.aoc):
       self.wires['%s%02d' % (prefix, bit)] = n & 1
       n >>= 1
 
-  def part2(self):
-    if self.doing_sample:
-      return None
-    print('===== Start part 2')
-    self.reset()
+  def part2_check_for_plain_old_adder(self):
     # My input has 222 gates and 45 bit inputs
     # A half adder needs 1 XOR, 1 AND
     # A full adder needs 2 XOR, 2 AND, 1 OR
@@ -153,17 +158,83 @@ class day24(aoc.aoc):
       assert n_gates['xor'] == 44 * 2 + 1
       assert n_gates['or'] == 44
 
-    self.build_connections_to_gates()
+  def part2(self):
+    if self.doing_sample:
+      return None
+    print('===== Start part 2')
+    self.reset()
+    self.part2_check_for_plain_old_adder()
+
+    self.setup_part2()
     self.good_gates = set()
     self.bad_gates = set()
     self.check_sum_gates()
     assert len(self.sum_gates) == self.max_z + 1
 
     self.check_carry_inputs()
+
+    for bit in range(self.max_x+1):
+      self.trace_bit(bit)
+
     # self.verify_half_adder(bit=0)
     #for bit in range(1, 4):
     #  self.verify_full_adder(bit=bit)
     return 42
+
+  def trace_bit(self, bit):
+    # Trace for correct wiring for bit N
+    if bit == 0:
+      sum_gate = self.output_to_gate['sum_0']
+      out_gate = self.output_to_gate['out_0']
+      if sum_gate != out_gate:
+        print("We're doomed. Bit zero half adder is borked")
+        sys.exit(1)
+      print("Circuit complete for bit", bit)
+      return
+
+    # Do the sum side
+    xy_input = self.output_to_gate['xor_inp_%d' % bit]
+    sum_output = self.output_to_gate['out_%d' % bit]
+    bad_xy = False
+    bad_carry = False
+    if not sum_output.is_input(xy_input.out):
+      bad_xy = True
+      print("Input xor to sum gate problem", xy_input, sum_output)
+    # carry in == carry out from bit - 1
+    carry_in = self.output_to_gate.get('carry_out_%d' % (bit - 1))
+    if carry_in:
+      if not sum_output.is_input(carry_in.out):
+        bad_carry = True
+        print("Carry input to sum gate problem", carry_in, sum_output)
+    if bad_xy:
+      if bad_carry:
+        # The sum gate is wrong.
+        print("sum gate is probably wrong", xy_input, carry_in, sum_output)
+      else:
+        self.bad_gates.add(xy_input)
+    elif bad_carry:
+      self.bad_gates.add(carry_in)
+
+    # Do the carry side
+    xy_and = self.output_to_gate['and_inp_%d' % bit]
+    # (x and y) feeds the carry_out or gate directly
+    candidate_carry_out = self.input_to_gate_type(xy_and.out, 'or')
+    # ((x xor y) and carry_in) also feeds carry_out or gate
+    candidate_inp_and_carry = self.input_to_gate_type(xy_input.out, 'and')
+    # print("possible carry at", xy_and, candidate_inp_and_carry, candidate_carry_out)
+    if candidate_inp_and_carry and carry_in:
+      verify = self.input_to_gate_type(carry_in.out, 'and')
+      # print("  carry in", carry_in, verify)
+      if candidate_inp_and_carry == verify:
+        # assert correct inputs for this and gate.
+        if (candidate_carry_out.is_input(candidate_inp_and_carry.out)
+            and candidate_carry_out.is_input(xy_and.out)):
+          candidate_inp_and_carry.functional_name = 'inp_carry_and_%d' % bit
+          self.output_to_gate[candidate_inp_and_carry.functional_name] = candidate_inp_and_carry
+          candidate_carry_out.functional_name = 'carry_out_%d' % bit
+          self.output_to_gate[candidate_carry_out.functional_name] = candidate_carry_out
+          print("Circuit complete for bit", bit, candidate_carry_out)
+
 
   def check_carry_inputs(self):
     # Carry input 3 is the carry output of bit 2 full adder
@@ -240,14 +311,39 @@ class day24(aoc.aoc):
     self.good_gates.add(self)
     return True
 
-  def build_connections_to_gates(self):
+  def setup_part2(self):
+    # build indices to make life easier
     self.input_to_gates = defaultdict(set)
     self.output_to_gate = {}
+    self.bit_to_gates = defaultdict(set)
     for gate in self.gates:
       self.input_to_gates[gate.a].add(gate)
       self.input_to_gates[gate.b].add(gate)
       assert gate.out not in self.output_to_gate
       self.output_to_gate[gate.out] = gate
+
+      if gate.a[0] in ('x', 'y'):
+        gate.bit = int(gate.a[1:])
+        assert gate.bit == int(gate.b[1:])
+        self.bit_to_gates[gate.bit].add(gate)
+        if gate.opname == 'xor':
+          if gate.bit == 0:
+            gate.functional_name = "sum_0"
+          else:
+           gate.functional_name = "xor_inp_%d" % gate.bit
+        elif gate.opname == 'and':
+          if gate.bit == 0:
+            gate.functional_name = "carry_out_0"
+          else:
+            gate.functional_name = "and_inp_%d" % gate.bit
+        if gate.functional_name:
+          self.output_to_gate[gate.functional_name] = gate
+      if gate.out[0] == 'z':
+        gate.bit = int(gate.out[1:])
+        self.bit_to_gates[gate.bit].add(gate)
+        gate.functional_name = "out_%d" % gate.bit
+        self.output_to_gate[gate.functional_name] = gate
+
 
   def input_to_gate_type(self, name, type):
     ret = None
