@@ -2,6 +2,7 @@
 "AOC 2023: day 13"
 
 from collections import defaultdict
+import math
 
 from tools import aoc
 from tools import qparser
@@ -84,9 +85,153 @@ class Prize(object):
     if verbose:
       print(self)
     offset = 10000000000000
-    #self.x += offset
-    #self.y += offset
+    target_x = self.x + offset
+    target_y = self.y + offset
+   
+    # target_x = self.a.x * A + self.b.x * B
+    x_base_a, x_delta_a, x_base_b, x_delta_b = self.find_recurrance(
+       target_x, self.a.x, self.b.x, verbose=verbose)
+    if verbose:
+      print("x Base/delta a,b:", x_base_a, x_delta_a, x_base_b, x_delta_b)
+    assert target_x == x_base_a * self.a.x + x_base_b * self.b.x
+    y_base_a, y_delta_a, y_base_b, y_delta_b = self.find_recurrance(
+       target_y, self.a.y, self.b.y, verbose=verbose)
+    if verbose:
+      print("y Base/delta a,b:", y_base_a, y_delta_a, y_base_b, y_delta_b)
+    assert target_y == y_base_a * self.a.y + y_base_b * self.b.y
+   
+    lcm_x = math.lcm(self.a.x, self.b.x)
+    gcd_x = math.gcd(self.a.x, self.b.x)
+    a_cycle_x = lcm_x // self.a.x
+    b_cycle_x = lcm_x // self.b.x
+    print("x via lcm", a_cycle_x, b_cycle_x, 'gcd', gcd_x)
+    lcm_y = math.lcm(self.a.y, self.b.y)
+    gcd_y = math.gcd(self.a.y, self.b.y)
+    a_cycle_y = lcm_y // self.a.y
+    b_cycle_y = lcm_y // self.b.y
+    print("y via lcm", a_cycle_y, b_cycle_y, 'gcd', gcd_y)
 
+    lcm_a = math.lcm(a_cycle_x, a_cycle_y)
+    lcm_b = math.lcm(b_cycle_x, b_cycle_y)
+    print("lcm_ab", lcm_a, lcm_b)
+    lcm_xy = math.lcm(a_cycle_x * a_cycle_y, b_cycle_x * b_cycle_y)
+    print("lcm_xy", lcm_xy, a_cycle_x * a_cycle_y, b_cycle_x * b_cycle_y)
+
+    xf_a = self.b.x // gcd_x
+    xf_b = - self.a.x // gcd_x
+    yf_a = self.b.y // gcd_y
+    yf_b = - self.a.y // gcd_y
+    last = 0
+    for m in range(1000):
+      a = x_base_a + m * xf_a
+      b = x_base_b + m * xf_b
+      # print(m, a, b, self.a.x * a + self.b.x * b)
+      a = y_base_a + m * yf_a
+      b = y_base_b + m * yf_b
+      # print(m, a, b, self.a.y * a + self.b.y * b)
+
+      n = (x_base_a - y_base_a + m * xf_a) // yf_a
+      if n * yf_a == (x_base_a - y_base_a + m * xf_a):
+        a = y_base_a + n * yf_a
+        b = y_base_b + n * yf_b
+        delta = m - last
+        print(m, delta, a, b, self.a.x * a + self.b.x * b, self.a.y * a + self.b.y * b)
+        last = m
+      
+   
+
+    """
+    for n in range(100):
+      a_press = x_base_a + n * lcm_a
+      b_press = (target_x - a_press * self.a.x) // self.b.x
+      x = a_press * self.a.x + b_press * self.b.x
+      y = a_press * self.a.y + b_press * self.b.y
+
+      a_press_y = y_base_a + n * lcm_a
+      b_press_y = (target_y - a_press_y * self.a.y) // self.b.y
+      x_y = a_press_y * self.a.x + b_press_y * self.b.x
+      y_y = a_press_y * self.a.y + b_press_y * self.b.y
+
+      if (abs(y - target_y) < 10000) or n % 10 == 0:
+        print(n, '%9d' % a_press, '%9d' % b_press, x, y, y_y)
+
+    # learning
+    for n in range(3):
+      a_press = (x_base_a + n*x_delta_a)
+      b_press = (x_base_b + n*x_delta_b)
+      x = a_press * self.a.x + b_press * self.b.x
+      a_press2 = (y_base_a + n*y_delta_a)
+      b_press2 = (y_base_b + n*y_delta_b)
+      y = (y_base_a + n*y_delta_a)*self.a.y + (y_base_b + n*y_delta_b)*self.b.y
+      print(n, x, y, a_press, b_press, a_press2, b_press2)
+    """
+
+    """
+    last_sol = 0
+    for na in range(200):
+      for nb in range(500):
+        a_press = (x_base_a + na*x_delta_a)
+        b_press = (x_base_b + na*x_delta_b)
+        a_press2 = (y_base_a + nb*y_delta_a)
+        b_press2 = (y_base_b + nb*y_delta_b)
+        if a_press == a_press2:
+          x = a_press * self.a.x + b_press * self.b.x
+          y = a_press * self.a.y + b_press * self.b.y
+          a_delta = a_press - last_sol
+          last_sol = a_press
+          print("Solution at a ", a_press, a_delta, x, y)
+          if b_press == b_press2:
+            print("Solution at b ", b_press)
+
+    if target_x < target_y:
+      target = target_y - target_x
+      n_a = self.a.y - self.a.x
+      n_b = self.b.y - self.b.x
+    else:
+      target = target_x - target_y
+      n_a = self.a.x - self.a.y
+      n_b = self.b.x - self.b.y
+    if verbose:
+      print("X %d = %d * A + %d * B" % (target_x, self.a.x, self.b.x))
+      print("Y %d = %d * A + %d * B" % (target_y, self.a.y, self.b.y))
+      print("  %d = %d * A + %d * B" % (target, n_a, n_b))
+
+    nn = 0
+    for a in range(base_a, 2*target // n_a, delta_a):
+      need = target - n_a * a
+      b = need // n_b
+      print(a * n_a + b * n_b, '=== %d * %d + %d * %d' % (a, n_a, b, n_b))
+      nn += 1
+      if nn > 3:
+        break
+
+    need_bx = target_x - base_a * self.a.x
+    bpress = need_bx // self.b.x
+    got = base_a * self.a.x + bpress * self.b.x
+    print(target_x, ":", got, "<= %d * %d + %d * %d" % (self.a.x, base_a, self.b.x, bpress))
+    # return 11
+    """
+
+    """
+    maxa = target_x // self.a.x
+    n_sol = 0
+    for i in range(100):
+      a = maxa - i
+      need_bx = target_x - self.a.x * a
+      b = need_bx // self.b.x
+      got = self.a.x * a + self.b.x * b
+      if target_x == got:
+        print("Got x solution at a,b", a, b, got)
+        got_y = self.a.y * a + self.b.y * b
+        if target_y == got_y:
+          n_sol += 1
+          print("Got full solution at a,b", a, b, got, got_y)
+          if n_sol > 0:
+            break
+    """
+
+    
+  def find_recurrance(self, target, n_a, n_b, verbose=False):
     # Find the recurance relationship
     # compute base # of A & B presses for cycle to start and 
     # how many more of each to hit it again.
@@ -94,9 +239,9 @@ class Prize(object):
     a_press = 0
     while n_solved < 3:
       a_press += 1
-      left = self.target - self.n_a * a_press
-      b_press = left // self.n_b
-      if (b_press > 0) and (b_press * self.n_b == left):
+      left = target - n_a * a_press
+      b_press = left // n_b
+      if (b_press > 0) and (b_press * n_b == left):
         # we have a solution
         cost = 3 * a_press + b_press
         if n_solved == 0:
@@ -114,6 +259,17 @@ class Prize(object):
         n_solved += 1
         if verbose:
           print(' pattern at %d %d => cost: %d' % (a_press, b_press, cost))
+    return base_a, delta_a, base_b, delta_b
+
+
+  def least_cost2_a(self, verbose=False):
+    if verbose:
+      print(self)
+    offset = 10000000000000
+    #self.x += offset
+    #self.y += offset
+    base_a, delta_a, base_b, delta_b = self.find_recurrance(
+       self.target, self.n_a, self.nb, verbose=verbose)
 
     # Ax = base_a + delta_a * N
     # Bx = base_b + delta_b * N
@@ -251,7 +407,7 @@ class day13(aoc.aoc):
     self.prizes = []
     
   def do_line(self, line):
-    # called for each line of input
+    # called for each group of input
     a = Button(line[0])
     b = Button(line[1])
     prize = Prize(line[2], a, b)
