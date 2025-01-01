@@ -6,6 +6,9 @@ from collections import defaultdict
 from tools import aoc
 from tools import gridutils
 
+FELL_OFF=0
+LOOPED=1
+
 
 class day06(aoc.aoc):
 
@@ -72,9 +75,26 @@ class day06(aoc.aoc):
     print('===== Start part 2')
     self.reset()
     at = self.guard_start
+
+    # brute forcing it
+    ret = 0
+    for x in range(self.grid.max_x + 1):
+      for y in range(self.grid.max_y + 1):
+        if self.grid.get(x, y) == '#':
+          continue
+        what = self.follow_path(extra=(x,y))
+        if what == LOOPED:
+          ret += 1
+    return ret
+
+  def part2_other (self):
+    print('===== Start part 2')
+    self.reset()
+    at = self.guard_start
     dir_index = 0
     added = set()
     hit_wall = 0
+
     while True:
       np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
       # Next step will fall off grid
@@ -109,6 +129,32 @@ class day06(aoc.aoc):
     print("Fell off grid at", np)
     print("size", len(added))
     return len(added)
+
+  def follow_path(self, extra=None):
+    at = self.guard_start
+    dir_index = 0
+    hit_wall = 0
+    max_iter = (self.grid.max_x + 1) * (self.grid.max_y + 1)
+    for iter in range(max_iter):
+      np = gridutils.move_in_dir(at, dir=gridutils.DIRS4[dir_index])
+      # Next step will fall off grid
+      if (np[0] < 0 or np[0] > self.grid.max_x 
+          or np[1] < 0 or np[1] > self.grid.max_y):
+        return FELL_OFF
+
+      if self.grid.get_pos(np) == '#' or np == extra:
+        # print('from', at, 'to', np, 'would collide', self.grid.get_pos(np))
+        hit_wall += 1
+        if hit_wall > 4:
+          print('boxed in at', at)
+          return -1
+        dir_index = (dir_index + 1) % 4
+        continue
+      hit_wall = 0
+      at = np
+
+    return LOOPED
+    
 
   def would_loop(self, at, dir_index, extra):
     vis = set()
@@ -162,4 +208,4 @@ if __name__ == '__main__':
   # 1833 too high
   # 1791 it did not like
   # 1790 it did not like
-  day06.run_and_check('input.txt', expect1=5086, expect2=1700)
+  day06.run_and_check('input.txt', expect1=5086, expect2=1770)
