@@ -80,89 +80,76 @@ class day16(aoc.aoc):
       print(len(cells))
     return min(end_costs)
 
-  def possible_moves(self, path):
-    ret = []
-    np = gridutils.add_vector(path.pos, DIRS[path.dir])
-    if self.grid.get_pos(np) != '#':
-      ret.append(((np, path.dir), path.cost+1))
-    right = (path.dir+1) % 4
-    np = gridutils.add_vector(path.pos, DIRS[right])
-    if self.grid.get_pos(np) != '#':
-      ret.append(((path.pos, right), path.cost+1000))
-    left = (path.dir+3) % 4
-    np = gridutils.add_vector(path.pos, DIRS[left])
-    if self.grid.get_pos(np) != '#':
-      ret.append(((path.pos, left), path.cost+1000))
-    return ret
 
   def part2(self):
     print('===== Start part 2')
 
+    least_cost = self.part1()
+    print("PART1 least cost", least_cost)
+
+    # Track all paths fully.
+    # But delete it if they get too costly
+    # union the points at the end
+
     # (pos, dir) => cost
     initial = Head(self.start, self.dir, 0)
+    path = set([self.start])
+    paths = {initial: path}
     heads = [initial]
+    # Map of cells visited and what it cost to get there.
     visited = {(initial.pos, initial.dir): 0}
-    print(self.possible_moves(initial))
-    end_costs = set()
+    # print(self.possible_moves(initial))
+    end_costs = defaultdict(set)
     best_end = -1
     for n in range(self.grid.width * self.grid.height):
-      new_heads = []
-      for p in heads:
-        for nxt, cost in self.possible_moves(p):
+      new_paths = {}
+      for head, p_path in paths.items():
+        for nxt, cost in self.possible_moves(head):
           prev_cost = visited.get(nxt)
-          if prev_cost and prev_cost < cost:
+          # Did we get here at lower cost before?
+          if (prev_cost and prev_cost < cost) or least_cost < cost:
             # print('got to', nxt, 'at cost', prev_cost, '<', cost)
+            if self.doing_sample and nxt[0][1] == 7:
+              print("drop path:", n, head, nxt, '\n  ', len(path), [p for p in sorted(p_path)])
             continue
+
+          if head.pos != nxt[0] and nxt[0] in p_path: 
+            # print("BACKTRACKING", n, head, nxt)
+            continue
+
+          # We'll keep this head
+          path = set(p_path)
+          path.add(nxt[0])
+          new_head = Head(nxt[0], nxt[1], cost)
+          if self.doing_sample and nxt[0][0] <= 8:
+            print("keep new head:", n, new_head, '\n  ', len(path), [p for p in sorted(path)])
+
+          # But we also have been here before
+          if prev_cost == cost:
+            other_path = new_paths.get(new_head) or []
+            if self.doing_sample:
+              print("===== join at", nxt, cost,
+                    '\n', len(path), [p for p in sorted(path)], 
+                    '\n', len(other_path), [p for p in sorted(other_path)],
+              )
+            path = path.union(other_path) 
+          new_paths[new_head] = path
+          visited[nxt] = cost
+
           if nxt[0] == self.end:
-            print("===================== end", nxt, cost)
+            # print("===================== end", nxt, cost, len(path))
+            end_costs[cost] = end_costs[cost].union(path)
             if best_end < 0 or cost < best_end:
               best_end = cost
-              # visited now has the lowest costs
-              pos_costs = [{cell_dir[0]: cost for cell_dir, cost in visited.items()}]
-            elif cost == best_end:
-              best_end = cost
-              # visited now has the lowest costs
-              pos_costs.append({cell_dir[0]: cost for cell_dir, cost in visited.items()})
-            end_costs.add(cost)
-          new_heads.append(Head(nxt[0], nxt[1], cost))
-          visited[nxt] = cost
-      heads = new_heads
+      paths = new_paths
+    return len(end_costs[best_end])
 
-    # visited now has the lowest costs
-    costs = {cell_dir[0]: cost for cell_dir, cost in visited.items()}
-
-    for pc in pos_costs:
-      i = 0
-      keys = list(pc.keys())
-      for i in range(1, len(pc), 8):
-        print(",  ".join(["%-9s= %4d" % (key, pc[key]) for key in keys[i:i+8]]))
-      
-    # print(pos_costs)
-    pos = self.end
-    ends = [self.end]
-    for n in range(10):
-      new_ends = []
-      for end in ends:
-        lc = costs[end]
-        print("at", end, 'lc=', lc)
-        for dir in range(4):
-          np = gridutils.add_vector(end, DIRS[dir])
-          if np not in costs:
-            print('loser', np)
-            continue
-          from_cost = costs[np]
-          if from_cost < lc:
-            best = [np]
-            lc = from_cost
-          elif from_cost == lc:
-            best.append(np)
-        print("back to", best)
-        new_ends.extend(list(best))
-      ends = new_ends
-
-    return min(end_costs)
 
   def possible_moves(self, path):
+    """Return list of possible moves from path.pos.
+
+    Moves are tuple of ((pos, dir), cost)
+    """
     ret = []
     np = gridutils.add_vector(path.pos, DIRS[path.dir])
     if self.grid.get_pos(np) != '#':
@@ -177,7 +164,6 @@ class day16(aoc.aoc):
       ret.append(((path.pos, left), path.cost+1000))
     return ret
 
-    return 42
 
 
 day16.sample_test("""
@@ -200,4 +186,4 @@ day16.sample_test("""
 
 
 if __name__ == '__main__':
-  day16.run_and_check('input.txt', expect1=85420, expect2=None)
+  day16.run_and_check('input.txt', expect1=85420, expect2=492)
