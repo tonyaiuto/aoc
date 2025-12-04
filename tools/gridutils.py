@@ -201,10 +201,10 @@ class Grid(object):
     return self.max_y - self.min_y
 
   def get(self, x, y):
-     return self.points.get((x, y), self.default_cell)
+    return self.points.get((x, y), self.default_cell)
 
   def get_pos(self, pos):
-     return self.points.get(pos, self.default_cell)
+    return self.points.get(pos, self.default_cell)
 
   def set(self, x, y, value):
     self.min_x = min(self.min_x, x)
@@ -214,8 +214,7 @@ class Grid(object):
     self.points[(x, y)] = value
 
   def set_pos(self, pos, value):
-     return self.set(pos[0], pos[1], value)
-
+    return self.set(pos[0], pos[1], value)
 
   def unset(self, x, y):
     del self.points[(x, y)]
