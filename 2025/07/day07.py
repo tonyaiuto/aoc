@@ -37,37 +37,31 @@ class day07(aoc.aoc):
     if self.doing_sample:
       self.mani.print()
       print('beam @', self.beams, self.mani.get_pos(self.start))
-    self.b_splits = {self.start: 0}
+    self.b_splits = {self.start: 1}
 
   def reset(self):
     self.splits = 0
     self.beams = set()
     self.beams.add(self.start)
-    self.b_splits = {self.start: 0}
+    self.b_splits = {self.start: 1}
 
   def turn(self):
     new_beams = set()
-    new_splits = {}
+    new_splits = defaultdict(int)
     for beam in self.beams:
       splits = self.b_splits[beam]
       below = Pos(beam.x, beam.y+1)
       cell_below = self.mani.get_pos(below)
       if cell_below == ' ':
+        new_splits[below] += splits
         new_beams.add(below)
-        new_splits[below] = splits
       elif cell_below == '^':
         left = Pos(below.x-1, below.y)
-        new_splits[left] = splits + 1
-        if left in new_beams:
-          new_splits[left] += 1
-        else:
-          new_beams.add(left)
+        new_splits[left] += splits
+        new_beams.add(left)
         right = Pos(below.x+1, below.y)
-        new_splits[right] = splits + 1
-        if right in new_beams:
-          new_splits[right] += 1
-        else:
-          new_beams.add(right)
+        new_splits[right] += splits
+        new_beams.add(right)
         self.splits += 1
     if self.doing_sample:
       print('>>>', self.splits, new_beams)
@@ -78,8 +72,9 @@ class day07(aoc.aoc):
     print('===== Start part 1')
     for i in range(self.mani.n_rows+1):
        self.turn()
-    for beam in self.beams:
-      print('beam @', beam)
+    if self.doing_sample:
+      for beam in self.beams:
+        print('beam @', beam)
     return self.splits
 
 
@@ -87,11 +82,9 @@ class day07(aoc.aoc):
     print('===== Start part 2')
     self.reset()
     for i in range(self.mani.n_rows):
-       print("TURN", i)
        self.turn()
-    for beam in self.beams:
-      print('beam @', beam)
-    print(self.b_splits)
+    if self.doing_sample:
+      print(self.b_splits)
     return sum(self.b_splits.values())
 
 
@@ -116,4 +109,4 @@ day07.sample_test("""
 
 
 if __name__ == '__main__':
-  day07.run_and_check('input.txt', expect1=1590, expect2=40)
+  day07.run_and_check('input.txt', expect1=1590, expect2=20571740188555)
