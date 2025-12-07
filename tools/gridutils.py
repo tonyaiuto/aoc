@@ -3,6 +3,7 @@
 
 """
 
+from collections import namedtuple
 import sys
 
 verbose = False
@@ -25,6 +26,7 @@ DIRS8 = [
     (-1, -1),  # LEFT UP
 ]
 
+Pos = namedtuple('Pos', 'x, y')
 
 def add_vector(a, v):
   return (a[0]+v[0], a[1]+v[1])
