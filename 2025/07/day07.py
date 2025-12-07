@@ -47,48 +47,32 @@ class day07(aoc.aoc):
 
   def turn(self):
     new_beams = set()
-    osize = len(self.beams)
+    new_splits = {}
     for beam in self.beams:
       splits = self.b_splits[beam]
       below = Pos(beam.x, beam.y+1)
       cell_below = self.mani.get_pos(below)
       if cell_below == ' ':
         new_beams.add(below)
-        self.b_splits[below] = splits
+        new_splits[below] = splits
       elif cell_below == '^':
         left = Pos(below.x-1, below.y)
-        self.b_splits[left] = splits + 1
+        new_splits[left] = splits + 1
         if left in new_beams:
-          self.b_splits[left] += 1
+          new_splits[left] += 1
         else:
           new_beams.add(left)
         right = Pos(below.x+1, below.y)
-        self.b_splits[right] = splits + 1
+        new_splits[right] = splits + 1
         if right in new_beams:
-          self.b_splits[right] += 1
+          new_splits[right] += 1
         else:
           new_beams.add(right)
         self.splits += 1
     if self.doing_sample:
       print('>>>', self.splits, new_beams)
     self.beams = new_beams
-
-  def turn2(self):
-    new_beams = []
-    for beam in self.beams:
-      below = Pos(beam.x, beam.y+1)
-      cell_below = self.mani.get_pos(below)
-      if cell_below == ' ':
-        new_beams.append(below)
-      elif cell_below == '^':
-        left = Pos(below.x-1, below.y)
-        new_beams.append(left)
-        right = Pos(below.x+1, below.y)
-        new_beams.append(right)
-        self.splits += 1
-    if True or self.doing_sample:
-      print('>>>', self.splits, len(new_beams))
-    self.beams = new_beams
+    self.b_splits = new_splits
 
   def part1(self):
     print('===== Start part 1')
@@ -107,7 +91,8 @@ class day07(aoc.aoc):
        self.turn()
     for beam in self.beams:
       print('beam @', beam)
-    return len(self.beams)
+    print(self.b_splits)
+    return sum(self.b_splits.values())
 
 
 day07.sample_test("""
@@ -127,7 +112,7 @@ day07.sample_test("""
 ...............
 .^.^.^.^.^...^.
 ...............
-""", expect1=21, expect2=None)
+""", expect1=21, expect2=40)
 
 
 if __name__ == '__main__':
