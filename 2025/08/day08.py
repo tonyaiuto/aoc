@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 "AOC 2025: day 08"
 
-from collections import defaultdict
 from collections import namedtuple
 import heapq
-import itertools
 
 from tools import aoc
 
@@ -25,10 +23,6 @@ class day08(aoc.aoc):
     self.trace = True
     self.boxes = []
 
-  def reset(self):
-    # for future use
-    pass
-
   def do_line(self, line):
     # called for each line of input
     coords = [int(x) for x in line.split(',')]
@@ -37,72 +31,100 @@ class day08(aoc.aoc):
 
   def post_load(self):
     # called after all input is read
-    self.dists = {}
+    # self.dists = {}
     self.distheap = []
     for i, box in enumerate(self.boxes):
       for other_i in range(i+1, len(self.boxes)):
         other_box = self.boxes[other_i]
         dist = (box.x - other_box.x) ** 2 + (box.y - other_box.y) ** 2 + (box.z - other_box.z) ** 2
-        self.dists[(box, other_box)] = dist
-        self.dists[(other_box, box)] = dist
+        # self.dists[(box, other_box)] = dist
+        # self.dists[(other_box, box)] = dist
         heapq.heappush(self.distheap, (dist, box, other_box))
-
 
   def part1(self):
     print('===== Start part 1')
-    self.reset()
     if self.doing_sample:
       print(self.boxes)
-      print(self.dists)
+      # print(self.dists)
 
-    box2circ = {}
-    all_circuts = []
-    for i in range(10):
+    self.box2circ = {}
+    self.all_circuits = []
+    limit = 1000
+    if self.doing_sample:
+      limit = 10
+    for i in range(limit):
+      self.do_next()
+    sizes = sorted([len(circ) for circ in self.all_circuits], reverse=True)
+    print(sizes)
+    return sizes[0] * sizes[1] * sizes[2]
+
+  def do_next(self):
+      self.all_circuits = [x for x in self.all_circuits if len(x) > 0]
       dx = heapq.heappop(self.distheap)
-      print(f"Popped smallest item: {dx}")
+      if self.doing_sample:
+        print(f"    {[len(c) for c in self.all_circuits]}")
+        print(f"Shortest pair: {dx}")
       dist = dx[0],
       box1 = dx[1]
       box2 = dx[2]
-      c1 = box2circ.get(box1)
-      c2 = box2circ.get(box2)
+      c1 = self.box2circ.get(box1)
+      c2 = self.box2circ.get(box2)
       if not c1 and not c2:
-        print("    New pair")
+        if self.doing_sample:
+          print("    New pair")
         new_circ = set([box1, box2])
-        all_circuts.append(new_circ)
-        box2circ[box1] = new_circ
-        box2circ[box2] = new_circ
-        continue
+        self.all_circuits.append(new_circ)
+        self.box2circ[box1] = new_circ
+        self.box2circ[box2] = new_circ
+        return
       if c1 == c2:
-        print("    Nothing")
-        continue 
+        if self.doing_sample:
+          print("    Nothing")
+        return 
+
       if c1 and not c2:
-        print(f"    Merge {box2} into {c1}")
+        if self.doing_sample:
+          print(f"    Merge {box2} into {c1}")
         c1.add(box2)
-        box2circ[box2] = c1
-        continue
-      if c2 and not c1:
-        print(f"    Merge {box1} into {c2}")
+        self.box2circ[box2] = c1
+        self.last_pair = [box1, box2]
+        return
+      elif c2 and not c1:
+        if self.doing_sample:
+          print(f"    Merge {box1} into {c2}")
         c2.add(box1)
-        box2circ[box1] = c2
-        continue
+        self.box2circ[box1] = c2
+        self.last_pair = [box1, box2]
+        return
+
       if self.doing_sample:
         print(f"JOIN!! {box1} {box2} {c1}, {c2}")
-      c1 = c1 | c2
+      if len(c1) + len(c2) == len(self.boxes):
+        print(f"==> Last pair, {box1} {box2}")
+        self.last_pair = [box1, box2]
+      c1.update(c2)
+      c1.add(box2)
+      self.box2circ[box2] = c1
       for box in c2:
-        box2circ[box] = c1
+        self.box2circ[box] = c1
       c2.clear()
-
-    # print(box2circ)
-    sizes = sorted([len(circ) for circ in all_circuts], reverse=True)
-    print(sizes)
-    return 42
+      if self.doing_sample:
+        print(f"    {[len(c) for c in self.all_circuits]}")
 
 
   def part2(self):
     print('===== Start part 2')
-    self.reset()
-
-    return 42
+    self.box2circ = {}
+    self.all_circuits = []
+    limit = len(self.boxes) ** 2
+    for i in range(limit):
+      self.do_next()
+      sizes = sorted([len(circ) for circ in self.all_circuits], reverse=True)
+      if sizes[0] == len(self.boxes):
+         print(f"Done at {i}, {self.last_pair}")
+         break
+    print(f"=> {[len(c) for c in self.all_circuits]}")
+    return self.last_pair[0].x * self.last_pair[1].x
 
 
 day08.sample_test("""
@@ -126,8 +148,8 @@ day08.sample_test("""
 862,61,35
 984,92,344
 425,690,689
-""", expect1=40, expect2=None)
+		  """, expect1=40, expect2=25272)
 
 
 if __name__ == '__main__':
-  day08.run_and_check('input.txt', expect1=None, expect2=None)
+  day08.run_and_check('input.txt', expect1=112230, expect2=2573952864)
