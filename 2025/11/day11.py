@@ -74,6 +74,7 @@ class day11(aoc.aoc):
         # to_delete.append(dev.name)
 
   def reduce_all(self):
+    # 30 is to prevent doing this for the sample.
     while len(self.devs) > 30:
       orig_size = len(self.devs)
       print(f"== {orig_size} devs")
@@ -85,6 +86,16 @@ class day11(aoc.aoc):
     with open("reduced_input.txt", "w") as out:
       for dev in self.devs.values():
         out.write(f"{dev.name}: {' '.join(dev.outs)}\n")
+
+  def find_connected(self, target, connected=None):
+    # find devs connect to a point
+    if target in connected:
+      return
+    connected.add(target)
+    print(f" connecting {target}")
+    for feeder in self.feeders[target]:
+      feed_dev = self.devs.get(feeder)
+      self.find_connected(feeder, connected=connected)
 
   def part1(self):
     print('===== Start part 1')
@@ -99,18 +110,18 @@ class day11(aoc.aoc):
   def find_paths(self, cur, visited, end="out", need_fft=False):
     visited = set(visited)
     visited.add(cur.name)
-    if len(visited) > 20:
+    if len(visited) > 200:
       print(visited)
     found = 0
     for out in cur.outs:
       if out == end:
-        # print(visited)
         if need_fft:
           if "fft" in visited and "dac" in visited:
+            print("PATH", visited)
             found += 1
         else:
           found += 1
-        continue
+        break
       if out in visited:
         continue
       out_dev = self.devs[out]
@@ -120,6 +131,7 @@ class day11(aoc.aoc):
   def part2(self):
     print('===== Start part 2')
     self.reset()
+    self.reduce_all()
     if self.doing_sample:
       for d in self.devs.values():
         print(f"  {d}")
@@ -127,18 +139,30 @@ class day11(aoc.aoc):
     if not start:
       return 0
     self.feeders = self.build_reverse_map()
+    con = set()
+    self.find_connected("out", con)
+    print(f"connected set: {len(con)}")
 
-    print("Finding from fft")
-    from_fft = self.find_paths(cur=self.devs.get("fft"), visited=set())
-    from_dac = self.find_paths(cur=self.devs.get("dac"), visited=set())
-    print(f"from_fft: {from_fft}, from_dac: {from_dac}")
+    n_paths_to_end = {"out": 0}
 
-    to_fft = self.find_paths(cur=self.devs.get("svr"), end="fft", visited=set())
-    to_dac = self.find_paths(cur=self.devs.get("svr"), end="dac", visited=set())
+    dac = self.devs.get("dac")
+    print("Finding from {dac}")
+    from_dac = self.find_paths(cur=dac, visited=set(), need_fft=True)
+    print("Finding from dac =>", from_dac)
+
+    fft = self.devs.get("fft")
+    print("Finding from {fft}")
+    from_fft = self.find_paths(cur=fft, visited=set(), need_fft=False)
+    print("Finding from fft =>", from_fft)
+    # print(f"from_fft: {from_fft}, from_dac: {from_dac}")
+
+    to_fft = self.find_paths(cur=start, end="fft", visited=set())
+    print(f"to_fft: {to_fft}")
+
+    """
+    to_dac = self.find_paths(cur=start, end="dac", visited=set())
     print(f"to_fft: {to_fft}, to_dac: {to_dac}")
-
-    if self.doing_sample:
-       return self.find_paths(cur=start, visited=set(), need_fft=True)
+    """
     return self.find_paths(cur=start, visited=set(), need_fft=True)
 
 
